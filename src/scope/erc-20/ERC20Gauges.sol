@@ -288,7 +288,9 @@ abstract contract ERC20Gauges is ERC20MultiVotes, ReentrancyGuard, IERC20Gauges 
 
         // All operations will revert on underflow, protecting against bad inputs
         _decrementGaugeWeight(msg.sender, gauge, weight, currentCycle);
-        return _decrementUserAndGlobalWeights(msg.sender, weight, currentCycle);
+        if (!_deprecatedGauges.contains(gauge))
+            _writeGaugeWeight(_totalWeight, _subtract112, weight, currentCycle);
+        return _decrementUserWeights(msg.sender, weight);
     }
 
     function _decrementGaugeWeight(
@@ -312,15 +314,12 @@ abstract contract ERC20Gauges is ERC20MultiVotes, ReentrancyGuard, IERC20Gauges 
         emit DecrementGaugeWeight(user, gauge, weight, cycle);
     }
 
-    function _decrementUserAndGlobalWeights(
-        address user,
-        uint112 weight,
-        uint32 cycle
-    ) internal returns (uint112 newUserWeight) {
+    function _decrementUserWeights(address user, uint112 weight)
+        internal
+        returns (uint112 newUserWeight)
+    {
         newUserWeight = getUserWeight[user] - weight;
-
         getUserWeight[user] = newUserWeight;
-        _writeGaugeWeight(_totalWeight, _subtract112, weight, cycle);
     }
 
     /// @inheritdoc IERC20Gauges
@@ -332,8 +331,9 @@ abstract contract ERC20Gauges is ERC20MultiVotes, ReentrancyGuard, IERC20Gauges 
         uint256 size = gaugeList.length;
         if (weights.length != size) revert SizeMismatchError();
 
-        // store total in summary for the batch update on user/global state
+        // store total in summary for the batch update on user and global state
         uint112 weightsSum;
+        uint112 globalWeightsSum;
 
         uint32 currentCycle = _getGaugeCycleEnd();
 
@@ -343,13 +343,16 @@ abstract contract ERC20Gauges is ERC20MultiVotes, ReentrancyGuard, IERC20Gauges 
             address gauge = gaugeList[i];
             uint112 weight = weights[i];
             weightsSum += weight;
+            if (!_deprecatedGauges.contains(gauge)) globalWeightsSum += weight;
 
             _decrementGaugeWeight(msg.sender, gauge, weight, currentCycle);
             unchecked {
                 i++;
             }
         }
-        return _decrementUserAndGlobalWeights(msg.sender, weightsSum, currentCycle);
+        _writeGaugeWeight(_totalWeight, _subtract112, globalWeightsSum, currentCycle);
+
+        return _decrementUserWeights(msg.sender, weightsSum);
     }
 
     /**
