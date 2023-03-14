@@ -195,7 +195,7 @@ abstract contract ERC20MultiVotes is ERC20, Ownable, IERC20MultiVotes {
     ) internal virtual {
         // Require freeVotes exceed the delegation size
         uint256 free = freeVotes(delegator);
-        if (delegatee == address(0) || free < amount) revert DelegationError();
+        if (delegatee == address(0) || free < amount || amount == 0) revert DelegationError();
 
         bool newDelegate = _delegates[delegator].add(delegatee); // idempotent add
         if (
