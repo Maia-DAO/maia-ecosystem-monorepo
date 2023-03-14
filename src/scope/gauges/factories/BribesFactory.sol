@@ -69,7 +69,7 @@ contract BribesFactory is Ownable, IBribesFactory {
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IBribesFactory
-    function addGaugetoFlywheel(address gauge, address bribeToken) external {
+    function addGaugetoFlywheel(address gauge, address bribeToken) external onlyGaugeFactory {
         if (address(flywheelTokens[bribeToken]) == address(0)) createBribeFlywheel(bribeToken);
 
         flywheelTokens[bribeToken].addStrategyForRewards(ERC20(gauge));
