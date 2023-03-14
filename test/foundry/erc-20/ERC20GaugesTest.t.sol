@@ -76,6 +76,7 @@ contract ERC20GaugesTest is DSTestPlus {
 
     function testAddPreviouslyDeprecated(uint112 amount) public {
         amount %= type(uint112).max;
+        amount++;
 
         token.setMaxGauges(2);
         token.addGauge(gauge1);
@@ -135,6 +136,9 @@ contract ERC20GaugesTest is DSTestPlus {
     }
 
     function testRemoveGaugeWithWeight(uint112 amount) public {
+        amount %= type(uint112).max;
+        amount++;
+
         token.mint(address(this), amount);
         token.setMaxDelegates(1);
         token.delegate(address(this));
@@ -212,7 +216,7 @@ contract ERC20GaugesTest is DSTestPlus {
             uint112 sum;
             for (uint256 i = 0; i < 8; i++) {
                 gauges[i] = address(new MockBaseV2Gauge(FlywheelGaugeRewards(address(0)), address(0), address(0)));
-                hevm.assume(sum + amounts[i] >= sum && !token.isGauge(gauges[i]) && gauges[i] != address(0));
+                hevm.assume(amounts[i] > 0 && sum + amounts[i] >= sum && !token.isGauge(gauges[i]) && gauges[i] != address(0));
                 sum += amounts[i];
 
                 // Can't delegate to 0 address
@@ -300,7 +304,7 @@ contract ERC20GaugesTest is DSTestPlus {
             uint112 sum;
             for (uint256 i = 0; i < 8; i++) {
                 gauges[i] = address(new MockBaseV2Gauge(FlywheelGaugeRewards(address(0)), address(0), address(0)));
-                hevm.assume(sum + amounts[i] >= sum && !token.isGauge(gauges[i]) && gauges[i] != address(0));
+                hevm.assume(amounts[i] > 0 && sum + amounts[i] >= sum && !token.isGauge(gauges[i]) && gauges[i] != address(0));
                 sum += amounts[i];
 
                 token.mint(address(this), amounts[i]);
@@ -390,6 +394,9 @@ contract ERC20GaugesTest is DSTestPlus {
     }
 
     function testIncrementOverWeight(uint112 amount) public {
+        amount %= type(uint112).max;
+        amount++;
+
         token.setMaxGauges(2);
         token.addGauge(gauge1);
         token.addGauge(gauge2);
@@ -579,6 +586,9 @@ contract ERC20GaugesTest is DSTestPlus {
     }
 
     function testDecrementOverWeight(uint112 amount) public {
+        amount %= type(uint112).max;
+        amount++;
+
         token.setMaxGauges(2);
         token.addGauge(gauge1);
         token.addGauge(gauge2);

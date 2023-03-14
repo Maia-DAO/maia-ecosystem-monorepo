@@ -56,6 +56,7 @@ contract BaseV2GaugeTest is DSTestPlus {
 
         hevm.mockCall(address(this), abi.encodeWithSignature("bHermesBoostToken()"), abi.encode(address(0)));
         hevm.mockCall(address(0), abi.encodeWithSignature("gaugeBoost()"), abi.encode(gaugeToken));
+        hevm.mockCall(address(rewardsStream), abi.encodeWithSignature("updatePeriod()"), abi.encode(0));
 
         gauge = new MockBaseV2Gauge(rewards, address(strategy), address(this));
 

@@ -51,6 +51,7 @@ contract FlywheelGaugeRewardsTest is DSTestPlus {
             abi.encodeWithSignature("bHermesBoostToken()"),
             abi.encode(ERC20Gauges(address(0xBABE)))
         );
+        hevm.mockCall(address(rewardsStream), abi.encodeWithSignature("updatePeriod()"), abi.encode(0));
 
         gauge1 = address(new MockBaseV2Gauge(rewards, address(0), address(0)));
         gauge2 = address(new MockBaseV2Gauge(rewards, address(0), address(0)));

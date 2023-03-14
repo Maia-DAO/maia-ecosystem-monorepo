@@ -61,7 +61,7 @@ contract ERC20MultiVotesTest is DSTestPlus {
         unchecked {
             uint224 sum;
             for (uint256 i = 0; i < 8; i++) {
-                hevm.assume(sum + amounts[i] >= sum && from[i] != address(0) && delegates[i] != address(0));
+                hevm.assume(amounts[i] > 0 && sum + amounts[i] >= sum && from[i] != address(0) && delegates[i] != address(0));
                 sum += amounts[i];
 
                 token.mint(from[i], amounts[i]);
@@ -155,7 +155,7 @@ contract ERC20MultiVotesTest is DSTestPlus {
         address newDelegatee,
         uint112 mintAmount
     ) public {
-        hevm.assume(mintAmount >= beforeDelegateAmount);
+        hevm.assume(mintAmount >= beforeDelegateAmount && beforeDelegateAmount > 0);
         token.mint(address(this), mintAmount);
         token.setMaxDelegates(2);
 
@@ -187,7 +187,7 @@ contract ERC20MultiVotesTest is DSTestPlus {
         hevm.assume(delegatorPk != 0);
         address owner = hevm.addr(delegatorPk);
 
-        hevm.assume(mintAmount >= beforeDelegateAmount);
+        hevm.assume(mintAmount >= beforeDelegateAmount && beforeDelegateAmount > 0);
         token.mint(owner, mintAmount);
         token.setMaxDelegates(2);
 
