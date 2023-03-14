@@ -136,7 +136,7 @@ abstract contract ERC20Boost is ERC20, Ownable, IERC20Boost {
 
     /// @inheritdoc IERC20Boost
     function detach(address user) external {
-        _userGauges[user].remove(msg.sender);
+        require(_userGauges[user].remove(msg.sender));
         delete getUserGaugeBoost[user][msg.sender];
     }
 
@@ -180,7 +180,7 @@ abstract contract ERC20Boost is ERC20, Ownable, IERC20Boost {
 
     /// @inheritdoc IERC20Boost
     function decrementGaugeAllBoost(address gauge) external {
-        _userGauges[msg.sender].remove(gauge);
+        require(_userGauges[msg.sender].remove(gauge));
         delete getUserGaugeBoost[msg.sender][gauge];
     }
 

@@ -131,6 +131,7 @@ abstract contract BaseV2GaugeFactory is Ownable, IBaseV2GaugeFactory {
 
     /// @inheritdoc IBaseV2GaugeFactory
     function removeGauge(BaseV2Gauge gauge) external onlyOwner {
+        if (!activeGauges[gauge] || gauges[gaugeIds[gauge]] != gauge) revert InvalidGauge();
         delete gauges[gaugeIds[gauge]];
         delete gaugeIds[gauge];
         delete activeGauges[gauge];
@@ -147,6 +148,7 @@ abstract contract BaseV2GaugeFactory is Ownable, IBaseV2GaugeFactory {
         external
         onlyOwnerOrBribesFactoryOwner
     {
+        if (!activeGauges[gauge]) revert InvalidGauge();
         gauge.addBribeFlywheel(bribesFactory.flywheelTokens(bribeToken));
         bribesFactory.addGaugetoFlywheel(address(gauge), bribeToken);
     }
@@ -156,6 +158,7 @@ abstract contract BaseV2GaugeFactory is Ownable, IBaseV2GaugeFactory {
         external
         onlyOwnerOrBribesFactoryOwner
     {
+        if (!activeGauges[gauge]) revert InvalidGauge();
         gauge.removeBribeFlywheel(bribesFactory.flywheelTokens(bribeToken));
     }
 

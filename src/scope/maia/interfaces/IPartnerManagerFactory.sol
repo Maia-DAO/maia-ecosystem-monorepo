@@ -55,4 +55,14 @@ interface IPartnerManagerFactory {
 
     /// @notice Used to remove a vault from the list of vaults.
     function removeVault(IBaseVault vault) external;
+
+    /*//////////////////////////////////////////////////////////////
+                            ERRORS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Error thrown when the partner manager is not found.
+    error InvalidPartnerManager();
+
+    /// @notice Error thrown when the vault is not found.
+    error InvalidVault();
 }

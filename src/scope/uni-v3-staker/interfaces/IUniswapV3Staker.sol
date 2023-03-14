@@ -323,6 +323,8 @@ interface IUniswapV3Staker is IERC721Receiver {
                             ERRORS
     //////////////////////////////////////////////////////////////*/
 
+    error InvalidGauge();
+
     error NotCalledByOwner();
 
     error IncentiveRewardMustBePositive();

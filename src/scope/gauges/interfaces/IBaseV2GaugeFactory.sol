@@ -125,4 +125,7 @@ interface IBaseV2GaugeFactory {
 
     /// @notice Throws when the caller is not the owner or BribesFactory owner.
     error NotOwnerOrBribesFactoryOwner();
+
+    /// @notice Throws when removing an invalid gauge.
+    error InvalidGauge();
 }

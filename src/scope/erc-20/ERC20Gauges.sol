@@ -216,7 +216,7 @@ abstract contract ERC20Gauges is ERC20MultiVotes, ReentrancyGuard, IERC20Gauges 
         uint112 weight,
         uint32 cycle
     ) internal {
-        if (_deprecatedGauges.contains(gauge)) revert InvalidGaugeError();
+        if (!_gauges.contains(gauge) || _deprecatedGauges.contains(gauge)) revert InvalidGaugeError();
         unchecked {
             if (cycle - block.timestamp <= incrementFreezeWindow) revert IncrementFreezeError();
         }
@@ -299,6 +299,8 @@ abstract contract ERC20Gauges is ERC20MultiVotes, ReentrancyGuard, IERC20Gauges 
         uint112 weight,
         uint32 cycle
     ) internal {
+        if (!_gauges.contains(gauge)) revert InvalidGaugeError();
+
         uint112 oldWeight = getUserGaugeWeight[user][gauge];
 
         IBaseV2Gauge(gauge).accrueBribes(user);

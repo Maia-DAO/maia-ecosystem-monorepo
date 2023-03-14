@@ -7,6 +7,9 @@ pragma solidity ^0.8.0;
  *  @notice This library is responsible for computing the incentive start and end times.
  */
 library IncentiveTime {
+    /// @notice Throws when the staked timestamp is before the incentive start time.
+    error InvalidStartTime();
+
     uint256 private constant INCENTIVES_DURATION = 1 weeks; // Incentives are 1 week long and start at THURSDAY 12:00:00 UTC (00:00:00 UTC + 12 hours (INCENTIVE_OFFSET))
 
     uint256 private constant INCENTIVES_OFFSET = 12 hours;
@@ -42,6 +45,7 @@ library IncentiveTime {
         uint40 stakedTimestamp,
         uint256 timestamp
     ) internal pure returns (uint96 end, uint256 stakedDuration) {
+        if (stakedTimestamp < start) revert InvalidStartTime();
         end = start + uint96(INCENTIVES_DURATION);
 
         // get earliest, block.timestamp or endTime

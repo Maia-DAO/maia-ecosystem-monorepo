@@ -74,12 +74,14 @@ contract PartnerManagerFactory is Ownable, IPartnerManagerFactory {
 
     /// @inheritdoc IPartnerManagerFactory
     function removePartner(PartnerManager partnerManager) external onlyOwner {
+        if (partners[partnerIds[partnerManager]] != partnerManager) revert InvalidPartnerManager();
         delete partners[partnerIds[partnerManager]];
         delete partnerIds[partnerManager];
     }
 
     /// @inheritdoc IPartnerManagerFactory
     function removeVault(IBaseVault vault) external onlyOwner {
+        if (vaults[vaultIds[vault]] != vault) revert InvalidVault();
         delete vaults[vaultIds[vault]];
         delete vaultIds[vault];
     }
