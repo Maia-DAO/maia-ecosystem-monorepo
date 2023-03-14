@@ -181,6 +181,7 @@ contract BoostAggregator is Ownable, IERC721Receiver, IBoostAggregator {
     function withdrawGaugeBoost(address to, uint256 amount) external onlyOwner {
         /// @dev May run out of gas.
         hermesGaugeBoost.decrementAllGaugesBoost(amount);
+        hermesGaugeBoost.updateUserBoost(address(this));
         address(hermesGaugeBoost).safeTransfer(to, amount);
     }
 
