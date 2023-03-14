@@ -359,7 +359,7 @@ contract TalosStrategyStakedTest is TalosTestor {
 
         hevm.prank(user1);
         hevm.expectRevert(ITalosBaseStrategy.RedeemingZeroShares.selector);
-        talosBaseStrategy.redeem(0, user1, user1);
+        talosBaseStrategy.redeem(0, 0, 0, user1, user1);
     }
 
     // function testWithdrawPaused(uint256 amount0Desired) public {

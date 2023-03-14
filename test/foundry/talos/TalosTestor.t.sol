@@ -155,7 +155,7 @@ abstract contract TalosTestor is DSTestPlus {
         token0.approve(address(strategy), 0);
         token1.approve(address(strategy), 0);
 
-        strategy.redeem(strategy.balanceOf(address(this)), address(this), address(this));
+        strategy.redeem(strategy.balanceOf(address(this)), 0, 0, address(this), address(this));
     }
 
     function initializeTalos() internal virtual;
@@ -354,7 +354,7 @@ abstract contract TalosTestor is DSTestPlus {
         uint256 oldTotalSupply = strategy.totalSupply();
 
         hevm.prank(to);
-        (amount0, amount1) = strategy.redeem(shares, to, to);
+        (amount0, amount1) = strategy.redeem(shares, predictedAmount0, predictedAmount1, to, to);
         hevm.warp(block.timestamp + 100);
 
         assertEq(strategy.balanceOf(to), currentShare - shares, "Incorrect shares");

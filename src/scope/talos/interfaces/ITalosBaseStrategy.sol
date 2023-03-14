@@ -144,6 +144,8 @@ interface ITalosBaseStrategy is IERC721Receiver {
      * @notice Withdraws tokens in proportion to the Optimizer's holdings.
      * @dev Removes proportional amount of liquidity from Uniswap.
      * @param shares burned
+     * @param amount0Min Min amount of token0 to withdraw
+     * @param amount1Min Min amount of token1 to withdraw
      * @param receiver address that tokens should be transfered
      * @param owner of the shares to be burned
      * @return amount0 Amount of token0 sent to recipient
@@ -151,6 +153,8 @@ interface ITalosBaseStrategy is IERC721Receiver {
      */
     function redeem(
         uint256 shares,
+        uint256 amount0Min,
+        uint256 amount1Min,
         address receiver,
         address owner
     ) external returns (uint256 amount0, uint256 amount1);

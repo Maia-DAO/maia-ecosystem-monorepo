@@ -257,6 +257,8 @@ abstract contract TalosBaseStrategy is Ownable, ERC20, ReentrancyGuard, ITalosBa
     /// @inheritdoc ITalosBaseStrategy
     function redeem(
         uint256 shares,
+        uint256 amount0Min,
+        uint256 amount1Min,
         address receiver,
         address _owner
     )
@@ -283,37 +285,38 @@ abstract contract TalosBaseStrategy is Ownable, ERC20, ReentrancyGuard, ITalosBa
 
         beforeRedeem(_tokenId, receiver);
 
-        uint128 liquidityToDecrease = uint128((liquidity * shares) / totalSupply);
         INonfungiblePositionManager _nonfungiblePositionManager = nonfungiblePositionManager; // Saves an extra SLOAD
+        {
+            uint128 liquidityToDecrease = uint128((liquidity * shares) / totalSupply);
 
-        (amount0, amount1) = _nonfungiblePositionManager.decreaseLiquidity(
-            INonfungiblePositionManager.DecreaseLiquidityParams({
-                tokenId: tokenId,
-                liquidity: liquidityToDecrease,
-                amount0Min: 0,
-                amount1Min: 0,
-                deadline: block.timestamp
-            })
-        );
+            (amount0, amount1) = _nonfungiblePositionManager.decreaseLiquidity(
+                INonfungiblePositionManager.DecreaseLiquidityParams({
+                    tokenId: _tokenId,
+                    liquidity: liquidityToDecrease,
+                    amount0Min: amount0Min,
+                    amount1Min: amount1Min,
+                    deadline: block.timestamp
+                })
+            );
 
-        if (amount0 == 0 && amount1 == 0) revert AmountsAreZero();
+            if (amount0 == 0 && amount1 == 0) revert AmountsAreZero();
 
-        _burn(_owner, shares);
+            _burn(_owner, shares);
 
-        liquidity -= liquidityToDecrease;
-
+            liquidity -= liquidityToDecrease;
+        }
         emit Redeem(msg.sender, receiver, _owner, amount0, amount1, shares);
 
         (amount0, amount1) = _nonfungiblePositionManager.collect(
             INonfungiblePositionManager.CollectParams({
-                tokenId: tokenId,
+                tokenId: _tokenId,
                 recipient: receiver,
                 amount0Max: type(uint128).max,
                 amount1Max: type(uint128).max
             })
         );
 
-        afterRedeem(tokenId);
+        afterRedeem(_tokenId);
     }
 
     /*//////////////////////////////////////////////////////////////
