@@ -3,7 +3,7 @@ pragma solidity >=0.8.0;
 
 import { FlywheelCoreInstant } from "@rewards/FlywheelCoreInstant.sol";
 import { MultiRewardsDepot } from "@rewards/depots/MultiRewardsDepot.sol";
-import { FlywheelInstantRewards } from "@rewards/rewards/FlywheelInstantRewards.sol";
+import { FlywheelInstantRewards, ERC20 } from "@rewards/rewards/FlywheelInstantRewards.sol";
 
 import { BoostAggregator } from "./boost-aggregator/BoostAggregator.sol";
 import { TalosStrategySimpleRebalance } from "./strategies/TalosStrategySimpleRebalance.sol";
@@ -65,6 +65,20 @@ contract TalosStrategyStaked is TalosStrategySimpleRebalance, ITalosStrategyStak
     /*//////////////////////////////////////////////////////////////
                           INTERNAL HOOKS LOGIC
     //////////////////////////////////////////////////////////////*/
+
+    function transfer(address _to, uint256 _amount) public override returns (bool) {
+        flywheel.accrue(ERC20(address(this)), msg.sender, _to);
+        return super.transfer(_to, _amount);
+    }
+
+    function transferFrom(
+        address _from,
+        address _to,
+        uint256 _amount
+    ) public override returns (bool) {
+        flywheel.accrue(ERC20(address(this)), _from, _to);
+        return super.transferFrom(_from, _to, _amount);
+    }
 
     /// @notice Hook that is called before a position is redeemed.
     /// @dev Responsible for collecting and accruing user rewards
