@@ -171,6 +171,7 @@ abstract contract ERC20Boost is ERC20, Ownable, IERC20Boost {
     function decrementGaugeBoost(address gauge, uint256 boost) public {
         GaugeState storage gaugeState = getUserGaugeBoost[msg.sender][gauge];
         if (boost >= gaugeState.userGaugeBoost) {
+            _userGauges[msg.sender].remove(gauge);
             delete getUserGaugeBoost[msg.sender][gauge];
         } else {
             gaugeState.userGaugeBoost -= boost.toUint128();
