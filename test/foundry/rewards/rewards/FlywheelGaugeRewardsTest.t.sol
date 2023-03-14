@@ -41,7 +41,7 @@ contract FlywheelGaugeRewardsTest is DSTestPlus {
             address(rewardToken),
             address(this),
             gaugeToken,
-            IRewardsStream(address(rewardsStream))
+            IBaseV2Minter(address(rewardsStream))
         );
 
         hevm.mockCall(address(0), abi.encodeWithSignature("rewardToken()"), abi.encode(ERC20(address(0xDEAD))));

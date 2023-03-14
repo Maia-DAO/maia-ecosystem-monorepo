@@ -13,7 +13,7 @@ import { bHermes } from "@hermes/bHermes.sol";
 import { FlywheelCore, ERC20 } from "@rewards/FlywheelCoreStrategy.sol";
 
 import { UniswapV3Gauge } from "@gauges/UniswapV3Gauge.sol";
-import { FlywheelGaugeRewards, IRewardsStream } from "@rewards/rewards/FlywheelGaugeRewards.sol";
+import { FlywheelGaugeRewards } from "@rewards/rewards/FlywheelGaugeRewards.sol";
 
 contract UniswapV3GaugeTest is DSTestPlus {
     MockERC20 public strategy;
@@ -21,7 +21,6 @@ contract UniswapV3GaugeTest is DSTestPlus {
     MockERC20 public hermes;
     bHermes public bhermesToken;
     MockRewardsStream public rewardsStream;
-    FlywheelGaugeRewards public rewards;
     MultiRewardsDepot public depot;
     FlywheelBoosterGaugeWeight public booster;
 
@@ -46,16 +45,8 @@ contract UniswapV3GaugeTest is DSTestPlus {
 
         bhermesToken = new bHermes(hermes, address(this), 604800, 604800 / 7);
         bhermesToken.gaugeWeight().setMaxGauges(10);
-        // bhermesToken.mint(address(this), 100e18);
 
         booster = new FlywheelBoosterGaugeWeight(bhermesToken.gaugeWeight());
-
-        // rewards = new FlywheelGaugeRewards(
-        //     address(rewardToken),
-        //     address(this),
-        //     bhermesToken.gaugeWeight(),
-        //     IRewardsStream(address(rewardsStream))
-        // );
 
         hevm.mockCall(
             address(this),

@@ -46,8 +46,6 @@ interface IFlywheelGaugeRewards {
     /// @notice the gauge token for determining gauge allocations of the rewards stream
     function gaugeToken() external view returns (ERC20Gauges);
 
-    function minter() external view returns (IRewardsStream);
-
     /// @notice the rewards token for this flywheel rewards contract
     function rewardToken() external view returns (address);
 

@@ -5,7 +5,8 @@ import { ERC4626 } from "@ERC4626/ERC4626.sol";
 
 import { HERMES } from "@hermes/tokens/HERMES.sol";
 
-import { FlywheelGaugeRewards, IRewardsStream } from "@rewards/rewards/FlywheelGaugeRewards.sol";
+import { IRewardsStream } from "@rewards/interfaces/IFlywheelGaugeRewards.sol";
+import { FlywheelGaugeRewards } from "@rewards/rewards/FlywheelGaugeRewards.sol";
 
 /**
  * @title Base V2 Minter

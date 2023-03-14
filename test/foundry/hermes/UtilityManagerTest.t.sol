@@ -8,7 +8,7 @@ import {MockERC20} from "solmate/test/utils/mocks/MockERC20.sol";
 
 import "@rewards/base/FlywheelCore.sol";
 import "../mocks/MockRewardsStream.sol";
-import {FlywheelGaugeRewards, IRewardsStream} from "@rewards/rewards/FlywheelGaugeRewards.sol";
+import {FlywheelGaugeRewards, IBaseV2Minter} from "@rewards/rewards/FlywheelGaugeRewards.sol";
 
 import {MockBooster} from "../mocks/MockBooster.sol";
 

@@ -11,7 +11,7 @@ import {FlywheelCore, ERC20} from "@rewards/FlywheelCoreStrategy.sol";
 import {FlywheelBoosterGaugeWeight, bHermesGauges} from "@rewards/booster/FlywheelBoosterGaugeWeight.sol";
 import {FlywheelBribeRewards} from "@rewards/rewards/FlywheelBribeRewards.sol";
 
-import {FlywheelGaugeRewards, IRewardsStream} from "@rewards/rewards/FlywheelGaugeRewards.sol";
+import {FlywheelGaugeRewards, IBaseV2Minter} from "@rewards/rewards/FlywheelGaugeRewards.sol";
 
 contract BaseV2GaugeTest is DSTestPlus {
     MockERC20 public strategy;
@@ -51,7 +51,7 @@ contract BaseV2GaugeTest is DSTestPlus {
             address(hermes),
             address(this),
             gaugeToken,
-            IRewardsStream(address(rewardsStream))
+            IBaseV2Minter(address(rewardsStream))
         );
 
         hevm.mockCall(address(this), abi.encodeWithSignature("bHermesBoostToken()"), abi.encode(address(0)));

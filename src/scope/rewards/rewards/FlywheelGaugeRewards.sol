@@ -10,7 +10,9 @@ import { ERC20 } from "solmate/tokens/ERC20.sol";
 
 import { ERC20Gauges } from "@ERC20/ERC20Gauges.sol";
 
-import { IFlywheelGaugeRewards, IRewardsStream } from "../interfaces/IFlywheelGaugeRewards.sol";
+import { IFlywheelGaugeRewards } from "../interfaces/IFlywheelGaugeRewards.sol";
+
+import { IBaseV2Minter } from "@hermes/interfaces/IBaseV2Minter.sol";
 
 /// @title Flywheel Gauge Reward Stream
 contract FlywheelGaugeRewards is Ownable, IFlywheelGaugeRewards {
@@ -24,8 +26,8 @@ contract FlywheelGaugeRewards is Ownable, IFlywheelGaugeRewards {
     /// @inheritdoc IFlywheelGaugeRewards
     ERC20Gauges public immutable override gaugeToken;
 
-    /// @inheritdoc IFlywheelGaugeRewards
-    IRewardsStream public immutable override minter;
+    /// @notice the minter contract, is a rewardsStream to collect rewards from
+    IBaseV2Minter public immutable minter;
 
     /// @inheritdoc IFlywheelGaugeRewards
     address public immutable override rewardToken;
@@ -52,7 +54,7 @@ contract FlywheelGaugeRewards is Ownable, IFlywheelGaugeRewards {
         address _rewardToken,
         address _owner,
         ERC20Gauges _gaugeToken,
-        IRewardsStream _minter
+        IBaseV2Minter _minter
     ) {
         _initializeOwner(_owner);
         rewardToken = _rewardToken;
@@ -73,10 +75,10 @@ contract FlywheelGaugeRewards is Ownable, IFlywheelGaugeRewards {
 
     /// @inheritdoc IFlywheelGaugeRewards
     function queueRewardsForCycle() external returns (uint256 totalQueuedForCycle) {
-        /// @dev low level call to update minter cycle and queue rewars if needed.
+        /// @dev Update minter cycle and queue rewars if needed.
         /// This will make this call fail if it is a new epoch, because the minter calls this function, the first call would fail with "CycleError()".
         /// Should be called through Minter to kickoff new epoch.
-        address(minter).call("");
+        minter.updatePeriod();
 
         // next cycle is always the next even divisor of the cycle length above current block timestamp.
         uint32 currentCycle = (block.timestamp.toUint32() / gaugeCycleLength) * gaugeCycleLength;
@@ -108,10 +110,10 @@ contract FlywheelGaugeRewards is Ownable, IFlywheelGaugeRewards {
 
     /// @inheritdoc IFlywheelGaugeRewards
     function queueRewardsForCyclePaginated(uint256 numRewards) external {
-        /// @dev low level call to update minter cycle and queue rewars if needed.
+        /// @dev Update minter cycle and queue rewars if needed.
         /// This will make this call fail if it is a new epoch, because the minter calls this function, the first call would fail with "CycleError()".
         /// Should be called through Minter to kickoff new epoch.
-        address(minter).call("");
+        minter.updatePeriod();
 
         // next cycle is always the next even divisor of the cycle length above current block timestamp.
         uint32 currentCycle = (block.timestamp.toUint32() / gaugeCycleLength) * gaugeCycleLength;
@@ -209,8 +211,8 @@ contract FlywheelGaugeRewards is Ownable, IFlywheelGaugeRewards {
 
     /// @inheritdoc IFlywheelGaugeRewards
     function getAccruedRewards() external returns (uint256 accruedRewards) {
-        /// @dev low level call to update minter cycle and queue rewars if needed.
-        address(minter).call("");
+        /// @dev Update minter cycle and queue rewars if needed.
+        minter.updatePeriod();
 
         QueuedRewards memory queuedRewards = gaugeQueuedRewards[ERC20(msg.sender)];
 
