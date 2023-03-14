@@ -15,6 +15,22 @@ contract OptimizerFactory {
         return optimizers;
     }
 
+    /**
+     * @notice Construct a new Optimizer Factory contract.
+     */
+    constructor() {
+        optimizers.push(
+            new TalosOptimizer(
+                0,
+                0,
+                0,
+                0,
+                0,
+                address(0)
+            )
+        );
+    }
+
     /*//////////////////////////////////////////////////////////////
                             CREATE LOGIC
     //////////////////////////////////////////////////////////////*/
