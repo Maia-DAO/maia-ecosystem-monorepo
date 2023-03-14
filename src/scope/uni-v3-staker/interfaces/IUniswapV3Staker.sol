@@ -340,6 +340,7 @@ interface IUniswapV3Staker is IERC721Receiver {
     error TokenNotUniswapV3NFT();
 
     error TokenNotStaked();
+    error TokenNotDeposited();
 
     error InvalidRecipient();
     error TokenStakedError();

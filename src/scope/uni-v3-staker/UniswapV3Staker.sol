@@ -499,6 +499,8 @@ contract UniswapV3Staker is IUniswapV3Staker, Multicallable {
 
         // If user not attached to gauge, attach
         address tokenOwner = deposits[tokenId].owner;
+        if (tokenOwner == address(0)) revert TokenNotDeposited();
+
         if (userAttachements[tokenOwner][pool] == 0) {
             userAttachements[tokenOwner][pool] = tokenId;
             gauges[pool].attachUser(tokenOwner);
