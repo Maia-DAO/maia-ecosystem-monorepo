@@ -126,12 +126,13 @@ contract BaseV2Minter is Ownable, IBaseV2Minter {
         if (block.timestamp >= _period + week && initializer == address(0)) {
             _period = (block.timestamp / week) * week;
             activePeriod = _period;
-            weekly = weeklyEmission();
+            uint256 newWeeklyEmission = weeklyEmission();
+            weekly += newWeeklyEmission;
             uint256 _circulatingSupply = circulatingSupply();
 
-            uint256 _growth = calculateGrowth(weekly);
-            uint256 _required = _growth + weekly;
-            /// @dev share of weekly emissions sent to DAO.
+            uint256 _growth = calculateGrowth(newWeeklyEmission);
+            uint256 _required = _growth + newWeeklyEmission;
+            /// @dev share of newWeeklyEmission emissions sent to DAO.
             uint256 share = (_required * daoShare) / base;
             _required += share;
             uint256 _balanceOf = underlying.balanceOf(address(this));
@@ -143,7 +144,7 @@ contract BaseV2Minter is Ownable, IBaseV2Minter {
 
             if (dao != address(0)) underlying.safeTransfer(dao, share);
 
-            emit Mint(msg.sender, weekly, _circulatingSupply, _growth, share);
+            emit Mint(msg.sender, newWeeklyEmission, _circulatingSupply, _growth, share);
 
             /// @dev queue rewards for the cycle, anyone can call if fails
             ///      queueRewardsForCycle will call this function but won't enter
