@@ -316,17 +316,22 @@ abstract contract ERC20MultiVotes is ERC20, Ownable, IERC20MultiVotes {
             address delegatee = delegateList[i];
             uint256 delegateVotes = _delegatesVotesCount[user][delegatee];
             // Minimum of votes delegated to delegatee and unused votes of delegatee
-            delegateVotes = FixedPointMathLib.min(delegateVotes, userUnusedVotes(delegatee));
-            // Skip if delegateVotes is zero
-            if (delegateVotes != 0) {
-                totalFreed += delegateVotes;
+            uint256 votesToFree = FixedPointMathLib.min(delegateVotes, userUnusedVotes(delegatee));
+            // Skip if votesToFree is zero
+            if (votesToFree != 0) {
+                totalFreed += votesToFree;
 
-                require(_delegates[user].remove(delegatee)); // Remove from set. Should never fail.
+                if (delegateVotes == votesToFree) {
+                    // If all votes are freed, remove delegatee from list
+                    require(_delegates[user].remove(delegatee)); // Remove from set. Should never fail.
+                    _delegatesVotesCount[user][delegatee] = 0;
+                } else {
+                    // If not all votes are freed, update the votes count
+                    _delegatesVotesCount[user][delegatee] -= votesToFree;
+                }
 
-                _delegatesVotesCount[user][delegatee] = 0;
-
-                _writeCheckpoint(delegatee, _subtract, delegateVotes);
-                emit Undelegation(user, delegatee, delegateVotes);
+                _writeCheckpoint(delegatee, _subtract, votesToFree);
+                emit Undelegation(user, delegatee, votesToFree);
             }
         }
 
