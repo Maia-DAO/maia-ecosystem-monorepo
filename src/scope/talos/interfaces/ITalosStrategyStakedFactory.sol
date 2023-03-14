@@ -29,4 +29,11 @@ interface ITalosStrategyStakedFactory {
     ///         to its respective users.
     /// @return flywheel
     function rewards() external view returns (FlywheelInstantRewards);
+
+    /*///////////////////////////////////////////////////////////////
+                                ERRORS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Throws when boostAggregator has an invalid nonfungiblePositionManager
+    error InvalidNFTManager();
 }

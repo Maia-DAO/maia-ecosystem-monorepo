@@ -86,6 +86,9 @@ contract TalosStrategyStakedFactory is TalosBaseStrategyFactory, ITalosStrategyS
         bytes memory data
     ) internal override returns (TalosBaseStrategy strategy) {
         BoostAggregator boostAggregator = abi.decode(data, (BoostAggregator));
+        if (boostAggregator.nonfungiblePositionManager() != nonfungiblePositionManager)
+            revert InvalidNFTManager();
+
         strategy = DeployStaked.createTalosV3Strategy(
             pool,
             optimizer,
