@@ -125,18 +125,18 @@ contract BoostAggregator is Ownable, IERC721Receiver, IBoostAggregator {
         uint256 pendingRewards = uniswapV3Staker.tokenIdRewards(tokenId) - tokenIdRewards[tokenId];
 
         if (pendingRewards > DIVISIONER) {
-            uint256 userRewards = (pendingRewards * protocolFee) / DIVISIONER;
-
+            uint256 newProtocolRewards = (pendingRewards * protocolFee) / DIVISIONER;
             /// @dev protocol rewards stay in stake contract
-            protocolRewards += pendingRewards - userRewards;
+            protocolRewards += newProtocolRewards;
+            pendingRewards -= newProtocolRewards;
 
             address rewardsDepot = userToRewardsDepot[user];
             if (rewardsDepot != address(0)) {
                 // claim rewards to user's rewardsDepot
-                uniswapV3Staker.claimReward(rewardsDepot, userRewards);
+                uniswapV3Staker.claimReward(rewardsDepot, pendingRewards);
             } else {
                 // claim rewards to user
-                uniswapV3Staker.claimReward(user, userRewards);
+                uniswapV3Staker.claimReward(user, pendingRewards);
             }
         }
 
