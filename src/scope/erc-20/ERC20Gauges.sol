@@ -4,6 +4,8 @@ pragma solidity ^0.8.0;
 
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 
+import { ReentrancyGuard } from "solmate/utils/ReentrancyGuard.sol";
+
 import { EnumerableSet } from "@lib/EnumerableSet.sol";
 
 import { IBaseV2Gauge } from "@gauges/interfaces/IBaseV2Gauge.sol";
@@ -14,7 +16,7 @@ import { Errors } from "./interfaces/Errors.sol";
 import { IERC20Gauges } from "./interfaces/IERC20Gauges.sol";
 
 /// @title  An ERC20 with an embedded "Gauge" style vote with liquid weights
-abstract contract ERC20Gauges is ERC20MultiVotes, IERC20Gauges {
+abstract contract ERC20Gauges is ERC20MultiVotes, ReentrancyGuard, IERC20Gauges {
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeCastLib for *;
 
@@ -200,6 +202,7 @@ abstract contract ERC20Gauges is ERC20MultiVotes, IERC20Gauges {
     /// @inheritdoc IERC20Gauges
     function incrementGauge(address gauge, uint112 weight)
         external
+        nonReentrant
         returns (uint112 newUserWeight)
     {
         uint32 currentCycle = _getGaugeCycleEnd();
@@ -250,6 +253,7 @@ abstract contract ERC20Gauges is ERC20MultiVotes, IERC20Gauges {
     /// @inheritdoc IERC20Gauges
     function incrementGauges(address[] calldata gaugeList, uint112[] calldata weights)
         external
+        nonReentrant
         returns (uint256 newUserWeight)
     {
         uint256 size = gaugeList.length;
@@ -277,6 +281,7 @@ abstract contract ERC20Gauges is ERC20MultiVotes, IERC20Gauges {
     /// @inheritdoc IERC20Gauges
     function decrementGauge(address gauge, uint112 weight)
         external
+        nonReentrant
         returns (uint112 newUserWeight)
     {
         uint32 currentCycle = _getGaugeCycleEnd();
@@ -321,6 +326,7 @@ abstract contract ERC20Gauges is ERC20MultiVotes, IERC20Gauges {
     /// @inheritdoc IERC20Gauges
     function decrementGauges(address[] calldata gaugeList, uint112[] calldata weights)
         external
+        nonReentrant
         returns (uint112 newUserWeight)
     {
         uint256 size = gaugeList.length;
@@ -479,7 +485,7 @@ abstract contract ERC20Gauges is ERC20MultiVotes, IERC20Gauges {
 
     /// a greedy algorithm for freeing weight before a token burn/transfer
     /// frees up entire gauges, so likely will free more than `weight`
-    function _decrementWeightUntilFree(address user, uint256 weight) internal {
+    function _decrementWeightUntilFree(address user, uint256 weight) internal nonReentrant {
         uint256 userFreeWeight = freeVotes(user) + userUnusedVotes(user);
 
         // early return if already free
