@@ -7,6 +7,7 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { ERC20 } from "solmate/tokens/ERC20.sol";
 
 /// @notice Minimal Deposit Only ERC4626 tokenized Vault implementation.
+/// @author Solmate (https://github.com/transmissions11/solmate/blob/main/src/mixins/ERC4626.sol)
 abstract contract ERC4626DepositOnly is ERC20 {
     using SafeTransferLib for address;
     using FixedPointMathLib for uint256;

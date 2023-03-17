@@ -6,6 +6,8 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { ERC20 } from "solmate/tokens/ERC20.sol";
 
+/// @notice Minimal ERC4626 tokenized Vault implementation.
+/// @author Solmate (https://github.com/transmissions11/solmate/blob/main/src/mixins/ERC4626.sol)
 abstract contract ERC4626MultiToken is ERC20 {
     using SafeTransferLib for address;
     using FixedPointMathLib for uint256;
@@ -56,6 +58,8 @@ abstract contract ERC4626MultiToken is ERC20 {
         }
         totalWeights = _totalWeights;
     }
+
+    // TODO: VERIFY USERS ARE DEPOSITING/WITHDRAWING ALL ASSETS
 
     function receiveAssets(uint256[] memory assetsAmounts) private {
         uint256 length = assetsAmounts.length;
