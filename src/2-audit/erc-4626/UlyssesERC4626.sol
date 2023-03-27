@@ -1,83 +1,67 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0;
 
-import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
-import { ERC20 } from "solmate/tokens/ERC20.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
+import {ReentrancyGuard} from "solmate/utils/ReentrancyGuard.sol";
+
+import {IUlyssesERC4626} from "./interfaces/IUlyssesERC4626.sol";
 
 /// @notice Minimal ERC4626 tokenized Vault implementation.
 /// @author Solmate (https://github.com/transmissions11/solmate/blob/main/src/mixins/ERC4626.sol)
-abstract contract UlyssesERC4626 is ERC20 {
+abstract contract UlyssesERC4626 is ERC20, ReentrancyGuard, IUlyssesERC4626 {
     using SafeTransferLib for address;
     using FixedPointMathLib for uint256;
-
-    /*//////////////////////////////////////////////////////////////
-                                 EVENTS
-    //////////////////////////////////////////////////////////////*/
-
-    event Deposit(address indexed caller, address indexed owner, uint256 assets, uint256 shares);
-
-    event Withdraw(
-        address indexed caller,
-        address indexed receiver,
-        address indexed owner,
-        uint256 assets,
-        uint256 shares
-    );
 
     /*//////////////////////////////////////////////////////////////
                                IMMUTABLES
     //////////////////////////////////////////////////////////////*/
 
-    ERC20 public immutable asset;
+    address public immutable asset;
 
-    constructor(
-        ERC20 _asset,
-        string memory _name,
-        string memory _symbol
-    ) ERC20(_name, _symbol, _asset.decimals()) {
+    constructor(address _asset, string memory _name, string memory _symbol) ERC20(_name, _symbol, 18) {
         asset = _asset;
+
+        if (ERC20(_asset).decimals() != 18) revert InvalidAssetDecimals();
     }
 
     /*//////////////////////////////////////////////////////////////
                         DEPOSIT/WITHDRAWAL LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    function deposit(uint256 assets, address receiver) public virtual returns (uint256 shares) {
-        // Check for rounding error since we round down in previewDeposit.
-        require((shares = previewDeposit(assets)) != 0, "ZERO_SHARES");
-
+    function deposit(uint256 assets, address receiver) public virtual nonReentrant returns (uint256 shares) {
         // Need to transfer before minting or ERC777s could reenter.
-        address(asset).safeTransferFrom(msg.sender, address(this), assets);
+        asset.safeTransferFrom(msg.sender, address(this), assets);
 
         shares = beforeDeposit(assets);
+
+        require(shares != 0, "ZERO_SHARES");
 
         _mint(receiver, shares);
 
         emit Deposit(msg.sender, receiver, assets, shares);
     }
 
-    function mint(uint256 shares, address receiver) public virtual returns (uint256 assets) {
-        assets = previewMint(shares); // No need to check for rounding error, previewMint rounds up.
+    function mint(uint256 shares, address receiver) public virtual nonReentrant returns (uint256 assets) {
+        assets = beforeMint(shares); // No need to check for rounding error, previewMint rounds up.
 
-        // Need to transfer before minting or ERC777s could reenter.
-        address(asset).safeTransferFrom(msg.sender, address(this), assets);
+        require(assets != 0, "ZERO_ASSETS");
 
-        shares = beforeDeposit(assets);
+        asset.safeTransferFrom(msg.sender, address(this), assets);
 
         _mint(receiver, shares);
 
         emit Deposit(msg.sender, receiver, assets, shares);
     }
 
-    function withdraw(
-        uint256 assets,
-        address receiver,
-        address owner
-    ) public virtual returns (uint256 shares) {
-        shares = previewWithdraw(assets); // No need to check for rounding error, previewWithdraw rounds up.
-
+    function redeem(uint256 shares, address receiver, address owner)
+        public
+        virtual
+        nonReentrant
+        returns (uint256 assets)
+    {
         if (msg.sender != owner) {
             uint256 allowed = allowance[owner][msg.sender]; // Saves gas for limited approvals.
 
@@ -86,34 +70,13 @@ abstract contract UlyssesERC4626 is ERC20 {
 
         _burn(owner, shares);
 
-        assets = afterWithdraw(shares);
+        assets = afterRedeem(shares);
+
+        require(assets != 0, "ZERO_ASSETS");
 
         emit Withdraw(msg.sender, receiver, owner, assets, shares);
 
-        address(asset).safeTransfer(receiver, assets);
-    }
-
-    function redeem(
-        uint256 shares,
-        address receiver,
-        address owner
-    ) public virtual returns (uint256 assets) {
-        if (msg.sender != owner) {
-            uint256 allowed = allowance[owner][msg.sender]; // Saves gas for limited approvals.
-
-            if (allowed != type(uint256).max) allowance[owner][msg.sender] = allowed - shares;
-        }
-
-        // Check for rounding error since we round down in previewRedeem.
-        require((assets = previewRedeem(shares)) != 0, "ZERO_ASSETS");
-
-        _burn(owner, shares);
-
-        assets = afterWithdraw(shares);
-
-        emit Withdraw(msg.sender, receiver, owner, assets, shares);
-
-        address(asset).safeTransfer(receiver, assets);
+        asset.safeTransfer(receiver, assets);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -138,10 +101,6 @@ abstract contract UlyssesERC4626 is ERC20 {
         return shares;
     }
 
-    function previewWithdraw(uint256 assets) public view virtual returns (uint256) {
-        return assets;
-    }
-
     function previewRedeem(uint256 shares) public view virtual returns (uint256) {
         return shares;
     }
@@ -158,10 +117,6 @@ abstract contract UlyssesERC4626 is ERC20 {
         return type(uint256).max;
     }
 
-    function maxWithdraw(address owner) public view virtual returns (uint256) {
-        return balanceOf[owner];
-    }
-
     function maxRedeem(address owner) public view virtual returns (uint256) {
         return balanceOf[owner];
     }
@@ -174,5 +129,8 @@ abstract contract UlyssesERC4626 is ERC20 {
     function beforeDeposit(uint256 assets) internal virtual returns (uint256 shares);
 
     /// @dev Should not do any external calls to prevent reentrancy.
-    function afterWithdraw(uint256 shares) internal virtual returns (uint256 assets);
+    function beforeMint(uint256 shares) internal virtual returns (uint256 assets);
+
+    /// @dev Should not do any external calls to prevent reentrancy.
+    function afterRedeem(uint256 shares) internal virtual returns (uint256 assets);
 }
