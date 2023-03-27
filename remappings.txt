@@ -17,6 +17,6 @@ solady/=lib/solady/src/
 @rlp/=src/1-audit/rlp-encoding/
 @ERC20/=src/1-audit/erc-20/
 
-@omni/=src/2-audit/omni-chain/
-@ulysses/=src/2-audit/ulysses/
+@omni/=src/2-audit/ulysses-omnichain/
+@ulysses-amm/=src/2-audit/ulysses-amm/
 @ERC4626/=src/2-audit/erc-4626/

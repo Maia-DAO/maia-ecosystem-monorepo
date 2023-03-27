@@ -3,4 +3,17 @@ src = 'src'
 out = 'out'
 libs = ['lib']
 
+# TEST
+optimizer = true
+# optimizer-runs = 10_000_000
+
+# DEPLOY
+# optimizer-runs = 10_000_000
+# via_ir = true
+
+[invariant]
+# fail_on_revert = true
+runs = 50 # default = 256
+depth = 75 # default = 15
+
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config
