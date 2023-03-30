@@ -130,6 +130,18 @@ interface IBranchPort {
     function toggleBridgeAgent(address _bridgeAgent) external;
 
     /**
+     * @notice Adds a new strategy token.
+     * @param _token address of the token to add to the Strategy Tokens
+     */
+    function addStrategyToken(address _token, uint256 _minimumReservesRatio) external;
+
+    /**
+     * @notice Reverts the toggle on the given strategy token. If it's active, it will de-activate it and vice-versa.
+     * @param _token address of the token to add to the Strategy Tokens
+     */
+    function toggleStrategyToken(address _token) external;
+
+    /**
      * @notice Adds a new Port strategy to the given port
      * @param _portStrategy address of the bridge agent factory to add to the Port
      */
@@ -160,6 +172,7 @@ interface IBranchPort {
                             ERRORS
     //////////////////////////////////////////////////////////////*/
 
+    error InvalidMinimumReservesRatio();
     error InsufficientReserves();
     error UnrecognizedCore();
     error UnrecognizedBridgeAgent();

@@ -124,11 +124,11 @@ contract BranchPort is Ownable, IBranchPort {
     }
 
     /**
-     * @notice returns excess reserves not backing tokens
+     * @notice returns excess reserves
      *     @return uint
      */
     function _minimumReserves(uint256 _currBalance, address _token) internal view returns (uint256) {
-        return _currBalance + (getStrategyTokenDebt[_token] * getMinimumTokenReserveRatio[_token]) / DIVISIONER;
+        return ((_currBalance + getStrategyTokenDebt[_token]) * getMinimumTokenReserveRatio[_token]) / DIVISIONER;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -299,6 +299,17 @@ contract BranchPort is Ownable, IBranchPort {
     /// @inheritdoc IBranchPort
     function toggleBridgeAgent(address _bridgeAgent) external requiresBridgeAgentFactory {
         isBridgeAgent[_bridgeAgent] = !isBridgeAgent[_bridgeAgent];
+    }
+
+    function addStrategyToken(address _token, uint256 _minimumReservesRatio) external onlyOwner {
+        if (_minimumReservesRatio >= DIVISIONER) revert InvalidMinimumReservesRatio();
+        strategyTokens.push(_token);
+        strategyTokensLenght++;
+        getMinimumTokenReserveRatio[_token] = _minimumReservesRatio;
+    }
+
+    function toggleStrategyToken(address _token) external onlyOwner {
+        isStrategyToken[_token] = !isStrategyToken[_token];
     }
 
     /// @inheritdoc IBranchPort
