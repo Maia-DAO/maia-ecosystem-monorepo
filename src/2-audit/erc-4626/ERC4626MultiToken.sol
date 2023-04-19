@@ -28,6 +28,10 @@ abstract contract ERC4626MultiToken is ERC20, ReentrancyGuard, IERC4626MultiToke
 
     uint256 public totalWeights;
 
+    function getAssets() external view returns (address[] memory) {
+        return assets;
+    }
+
     constructor(address[] memory _assets, uint256[] memory _weights, string memory _name, string memory _symbol)
         ERC20(_name, _symbol, 18)
     {
