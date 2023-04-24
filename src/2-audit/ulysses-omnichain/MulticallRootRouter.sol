@@ -109,7 +109,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
         uint24 toChain
     ) internal virtual {
         //Approve Root Port to spend/send output hTokens.
-        ERC20hTokenRoot(outputToken).approve(localPortAddress, amountOut);
+        ERC20hTokenRoot(outputToken).approve(bridgeAgentAddress, amountOut);
 
         //Move output hTokens from Root to Branch and call 'clearToken'.
         IBridgeAgent(bridgeAgentAddress).callOutAndBridge{value: msg.value}(
@@ -135,7 +135,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
         //For each output token
         for (uint256 i = 0; i < outputTokens.length;) {
             //Approve Root Port to spend output hTokens.
-            ERC20hTokenRoot(outputTokens[i]).approve(localPortAddress, amountsOut[i]);
+            ERC20hTokenRoot(outputTokens[i]).approve(bridgeAgentAddress, amountsOut[i]);
             unchecked {
                 ++i;
             }

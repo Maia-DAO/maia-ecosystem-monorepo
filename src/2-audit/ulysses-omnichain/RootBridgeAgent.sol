@@ -73,6 +73,8 @@ contract RootBridgeAgent is IRootBridgeAgent {
 
     uint8 internal constant PARAMS_TKN_SET_SIZE = 104;
 
+    uint8 internal constant PARAMS_TKN_SET_SIZE_MULTIPLE = 128;
+
     uint8 internal constant PARAMS_GAS_IN = 32;
 
     uint8 internal constant PARAMS_GAS_OUT = 16;
@@ -266,13 +268,12 @@ contract RootBridgeAgent is IRootBridgeAgent {
         uint256[] memory _deposits,
         uint24 _toChain
     ) external payable requiresRouter {
-        address[] memory hTokens;
-        address[] memory tokens;
+        address[] memory hTokens = new address[](_globalAddresses.length);
+        address[] memory tokens = new address[](_globalAddresses.length);
         for (uint256 i = 0; i < _globalAddresses.length;) {
             //Populate Addresses for Settlement
             hTokens[i] = IPort(localPortAddress).getLocalTokenFromGlobal(_globalAddresses[i], _toChain);
             tokens[i] = IPort(localPortAddress).getUnderlyingTokenFromLocal(hTokens[i], _toChain);
-
             _updateStateOnBridgeOut(
                 msg.sender, _globalAddresses[i], hTokens[i], tokens[i], _amounts[i], _deposits[i], _toChain
             );
@@ -924,14 +925,20 @@ contract RootBridgeAgent is IRootBridgeAgent {
         } else if (flag == 0x03) {
             DepositMultipleParams memory dParams = _bridgeInMultiple(
                 localRouterAddress,
-                data[PARAMS_START:PARAMS_END_OFFSET + uint8(bytes1(data[PARAMS_START])) * PARAMS_TKN_SET_SIZE],
+                data[
+                    PARAMS_START:
+                        PARAMS_END_OFFSET + uint16(uint8(bytes1(data[PARAMS_START]))) * PARAMS_TKN_SET_SIZE_MULTIPLE
+                ],
                 fromChainId
             );
 
             IRouter(localRouterAddress).anyExecuteDepositMultiple(
-                bytes1(data[PARAMS_END_OFFSET + uint8(bytes1(data[PARAMS_START])) * PARAMS_TKN_SET_SIZE]),
+                bytes1(
+                    data[PARAMS_END_OFFSET + uint16(uint8(bytes1(data[PARAMS_START]))) * PARAMS_TKN_SET_SIZE_MULTIPLE]
+                ),
                 data[
-                    PARAMS_START + PARAMS_END_OFFSET + uint8(bytes1(data[PARAMS_START])) * PARAMS_TKN_SET_SIZE:
+                    PARAMS_START + PARAMS_END_OFFSET
+                        + uint16(uint8(bytes1(data[PARAMS_START]))) * PARAMS_TKN_SET_SIZE_MULTIPLE:
                         data.length - PARAMS_GAS_IN
                 ],
                 dParams,
@@ -947,7 +954,7 @@ contract RootBridgeAgent is IRootBridgeAgent {
             IPort(localPortAddress).toggleVirtualAccountApproved(userAccount, localRouterAddress);
 
             IRouter(localRouterAddress).anyExecuteSigned(
-                data[24], data[25:data.length - PARAMS_GAS_IN], address(userAccount), fromChainId
+                data[25], data[26:data.length - PARAMS_GAS_IN], address(userAccount), fromChainId
             );
 
             IPort(localPortAddress).toggleVirtualAccountApproved(userAccount, localRouterAddress);
@@ -970,16 +977,13 @@ contract RootBridgeAgent is IRootBridgeAgent {
             );
 
             _bridgeIn(address(userAccount), dParams, fromChainId);
+            IPort(localPortAddress).toggleVirtualAccountApproved(userAccount, localRouterAddress);
 
-            if (data.length > 132) {
-                IPort(localPortAddress).toggleVirtualAccountApproved(userAccount, localRouterAddress);
+            IRouter(localRouterAddress).anyExecuteSignedDepositSingle(
+                data[132], data[133:length - PARAMS_GAS_IN], dParams, address(userAccount), fromChainId
+            );
 
-                IRouter(localRouterAddress).anyExecuteSignedDepositSingle(
-                    data[132], data[133:length - PARAMS_GAS_IN], dParams, address(userAccount), fromChainId
-                );
-
-                IPort(localPortAddress).toggleVirtualAccountApproved(userAccount, localRouterAddress);
-            }
+            IPort(localPortAddress).toggleVirtualAccountApproved(userAccount, localRouterAddress);
 
             //DEPOSIT FLAG: 6 (Call with multiple asset Deposit + msg.sender)
         } else if (flag == 0x06) {
@@ -991,12 +995,12 @@ contract RootBridgeAgent is IRootBridgeAgent {
                 address(userAccount),
                 data[
                     PARAMS_START_SIGNED:
-                        PARAMS_END_SIGNED_OFFSET + uint8(bytes1(data[PARAMS_START_SIGNED])) * PARAMS_TKN_SET_SIZE
+                        PARAMS_END_SIGNED_OFFSET
+                            + uint16(uint8(bytes1(data[PARAMS_START_SIGNED]))) * PARAMS_TKN_SET_SIZE_MULTIPLE
                 ],
                 fromChainId
             );
 
-            if (data.length > PARAMS_END_SIGNED_OFFSET + uint8(bytes1(data[PARAMS_START_SIGNED])) * PARAMS_TKN_SET_SIZE)
             {
                 uint256 length = data.length;
                 uint8 numOfAssets = uint8(bytes1(data[PARAMS_START_SIGNED]));
@@ -1004,9 +1008,9 @@ contract RootBridgeAgent is IRootBridgeAgent {
                 IPort(localPortAddress).toggleVirtualAccountApproved(userAccount, localRouterAddress);
 
                 IRouter(localRouterAddress).anyExecuteSignedDepositMultiple(
-                    data[PARAMS_END_SIGNED_OFFSET + numOfAssets * PARAMS_TKN_SET_SIZE],
+                    data[PARAMS_END_SIGNED_OFFSET + uint16(numOfAssets) * PARAMS_TKN_SET_SIZE_MULTIPLE],
                     data[
-                        PARAMS_START + PARAMS_END_SIGNED_OFFSET + numOfAssets * PARAMS_TKN_SET_SIZE:
+                        PARAMS_START + PARAMS_END_SIGNED_OFFSET + uint16(numOfAssets) * PARAMS_TKN_SET_SIZE_MULTIPLE:
                             length - PARAMS_GAS_IN
                     ],
                     dParams,
