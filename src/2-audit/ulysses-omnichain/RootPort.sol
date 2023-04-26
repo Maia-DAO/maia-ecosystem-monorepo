@@ -311,7 +311,7 @@ contract RootPort is Ownable, IRootPort {
      * @param _amount amount of hTokens to mint.
      * @param _fromChain The chainId of the chain where the token is deployed.
      */
-    function mint(address _to, address _hToken, uint256 _amount, uint24 _fromChain) internal requiresBridgeAgent {
+    function mint(address _to, address _hToken, uint256 _amount, uint24 _fromChain) internal {
         ERC20hTokenRoot(_hToken).mint(_to, _amount, _fromChain);
     }
 
@@ -326,7 +326,7 @@ contract RootPort is Ownable, IRootPort {
         requiresBridgeAgent
     {
         if (_amount - _deposit > 0) _hToken.safeTransfer(_recipient, _amount - _deposit);
-        if (_deposit > 0) mint(_recipient, _hToken, _amount, _fromChainId);
+        if (_deposit > 0) mint(_recipient, _hToken, _deposit, _fromChainId);
     }
 
     /// @inheritdoc IRootPort
@@ -348,7 +348,8 @@ contract RootPort is Ownable, IRootPort {
 
     /// @inheritdoc IRootPort
     function mintToLocalBranch(address _recipient, address _hToken, uint256 _amount) external requiresLocalBranchPort {
-        mint(_recipient, _hToken, _amount, localChainId);
+        // mint(_recipient, _hToken, _amount, localChainId);
+        _hToken.safeTransfer(_recipient, _amount);
     }
 
     /// @inheritdoc IRootPort

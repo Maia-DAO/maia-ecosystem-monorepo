@@ -746,7 +746,7 @@ contract RootBridgeAgent is IRootBridgeAgent {
     function _manageGasOut(uint24 _toChain) internal requiresFallbackGas returns (uint128) {
         uint256 amountOut;
         address gasToken;
-        if (_toChain == localChainId) return uint128(0);
+        if (_toChain == localChainId) return uint128(userFeeInfo.depositedGas);
         if (initialGas > 0) {
             (amountOut, gasToken) = _gasSwapOut(userFeeInfo.gasToBridgeOut, _toChain);
         } else {
