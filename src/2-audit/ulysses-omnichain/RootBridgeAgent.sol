@@ -141,7 +141,7 @@ contract RootBridgeAgent is IRootBridgeAgent {
 
     uint256 internal constant MIN_EXECUTION_OVERHEAD = 250000;
     uint256 internal constant MIN_FALLBACK_OVERHEAD = 50000;
-    uint256 internal constant MIN_RETRY_OVERHEAD = 50000;
+    uint256 internal constant MIN_PAY_FALLBACK_GAS_OVERHEAD = 10000;
 
     uint256 public initialGas;
     uint256 public accumulatedFees;
@@ -610,7 +610,7 @@ contract RootBridgeAgent is IRootBridgeAgent {
         require(settlement.status == SettlementStatus.Pending);
 
         //Update Settlement
-        settlement.status = SettlementStatus.Success;
+        getSettlement[_settlementNonce].status = SettlementStatus.Success;
 
         //Slice last 4 bytes calldata
         uint128 prevGasToBridgeOut =
@@ -828,7 +828,7 @@ contract RootBridgeAgent is IRootBridgeAgent {
     //   */
     function _payFallbackGas(uint32 _settlementNonce, uint256 _initialGas, uint256 _feesOwed) internal virtual {
         //Get Branch Environment Execution Cost
-        uint256 minExecCost = _feesOwed + tx.gasprice * (MIN_FALLBACK_OVERHEAD + _initialGas - gasleft());
+        uint256 minExecCost = _feesOwed + tx.gasprice * (MIN_PAY_FALLBACK_GAS_OVERHEAD + _initialGas - gasleft());
 
         //Update user deposit reverts if not enough gas => user must boost deposit with gas
         getSettlement[_settlementNonce].gasOwed += minExecCost.toUint128();

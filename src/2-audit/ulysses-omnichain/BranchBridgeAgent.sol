@@ -71,6 +71,8 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
 
     uint256 internal constant MIN_FALLBACK_OVERHEAD = 150000;
 
+    uint256 internal constant MIN_PAY_FALLBACK_GAS_OVERHEAD = 75000;
+
     uint128 public accumulatedFees;
 
     uint128 public remoteCallDepositedGas;
@@ -838,7 +840,7 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
 
     function _payFallbackGas(uint32 _depositNonce, uint256 _initialGas, uint256 _feesOwed) internal virtual {
         //Get Branch Environment Execution Cost
-        uint256 minExecCost = _feesOwed + tx.gasprice * (MIN_FALLBACK_OVERHEAD + _initialGas - gasleft());
+        uint256 minExecCost = _feesOwed + tx.gasprice * (MIN_PAY_FALLBACK_GAS_OVERHEAD + _initialGas - gasleft());
 
         //Update user deposit reverts if not enough gas => user must boost deposit with gas
         getDeposit[_depositNonce].depositedGas -= minExecCost.toUint128();
