@@ -796,7 +796,7 @@ contract RootBridgeAgent is IRootBridgeAgent {
         uint256 _initialGas,
         uint256 _feesOwed,
         uint24 _fromChain,
-        uint256 _toChain
+        uint24 _toChain
     ) internal returns (uint256 availableGas) {
         //reset initial remote execution gas and remote execution fee information
         delete(initialGas);
