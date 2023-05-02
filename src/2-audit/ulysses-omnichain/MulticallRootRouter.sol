@@ -415,7 +415,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
         DepositMultipleParams calldata,
         address userAccount,
         uint24 fromChainId
-    ) external payable returns (bool success, bytes memory result) {
+    ) external payable requiresAgent returns (bool success, bytes memory result) {
         /// FUNC ID: 1 (multicallNoOutput)
         if (funcId == 0x01) {
             Call[] memory calls = abi.decode(RLPDecoder.decodeCallData(rlpEncodedData, MAX_LENGTH), (Call[]));
@@ -478,7 +478,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
     /**
      *  @inheritdoc IRootRouter
      */
-    function anyFallback(bytes calldata) external pure returns (bool, bytes memory) {
+    function anyFallback(bytes calldata) external pure requiresAgent returns (bool, bytes memory) {
         return (true, "");
     }
 
