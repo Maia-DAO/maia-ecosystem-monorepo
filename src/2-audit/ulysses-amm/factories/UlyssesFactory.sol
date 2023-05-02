@@ -53,6 +53,10 @@ contract UlyssesFactory is Ownable, IUlyssesFactory {
     ///@notice Mapping that holds all the Ulysses tokens
     mapping(uint256 => UlyssesToken) public tokens;
 
+    constructor(address _owner) {
+        _initializeOwner(_owner);
+    }
+
     /*//////////////////////////////////////////////////////////////
                            NEW LP LOGIC
     //////////////////////////////////////////////////////////////*/
