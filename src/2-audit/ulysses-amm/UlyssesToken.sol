@@ -60,13 +60,16 @@ contract UlyssesToken is ERC4626MultiToken, Ownable, IUlyssesToken {
 
         if (assets.length == 1) revert CannotRemoveLastAsset();
 
+        totalWeights -= weights[assetIndex];
+
         // Remove asset from array
-        for (uint256 i = assetIndex; i < assets.length; i++) {
+        for (uint256 i = assetIndex; i < assets.length - 1; i++) {
             assets[i] = assets[i + 1];
+
+            assetId[assets[i]] = i + 1;
+
             weights[i] = weights[i + 1];
         }
-
-        totalWeights -= weights[assetIndex];
 
         assets.pop();
         weights.pop();

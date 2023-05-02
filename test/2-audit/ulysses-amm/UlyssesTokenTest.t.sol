@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity >=0.8.0 <0.9.0;
 
-import {MockERC20} from "solmate/test/utils/mocks/MockERC20.sol";
-import {UlyssesToken} from "@ulysses-amm/UlyssesToken.sol";
+import {console2} from "forge-std/console2.sol";
+import {stdError} from "forge-std/StdError.sol";
 
-import {
-    UlyssesTokenHandler
-} from "../../test-utils/invariant/handlers/UlyssesTokenHandler.t.sol";
+import {MockERC20} from "solmate/test/utils/mocks/MockERC20.sol";
+import {UlyssesToken, IUlyssesToken} from "@ulysses-amm/UlyssesToken.sol";
+
+import {UlyssesTokenHandler} from "../../test-utils/invariant/handlers/UlyssesTokenHandler.t.sol";
 
 contract InvariantUlyssesToken is UlyssesTokenHandler {
     function setUp() public override {
@@ -35,5 +36,62 @@ contract InvariantUlyssesToken is UlyssesTokenHandler {
         _delta_ = 0;
         _vaultMayBeEmpty = true;
         _unlimitedAmount = false;
+    }
+
+    function test_removeAsset(uint256 assetNum, address asset) internal {
+        // save weight
+        uint256 weight = UlyssesToken(_vault_).weights(assetNum);
+        // save total weights
+        uint256 totalWeights = UlyssesToken(_vault_).totalWeights();
+        // save length
+        uint256 length = UlyssesToken(_vault_).getAssets().length;
+
+        UlyssesToken(_vault_).removeAsset(asset);
+
+        // check total weights
+        assertEq(UlyssesToken(_vault_).totalWeights(), totalWeights - weight);
+        // check length
+        assertEq(UlyssesToken(_vault_).getAssets().length, length - 1);
+    }
+
+    function test_removeAsset(uint256 assetNum) external {
+        assetNum = assetNum % _underlyings_.length;
+        test_removeAsset(assetNum, _underlyings_[assetNum]);
+    }
+
+    function test_removeAssetFailInvalidAsset(address asset) external {
+        // check address is not in underlyings
+        for (uint256 i = 0; i < _underlyings_.length; i++) {
+            if (_underlyings_[i] == asset) {
+                asset = address(0);
+                break;
+            }
+        }
+
+        vm.expectRevert(stdError.arithmeticError);
+        UlyssesToken(_vault_).removeAsset(asset);
+    }
+
+    function test_removeAssetFailRemoveLastAsset_1() external {
+        while (_underlyings_.length > 1) {
+            test_removeAsset(_underlyings_.length - 1, _underlyings_[_underlyings_.length - 1]);
+            _underlyings_.pop();
+        }
+
+        assertEq(UlyssesToken(_vault_).getAssets().length, 1);
+
+        vm.expectRevert(IUlyssesToken.CannotRemoveLastAsset.selector);
+        UlyssesToken(_vault_).removeAsset(_underlyings_[0]);
+    }
+
+    function test_removeAssetFailRemoveLastAsset_2() external {
+        for (uint256 i = 0; i < _underlyings_.length - 1; i++) {
+            test_removeAsset(0, _underlyings_[i]);
+        }
+
+        assertEq(UlyssesToken(_vault_).getAssets().length, 1);
+
+        vm.expectRevert(IUlyssesToken.CannotRemoveLastAsset.selector);
+        UlyssesToken(_vault_).removeAsset(_underlyings_[_underlyings_.length - 1]);
     }
 }
