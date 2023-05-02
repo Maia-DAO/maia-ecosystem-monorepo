@@ -49,15 +49,89 @@ contract ArbitrumCoreBranchRouter is CoreBranchRouter {
         bytes memory packedData = abi.encodePacked(bytes1(0x02), data);
 
         //Send Cross-Chain request (System Response/Request)
-        IBridgeAgent(localBridgeAgentAddress).performSystemCallOut{value: msg.value}(msg.sender, packedData, 0);
+        IBridgeAgent(localBridgeAgentAddress).performCallOut(msg.sender, packedData, 0, 0);
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                BRIDGE AGENT MANAGEMENT INTERNAL FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Function to deploy/add a token already active in the global environment in the Root Chain. Must be called from another chain.
+     *  @param _newBranchRouter the address of the new branch router.
+     *  @param _branchBridgeAgentFactory the address of the branch bridge agent factory.
+     *  @param _rootBridgeAgent the address of the root bridge agent.
+     *  @param _rootBridgeAgentFactory the address of the root bridge agent factory.
+     *  @dev FUNC ID: 9
+     *  @dev all hTokens have 18 decimals.
+     *
+     */
+    function _receiveAddBridgeAgent(
+        address _newBranchRouter,
+        address _branchBridgeAgentFactory,
+        address _rootBridgeAgent,
+        address _rootBridgeAgentFactory,
+        uint128
+    ) internal override {
+        //Check if msg.sender is a valid BridgeAgentFactory
+        if (!IPort(localPortAddress).isBridgeAgentFactory(_branchBridgeAgentFactory)) {
+            revert UnrecognizedBridgeAgentFactory();
+        }
+
+        //Create Token
+        address newBridgeAgent = IBridgeAgentFactory(_branchBridgeAgentFactory).createBridgeAgent(
+            _newBranchRouter, _rootBridgeAgent, _rootBridgeAgentFactory
+        );
+
+        //Check BridgeAgent Address
+        if (!IPort(localPortAddress).isBridgeAgent(newBridgeAgent)) {
+            revert UnrecognizedBridgeAgent();
+        }
+
+        //Encode Data
+        bytes memory data = abi.encode(newBridgeAgent, _rootBridgeAgent);
+
+        //Pack FuncId
+        bytes memory packedData = abi.encodePacked(bytes1(0x04), data);
+
+        //Send Cross-Chain request
+        IBridgeAgent(localBridgeAgentAddress).performSystemCallOut(address(this), packedData, 0, 0);
     }
 
     /*///////////////////////////////////////////////////////////////
                     ANYCALL EXTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    function anyExecuteNoSettlement(bytes memory) external pure override returns (bool, bytes memory) {
-        /// Unrecognized Function Selector
-        revert();
+    /**
+     * @notice Performs a cross-chain call to the root chain.
+     * @param _data the data to be sent to the root chain.
+     */
+    function anyExecuteNoSettlement(bytes calldata _data)
+        external
+        override
+        returns (bool success, bytes memory result)
+    {
+        if (_data[0] == 0x02) {
+            (
+                address newBranchRouter,
+                address branchBridgeAgentFactory,
+                address rootBridgeAgent,
+                address rootBridgeAgentFactory,
+            ) = abi.decode(_data[1:], (address, address, address, address, uint128));
+
+            _receiveAddBridgeAgent(
+                newBranchRouter, branchBridgeAgentFactory, rootBridgeAgent, rootBridgeAgentFactory, 0
+            );
+            /// _receiveAddBridgeAgentFactory
+        } else if (_data[0] == 0x03) {
+            (address newBridgeAgentFactoryAddress) = abi.decode(_data[1:], (address));
+
+            _receiveAddBridgeAgentFactory(newBridgeAgentFactoryAddress);
+
+            /// Unrecognized Function Selector
+        } else {
+            return (false, "unknown selector");
+        }
+        return (true, "");
     }
 }

@@ -4,16 +4,19 @@ pragma solidity ^0.8.0;
 import "../interfaces/IBranchBridgeAgentFactory.sol";
 
 /**
-@title BridgeAgentFactory.
-@author MaiaDAO.
-@notice This contract is used to deploy new Bridge Agents which are in charge of managing the deposit and withdrawal of assets between the branch chains and the omnichain environment.
-*/
+ * @title BridgeAgentFactory.
+ * @author MaiaDAO.
+ * @notice This contract is used to deploy new Bridge Agents which are in charge of managing the deposit and withdrawal of assets between the branch chains and the omnichain environment.
+ */
 contract BranchBridgeAgentFactory is Ownable, IBranchBridgeAgentFactory {
     /// @notice Local Chain Id
     uint256 public immutable localChainId;
 
     /// @notice Root Chain Id
     uint256 public immutable rootChainId;
+
+    /// @notice Root Bridge Agent Factory Address
+    address public immutable rootBridgeAgentFactoryAddress;
 
     /// @notice Local Wrapped Native Token
     WETH9 public immutable wrappedNativeToken;
@@ -31,16 +34,21 @@ contract BranchBridgeAgentFactory is Ownable, IBranchBridgeAgentFactory {
     address public immutable localAnyCallExecutorAddress;
 
     /**
-        @notice Constructor for Bridge Agent.
-        @param _localChainId Local Chain Id.
-        @param _wrappedNativeToken Local Wrapped Native Token.
-        @param _localAnyCallAddress Local Anycall Address.
-        @param _localPortAddress Local Port Address.
-        @param _owner Owner of the contract.
+     * @notice Constructor for Bridge Agent.
+     *     @param _localChainId Local Chain Id.
+     *     @param _rootChainId Root Chain Id.
+     *     @param _rootBridgeAgentFactoryAddress Root Bridge Agent Factory Address.
+     *     @param _wrappedNativeToken Local Wrapped Native Token.
+     *     @param _localAnyCallAddress Local Anycall Address.
+     *     @param _localAnyCallExecutorAddress Local Anyexec Address.
+     *     @param _localCoreBranchRouterAddress Local Core Branch Router Address.
+     *     @param _localPortAddress Local Port Address.
+     *     @param _owner Owner of the contract.
      */
     constructor(
         uint256 _localChainId,
         uint256 _rootChainId,
+        address _rootBridgeAgentFactoryAddress,
         WETH9 _wrappedNativeToken,
         address _localAnyCallAddress,
         address _localAnyCallExecutorAddress,
@@ -50,6 +58,7 @@ contract BranchBridgeAgentFactory is Ownable, IBranchBridgeAgentFactory {
     ) {
         localChainId = _localChainId;
         rootChainId = _rootChainId;
+        rootBridgeAgentFactoryAddress = _rootBridgeAgentFactoryAddress;
         wrappedNativeToken = _wrappedNativeToken;
         localAnyCallAddress = _localAnyCallAddress;
         localAnyCallExecutorAddress = _localAnyCallExecutorAddress;
@@ -58,19 +67,45 @@ contract BranchBridgeAgentFactory is Ownable, IBranchBridgeAgentFactory {
         _initializeOwner(_owner);
     }
 
+    function initialize(address _coreRootBridgeAgent) external virtual onlyOwner {
+        address newCoreBridgeAgent = address(
+            new BranchBridgeAgent(
+                wrappedNativeToken,
+                rootChainId,
+                localChainId,
+                _coreRootBridgeAgent,
+                localAnyCallAddress,
+                localAnyCallExecutorAddress,
+                localCoreBranchRouterAddress,
+                localPortAddress
+            )
+        );
+
+        IPort(localPortAddress).addBridgeAgent(newCoreBridgeAgent);
+    }
+
     /*///////////////////////////////////////////////////////////////
                         BRIDGE AGENT FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
     /**
-    @notice Creates a new bridge agent for a new branch chain.
-    @param _newBranchRouterAddress Address of the new branch router.
-    @param _rootBridgeAgentAddress Address of the root bridge agent.
+     * @notice Creates a new bridge agent for a new branch chain.
+     * @param _newBranchRouterAddress Address of the new branch router.
+     * @param _rootBridgeAgentAddress Address of the root bridge agent.
      */
     function createBridgeAgent(
         address _newBranchRouterAddress,
-        address _rootBridgeAgentAddress
+        address _rootBridgeAgentAddress,
+        address _rootBridgeAgentFactoryAddress
     ) external virtual returns (address newBridgeAgent) {
+        require(
+            msg.sender == localCoreBranchRouterAddress, "Only the Core Branch Router can create a new Bridge Agent."
+        );
+        require(
+            _rootBridgeAgentFactoryAddress == rootBridgeAgentFactoryAddress,
+            "Root Bridge Agent Factory Address does not match."
+        );
+
         newBridgeAgent = address(
             new BranchBridgeAgent(
                 wrappedNativeToken,
@@ -88,8 +123,8 @@ contract BranchBridgeAgentFactory is Ownable, IBranchBridgeAgentFactory {
     }
 
     /**
-    @notice Toggles a bridge agent on or off.
-    @param _bridgeAgentAddress Address of the bridge agent to toggle.
+     * @notice Toggles a bridge agent on or off.
+     * @param _bridgeAgentAddress Address of the bridge agent to toggle.
      */
     function toggleBridgeAgent(address _bridgeAgentAddress) external onlyOwner {
         IPort(localPortAddress).toggleBridgeAgent(_bridgeAgentAddress);

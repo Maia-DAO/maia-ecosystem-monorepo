@@ -36,7 +36,7 @@ import {WETH9 as WETH} from "./mocks/WETH9.sol";
 import {Multicall2} from "@omni/lib/Multicall2.sol";
 import {RLPDecoder} from "@rlp/RLPDecoder.sol";
 
-contract CoreRootBridgeAgentTest is DSTestPlus {
+contract RootBridgeAgentDecodeTest is DSTestPlus {
     MockRootBridgeAgent mockRootBridgeAgent;
 
     MockERC20 wAvaxUnderlyingNativeToken;

@@ -89,14 +89,14 @@ interface IBranchRouter {
      * @notice Function responsible of executing a branch router response.
      *     @param data data received from messaging layer.
      */
-    function anyExecuteNoSettlement(bytes memory data) external returns (bool success, bytes memory result);
+    function anyExecuteNoSettlement(bytes calldata data) external returns (bool success, bytes memory result);
 
     /**
      * @dev Function responsible of executing a crosschain request without any deposit.
      *     @param data data received from messaging layer.
      *     @param sParams SettlementParams struct.
      */
-    function anyExecuteSettlement(bytes memory data, SettlementParams memory sParams)
+    function anyExecuteSettlement(bytes calldata data, SettlementParams memory sParams)
         external
         returns (bool success, bytes memory result);
 
@@ -115,7 +115,7 @@ interface IBranchRouter {
      *
      *
      */
-    function anyExecuteSettlementMultiple(bytes memory data, SettlementMultipleParams memory sParams)
+    function anyExecuteSettlementMultiple(bytes calldata data, SettlementMultipleParams memory sParams)
         external
         returns (bool success, bytes memory result);
 

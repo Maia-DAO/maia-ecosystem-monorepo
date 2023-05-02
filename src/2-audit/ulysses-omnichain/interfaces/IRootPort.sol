@@ -2,26 +2,27 @@
 
 pragma solidity ^0.8.0;
 
-import { Ownable } from "solady/auth/Ownable.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
-import { ERC20 } from "solmate/tokens/ERC20.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
-import { ERC20hTokenRoot } from "../token/ERC20hTokenRoot.sol";
+import {ERC20hTokenRoot} from "../token/ERC20hTokenRoot.sol";
 
-import { VirtualAccount } from "../VirtualAccount.sol";
+import {VirtualAccount} from "../VirtualAccount.sol";
 
-import { IRootBridgeAgent as IBridgeAgent } from "./IRootBridgeAgent.sol";
+import {IRootBridgeAgent as IBridgeAgent} from "./IRootBridgeAgent.sol";
 
-import { IRootBridgeAgentFactory } from "./IRootBridgeAgentFactory.sol";
+import {IRootBridgeAgentFactory} from "./IRootBridgeAgentFactory.sol";
 
-import { ISwapRouter } from "../interfaces/ISwapRouter.sol";
+import {ISwapRouter} from "../interfaces/ISwapRouter.sol";
 
-import { IERC20hTokenRootFactory } from "../interfaces/IERC20hTokenRootFactory.sol";
+import {IERC20hTokenRootFactory} from "../interfaces/IERC20hTokenRootFactory.sol";
 
-import { INonfungiblePositionManager } from "../interfaces/INonfungiblePositionManager.sol";
+import {INonfungiblePositionManager} from "../interfaces/INonfungiblePositionManager.sol";
 
 interface ICoreRootRouter {
+    function bridgeAgentAddress() external view returns (address);
     function hTokenFactoryAddress() external view returns (address);
 }
 
@@ -44,6 +45,8 @@ interface IRootPort {
                         VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    function isBridgeAgentFactory(address _bridgeAgentFactory) external view returns (bool);
+
     function isGlobalAddress(address _globalAddress) external view returns (bool);
 
     /// @notice Mapping from Underlying Address to isUnderlying (bool).
@@ -54,30 +57,21 @@ interface IRootPort {
      *  @param _localAddress The address of the token in the local chain.
      *  @param _fromChain The chainId of the chain where the token is deployed.
      */
-    function getGlobalTokenFromLocal(
-        address _localAddress,
-        uint24 _fromChain
-    ) external view returns (address);
+    function getGlobalTokenFromLocal(address _localAddress, uint256 _fromChain) external view returns (address);
 
     /**
      * @notice View Function returns Token's Local Address from it's global address.
      * @param _globalAddress The address of the token in the global chain.
      * @param _fromChain The chainId of the chain where the token is deployed.
      */
-    function getLocalTokenFromGlobal(
-        address _globalAddress,
-        uint24 _fromChain
-    ) external view returns (address);
+    function getLocalTokenFromGlobal(address _globalAddress, uint256 _fromChain) external view returns (address);
 
     /**
      * @notice View Function that returns the local token address from the underlying token address.
      *  @param _underlyingAddress The address of the underlying token.
      *  @param _fromChain The chainId of the chain where the token is deployed.
      */
-    function getLocalTokenFromUnder(
-        address _underlyingAddress,
-        uint24 _fromChain
-    ) external view returns (address);
+    function getLocalTokenFromUnder(address _underlyingAddress, uint256 _fromChain) external view returns (address);
 
     /**
      * @notice Function that returns Local Token's Local Address on another chain.
@@ -85,31 +79,21 @@ interface IRootPort {
      * @param _fromChain The chainId of the chain where the token is deployed.
      * @param _toChain The chainId of the chain where the token is deployed.
      */
-    function getLocalToken(
-        address _localAddress,
-        uint24 _fromChain,
-        uint24 _toChain
-    ) external view returns (address);
+    function getLocalToken(address _localAddress, uint24 _fromChain, uint24 _toChain) external view returns (address);
 
     /**
      * @notice View Function returns a underlying token address from it's local address.
      * @param _localAddress The address of the token in the local chain.
      * @param _fromChain The chainId of the chain where the token is deployed.
      */
-    function getUnderlyingTokenFromLocal(
-        address _localAddress,
-        uint24 _fromChain
-    ) external view returns (address);
+    function getUnderlyingTokenFromLocal(address _localAddress, uint256 _fromChain) external view returns (address);
 
     /**
      * @notice Returns the underlying token address given it's global address.
      * @param _globalAddress The address of the token in the global chain.
      * @param _fromChain The chainId of the chain where the token is deployed.
      */
-    function getUnderlyingTokenFromGlobal(
-        address _globalAddress,
-        uint24 _fromChain
-    ) external view returns (address);
+    function getUnderlyingTokenFromGlobal(address _globalAddress, uint24 _fromChain) external view returns (address);
 
     /**
      * @notice View Function returns True if Global Token is already added in current chain, false otherwise.
@@ -126,29 +110,20 @@ interface IRootPort {
     function isLocalToken(address _localAddress, uint24 _fromChain) external view returns (bool);
 
     /// @notice View Function returns True if Local Token and is also already added in another branch chain, false otherwise.
-    function isLocalToken(
-        address _localAddress,
-        uint24 _fromChain,
-        uint24 _toChain
-    ) external view returns (bool);
+    function isLocalToken(address _localAddress, uint24 _fromChain, uint24 _toChain) external view returns (bool);
 
     /**
      * @notice View Function returns True if the underlying Token is already added in current chain, false otherwise.
      * @param _underlyingToken The address of the underlying token.
      * @param _fromChain The chainId of the chain where the token is deployed.
      */
-    function isUnderlyingToken(
-        address _underlyingToken,
-        uint24 _fromChain
-    ) external view returns (bool);
+    function isUnderlyingToken(address _underlyingToken, uint24 _fromChain) external view returns (bool);
 
     /// @notice View Function returns wrapped native token address for a given chain.
     function getWrappedNativeToken(uint256 _chainId) external view returns (address);
 
     /// @notice View Function returns the gasPoolAddress for a given chain.
-    function getGasPoolInfo(
-        uint256 _chainId
-    )
+    function getGasPoolInfo(uint256 _chainId)
         external
         view
         returns (
@@ -179,13 +154,8 @@ interface IRootPort {
      * @param _deposit amount of underlying tokens to deposit.
      * @param _fromChainId The chainId of the chain where the token is deployed.
      */
-    function bridgeToRoot(
-        address _recipient,
-        address _hToken,
-        uint256 _amount,
-        uint256 _deposit,
-        uint24 _fromChainId
-    ) external;
+    function bridgeToRoot(address _recipient, address _hToken, uint256 _amount, uint256 _deposit, uint24 _fromChainId)
+        external;
 
     /**
      * @notice Bridges hTokens from the local branch to the root port.
@@ -202,12 +172,7 @@ interface IRootPort {
      * @param _amount amount of hTokens to bridge.
      * @param _deposit amount of underlying tokens to deposit.
      */
-    function bridgeToLocalBranch(
-        address _recipient,
-        address _hToken,
-        uint256 _amount,
-        uint256 _deposit
-    ) external;
+    function bridgeToLocalBranch(address _recipient, address _hToken, uint256 _amount, uint256 _deposit) external;
 
     /**
      * @notice Mints new tokens to the recipient address
@@ -235,11 +200,7 @@ interface IRootPort {
      *   @param _underlyingAddress new underlying/native token address to set.
      *
      */
-    function setUnderlyingAddress(
-        address _localAddress,
-        address _underlyingAddress,
-        uint24 _fromChain
-    ) external;
+    function setUnderlyingAddress(address _localAddress, address _underlyingAddress, uint24 _fromChain) external;
 
     /**
      * @notice Setter function to update a Global hToken's Local hToken Address.
@@ -247,12 +208,8 @@ interface IRootPort {
      *   @param _localAddress new underlying/native token address to set.
      *
      */
-    function setAddresses(
-        address _globalAddress,
-        address _localAddress,
-        address _underlyingAddress,
-        uint24 _fromChain
-    ) external;
+    function setAddresses(address _globalAddress, address _localAddress, address _underlyingAddress, uint24 _fromChain)
+        external;
 
     /**
      * @notice Setter function to update a Global hToken's Local hToken Address.
@@ -260,11 +217,7 @@ interface IRootPort {
      *   @param _localAddress new underlying/native token address to set.
      *
      */
-    function setLocalAddress(
-        address _globalAddress,
-        address _localAddress,
-        uint24 _fromChain
-    ) external;
+    function setLocalAddress(address _globalAddress, address _localAddress, uint24 _fromChain) external;
 
     /*///////////////////////////////////////////////////////////////
                     VIRTUAL ACCOUNT MANAGEMENT FUNCTIONS
@@ -293,11 +246,8 @@ interface IRootPort {
      * @param _rootBridgeAgent address of the root bridge agent.
      * @param _fromChain chainId of the chain to set the bridge agent for.
      */
-    function syncBranchBridgeAgentWithRoot(
-        address _newBranchBridgeAgent,
-        address _rootBridgeAgent,
-        uint24 _fromChain
-    ) external;
+    function syncBranchBridgeAgentWithRoot(address _newBranchBridgeAgent, address _rootBridgeAgent, uint24 _fromChain)
+        external;
 
     /**
      * @notice Adds a new bridge agent to the list of bridge agents.
@@ -332,6 +282,7 @@ interface IRootPort {
 
     /**
      * @notice Adds a new chain to the root port lists of chains
+     * @param _coreBranchBridgeAgentAddress address of the core branch bridge agent
      * @param _chainId chainId of the new chain
      * @param _gasTokenName gas token name of the chain to add
      * @param _gasTokenSymbol gas token symbol of the chain to add
@@ -345,6 +296,7 @@ interface IRootPort {
      * @param _hTokenFactoryAddress address of the hToken factory
      */
     function addNewChain(
+        address _coreBranchBridgeAgentAddress,
         uint24 _chainId,
         string memory _gasTokenName,
         string memory _gasTokenSymbol,
@@ -376,10 +328,7 @@ interface IRootPort {
      * @param hermesGlobalAddress hermes global address
      * @param maiaGlobalAddress maia global address
      */
-    function initializeEcosystemTokenAddresses(
-        address hermesGlobalAddress,
-        address maiaGlobalAddress
-    ) external;
+    function initializeEcosystemTokenAddresses(address hermesGlobalAddress, address maiaGlobalAddress) external;
 
     /**
      * @notice Adds an ecosystem hToken to a branch chain
@@ -387,11 +336,8 @@ interface IRootPort {
      * @param ecoTokenLocalAddress ecosystem token local address
      * @param toChainId chainId of the branch chain to add the ecosystem token to
      */
-    function addEcosystemTokenToChain(
-        address ecoTokenGlobalAddress,
-        address ecoTokenLocalAddress,
-        uint256 toChainId
-    ) external;
+    function addEcosystemTokenToChain(address ecoTokenGlobalAddress, address ecoTokenLocalAddress, uint256 toChainId)
+        external;
 
     /*///////////////////////////////////////////////////////////////
                             ERRORS  

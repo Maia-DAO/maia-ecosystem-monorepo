@@ -98,6 +98,9 @@ contract RootBridgeAgent is IRootBridgeAgent {
     WETH9 public immutable wrappedNativeToken;
 
     /// @notice Address of DAO.
+    address public immutable factoryAddress;
+
+    /// @notice Address of DAO.
     address public immutable daoAddress;
 
     /// @notice Local Root Router Address
@@ -120,7 +123,7 @@ contract RootBridgeAgent is IRootBridgeAgent {
     mapping(uint256 => address) public getBranchBridgeAgent;
 
     /// @notice If true, bridge agent manager has allowed for a new given branch bridge agent to be synced/added.
-    mapping(uint256 => mapping(address => bool)) public isBranchBridgeAgentAllowed;
+    mapping(uint256 => bool) public isBranchBridgeAgentAllowed;
 
     /*///////////////////////////////////////////////////////////////
                         SETTLEMENTS STATE
@@ -163,6 +166,7 @@ contract RootBridgeAgent is IRootBridgeAgent {
         address _localRouterAddress
     ) {
         wrappedNativeToken = _wrappedNativeToken;
+        factoryAddress = msg.sender;
         daoAddress = _daoAddress;
         localChainId = _localChainId;
         localAnyCallAddress = _localAnyCallAddress;
@@ -220,7 +224,6 @@ contract RootBridgeAgent is IRootBridgeAgent {
             userFeeInfo.depositedGas = uint128(msg.value);
             userFeeInfo.gasToBridgeOut = _remoteExecutionGas;
         }
-
         //Clear Settlement with updated gas.
         _clearSettlement(_settlementNonce);
     }
@@ -599,7 +602,7 @@ contract RootBridgeAgent is IRootBridgeAgent {
      *     @param _settlementNonce Identifier for token settlement.
      *
      */
-    function _clearSettlement(uint32 _settlementNonce) internal requiresFallbackGas {
+    function _clearSettlement(uint32 _settlementNonce) internal {
         //Get Settlement
         Settlement memory settlement = _getSettlementEntry(_settlementNonce);
 
@@ -743,15 +746,18 @@ contract RootBridgeAgent is IRootBridgeAgent {
      * @notice
      * @param _toChain chain to swap to
      */
-    function _manageGasOut(uint24 _toChain) internal requiresFallbackGas returns (uint128) {
+    function _manageGasOut(uint24 _toChain) internal returns (uint128) {
         uint256 amountOut;
         address gasToken;
-        if (_toChain == localChainId) return uint128(userFeeInfo.depositedGas);
+        if (_toChain == localChainId) return uint128(userFeeInfo.gasToBridgeOut);
+
         if (initialGas > 0) {
+            if (userFeeInfo.gasToBridgeOut <= MIN_FALLBACK_OVERHEAD) revert InsufficientGasForFees();
             (amountOut, gasToken) = _gasSwapOut(userFeeInfo.gasToBridgeOut, _toChain);
         } else {
+            if (msg.value <= MIN_FALLBACK_OVERHEAD) revert InsufficientGasForFees();
             wrappedNativeToken.deposit{value: msg.value}();
-            (amountOut,) = _gasSwapOut(msg.value, _toChain);
+            (amountOut, gasToken) = _gasSwapOut(msg.value, _toChain);
         }
 
         IPort(localPortAddress).burn(address(this), gasToken, amountOut, _toChain);
@@ -792,13 +798,17 @@ contract RootBridgeAgent is IRootBridgeAgent {
         uint24 _fromChain,
         uint256 _toChain
     ) internal returns (uint256 availableGas) {
-        if (_fromChain == _toChain) return 0;
+        //reset initial remote execution gas and remote execution fee information
+        delete(initialGas);
+        delete(userFeeInfo);
+
+        if (_fromChain == localChainId) return 0;
 
         //Get Available Gas
         availableGas = _depositedGas - _gasToBridgeOut;
 
         //Get Root Environment Execution Cost
-        uint256 minExecCost = ((MIN_EXECUTION_OVERHEAD + _initialGas + _feesOwed) - gasleft()) * tx.gasprice;
+        uint256 minExecCost = _feesOwed + tx.gasprice * (MIN_EXECUTION_OVERHEAD + _initialGas - gasleft());
 
         //Check if sufficient balance
         if (minExecCost > availableGas) revert InsufficientGasForFees();
@@ -818,7 +828,7 @@ contract RootBridgeAgent is IRootBridgeAgent {
     //   */
     function _payFallbackGas(uint32 _settlementNonce, uint256 _initialGas, uint256 _feesOwed) internal virtual {
         //Get Branch Environment Execution Cost
-        uint256 minExecCost = tx.gasprice * (MIN_FALLBACK_OVERHEAD + _initialGas - _feesOwed - gasleft());
+        uint256 minExecCost = _feesOwed + tx.gasprice * (MIN_FALLBACK_OVERHEAD + _initialGas - gasleft());
 
         //Update user deposit reverts if not enough gas => user must boost deposit with gas
         getSettlement[_settlementNonce].gasOwed += minExecCost.toUint128();
@@ -855,6 +865,9 @@ contract RootBridgeAgent is IRootBridgeAgent {
         UserFeeInfo memory _userFeeInfo;
 
         if (localAnyCallExecutorAddress == msg.sender) {
+            //Save initial gas
+            initialGas = _initialGas;
+
             //Get fromChainId from AnyExecutor Context
             (, uint256 _fromChainId) = _getContext();
 
@@ -884,10 +897,7 @@ contract RootBridgeAgent is IRootBridgeAgent {
 
         if (_userFeeInfo.depositedGas < _userFeeInfo.gasToBridgeOut) revert InsufficientGasForFees();
 
-        //Save initial gas
-        initialGas = _initialGas;
-
-        //Save User Fee Info
+        //Store User Fee Info
         userFeeInfo = _userFeeInfo;
 
         //Read Bridge Agent Action Flag attached from cross-chain message header.
@@ -1036,7 +1046,6 @@ contract RootBridgeAgent is IRootBridgeAgent {
                 localChainId
             );
             //Zero out gas after use
-            initialGas = 0;
             return (false, "unknown selector");
         }
         if (initialGas > 0) {
@@ -1049,7 +1058,6 @@ contract RootBridgeAgent is IRootBridgeAgent {
                 fromChainId,
                 localChainId
             );
-            initialGas = 0;
         }
 
         emit LogCallin(flag, data, fromChainId);
@@ -1098,9 +1106,9 @@ contract RootBridgeAgent is IRootBridgeAgent {
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IRootBridgeAgent
-    function approveBranchBridgeAgent(address _newBranchBridgeAgent, uint256 _branchChainId) external requiresManager {
+    function approveBranchBridgeAgent(uint256 _branchChainId) external requiresManager {
         if (getBranchBridgeAgent[_branchChainId] != address(0)) revert AlreadyAddedBridgeAgent();
-        isBranchBridgeAgentAllowed[_branchChainId][_newBranchBridgeAgent] = true;
+        isBranchBridgeAgentAllowed[_branchChainId] = true;
     }
 
     /**
@@ -1156,17 +1164,6 @@ contract RootBridgeAgent is IRootBridgeAgent {
     modifier requiresRouter() {
         _requiresRouter();
         _;
-    }
-
-    /// @notice Modifier that verifies msg sender is the RootInterface Contract from Root Chain.
-    modifier requiresFallbackGas() {
-        _requiresFallbackGas();
-        _;
-    }
-
-    /// @notice reuse to reduce contract bytesize
-    function _requiresFallbackGas() internal view {
-        if (userFeeInfo.gasToBridgeOut <= MIN_FALLBACK_OVERHEAD) revert InsufficientGasForFees();
     }
 
     fallback() external payable {}

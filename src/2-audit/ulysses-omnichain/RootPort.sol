@@ -78,16 +78,16 @@ contract RootPort is Ownable, IRootPort {
     mapping(address => bool) public isGlobalAddress;
 
     /// @notice ChainId -> Local Address -> Global Address
-    mapping(uint256 => mapping(address => address)) public getGlobalAddressFromLocal;
+    mapping(address => mapping(uint256 => address)) public getGlobalTokenFromLocal;
 
     /// @notice ChainId -> Global Address -> Local Address
-    mapping(uint256 => mapping(address => address)) public getLocalAddressFromGlobal;
+    mapping(address => mapping(uint256 => address)) public getLocalTokenFromGlobal;
 
     /// @notice ChainId -> Underlying Address -> Local Address
-    mapping(uint256 => mapping(address => address)) public getLocalAddressFromUnder;
+    mapping(address => mapping(uint256 => address)) public getLocalTokenFromUnder;
 
     /// @notice Mapping from Local Address to Underlying Address.
-    mapping(uint256 => mapping(address => address)) public getUnderlyingAddressFromLocal;
+    mapping(address => mapping(uint256 => address)) public getUnderlyingTokenFromLocal;
 
     /*///////////////////////////////////////////////////////////////
                            GAS POOLS
@@ -109,11 +109,11 @@ contract RootPort is Ownable, IRootPort {
         wrappedNativeTokenAddress = _wrappedNativeToken;
 
         _initializeOwner(msg.sender);
-        setup = true;
+        _setup = true;
     }
 
     function initialize(address _bridgeAgentFactory, address _coreRootRouter) external onlyOwner {
-        require(setup, "Setup ended.");
+        require(_setup, "Setup ended.");
         isBridgeAgentFactory[_bridgeAgentFactory] = true;
         bridgeAgentFactories.push(_bridgeAgentFactory);
         bridgeAgentFactoriesLenght++;
@@ -126,63 +126,22 @@ contract RootPort is Ownable, IRootPort {
         address _coreLocalBranchBridgeAgent,
         address _localBranchPortAddress
     ) external onlyOwner {
-        require(setup, "Setup ended.");
+        require(_setup, "Setup ended.");
         require(isBridgeAgent[_coreRootBridgeAgent], "Core Bridge Agent doesn't exist.");
         coreRootBridgeAgentAddress = _coreRootBridgeAgent;
         localBranchPortAddress = _localBranchPortAddress;
         IBridgeAgent(_coreRootBridgeAgent).syncBranchBridgeAgent(_coreLocalBranchBridgeAgent, localChainId);
+        getBridgeAgentManager[_coreRootBridgeAgent] = owner();
     }
 
     function forefeitOwnership(address _owner) external onlyOwner {
         _setOwner(address(_owner));
-        setup = false;
+        _setup = false;
     }
 
     /*///////////////////////////////////////////////////////////////
                         EXTERNAL VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-
-    /// @inheritdoc IRootPort
-    function getGlobalTokenFromLocal(address _localAddress, uint24 _fromChain) external view returns (address) {
-        return _getGlobalTokenFromLocal(_localAddress, _fromChain);
-    }
-
-    /**
-     * @notice Internal function that returns Token's Global Address.
-     * @param _localAddress The address of the token in the local chain.
-     * @param _fromChain The chainId of the chain where the token is deployed.
-     */
-    function _getGlobalTokenFromLocal(address _localAddress, uint24 _fromChain) internal view returns (address) {
-        return getGlobalAddressFromLocal[_fromChain][_localAddress];
-    }
-
-    /// @inheritdoc IRootPort
-    function getLocalTokenFromGlobal(address _globalAddress, uint24 _fromChain) external view returns (address) {
-        return _getLocalTokenFromGlobal(_globalAddress, _fromChain);
-    }
-
-    /**
-     * @notice Internal function that returns Token's Local Address.
-     * @param _globalAddress The address of the token in the global chain.
-     * @param _fromChain The chainId of the chain where the token is deployed.
-     */
-    function _getLocalTokenFromGlobal(address _globalAddress, uint24 _fromChain) internal view returns (address) {
-        return getLocalAddressFromGlobal[_fromChain][_globalAddress];
-    }
-
-    /// @inheritdoc IRootPort
-    function getLocalTokenFromUnder(address _underlyingAddress, uint24 _fromChain) external view returns (address) {
-        return _getLocalTokenFromUnder(_underlyingAddress, _fromChain);
-    }
-
-    /**
-     * @notice Internal function that returns Token's Local Address.
-     * @param _underlyingAddress The address of the underlying token.
-     * @param _fromChain The chainId of the chain where the token is deployed.
-     */
-    function _getLocalTokenFromUnder(address _underlyingAddress, uint24 _fromChain) internal view returns (address) {
-        return getLocalAddressFromUnder[_fromChain][_underlyingAddress];
-    }
 
     /// @inheritdoc IRootPort
     function getLocalToken(address _localAddress, uint24 _fromChain, uint24 _toChain) external view returns (address) {
@@ -200,25 +159,10 @@ contract RootPort is Ownable, IRootPort {
         view
         returns (address)
     {
-        address globalAddress = getGlobalAddressFromLocal[_fromChain][_localAddress];
-        return getLocalAddressFromGlobal[_toChain][globalAddress];
+        address globalAddress = getGlobalTokenFromLocal[_localAddress][_fromChain];
+        return getLocalTokenFromGlobal[globalAddress][_toChain];
     }
 
-    /// @inheritdoc IRootPort
-    function getUnderlyingTokenFromLocal(address _localAddress, uint24 _fromChain) external view returns (address) {
-        return _getUnderlyingTokenFromLocal(_localAddress, _fromChain);
-    }
-
-    /**
-     * @notice Internal function that returns a underlying token address from it's local address.
-     * @param _localAddress The address of the token in the local chain.
-     * @param _fromChain The chainId of the chain where the token is deployed.
-     */
-    function _getUnderlyingTokenFromLocal(address _localAddress, uint24 _fromChain) internal view returns (address) {
-        return getUnderlyingAddressFromLocal[_fromChain][_localAddress];
-    }
-
-    /// @inheritdoc IRootPort
     function getUnderlyingTokenFromGlobal(address _globalAddress, uint24 _fromChain) external view returns (address) {
         return _getUnderlyingTokenFromGlobal(_globalAddress, _fromChain);
     }
@@ -229,8 +173,8 @@ contract RootPort is Ownable, IRootPort {
      * @param _fromChain The chainId of the chain where the token is deployed.
      */
     function _getUnderlyingTokenFromGlobal(address _globalAddress, uint24 _fromChain) internal view returns (address) {
-        address localAddress = getLocalAddressFromGlobal[_fromChain][_globalAddress];
-        return getUnderlyingAddressFromLocal[_fromChain][localAddress];
+        address localAddress = getLocalTokenFromGlobal[_globalAddress][_fromChain];
+        return getUnderlyingTokenFromLocal[localAddress][_fromChain];
     }
 
     /// @inheritdoc IRootPort
@@ -244,12 +188,12 @@ contract RootPort is Ownable, IRootPort {
      * @param _fromChain The chainId of the chain where the token is deployed.
      */
     function _isGlobalToken(address _globalAddress, uint24 _fromChain) internal view returns (bool) {
-        return _getLocalTokenFromGlobal(_globalAddress, _fromChain) != address(0);
+        return getLocalTokenFromGlobal[_globalAddress][_fromChain] != address(0);
     }
 
     /// @inheritdoc IRootPort
     function isLocalToken(address _localAddress, uint24 _fromChain) external view returns (bool) {
-        return _getGlobalTokenFromLocal(_localAddress, _fromChain) != address(0);
+        return getGlobalTokenFromLocal[_localAddress][_fromChain] != address(0);
     }
 
     /// @inheritdoc IRootPort
@@ -264,7 +208,7 @@ contract RootPort is Ownable, IRootPort {
 
     /// @inheritdoc IRootPort
     function isUnderlyingToken(address _underlyingToken, uint24 _fromChain) external view returns (bool) {
-        return _getLocalTokenFromUnder(_underlyingToken, _fromChain) != address(0);
+        return getLocalTokenFromUnder[_underlyingToken][_fromChain] != address(0);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -276,8 +220,8 @@ contract RootPort is Ownable, IRootPort {
         external
         requiresCoreBridgeAgent
     {
-        getUnderlyingAddressFromLocal[_fromChain][_localAddress] = _underlyingAddress;
-        getLocalAddressFromUnder[_fromChain][_underlyingAddress] = _localAddress;
+        getUnderlyingTokenFromLocal[_localAddress][_fromChain] = _underlyingAddress;
+        getLocalTokenFromUnder[_underlyingAddress][_fromChain] = _localAddress;
     }
 
     /// @inheritdoc IRootPort
@@ -286,10 +230,10 @@ contract RootPort is Ownable, IRootPort {
         requiresCoreBridgeAgent
     {
         isGlobalAddress[_globalAddress] = true;
-        getGlobalAddressFromLocal[_fromChain][_localAddress] = _globalAddress;
-        getLocalAddressFromGlobal[_fromChain][_globalAddress] = _localAddress;
-        getLocalAddressFromUnder[_fromChain][_underlyingAddress] = _localAddress;
-        getUnderlyingAddressFromLocal[_fromChain][_localAddress] = _underlyingAddress;
+        getGlobalTokenFromLocal[_localAddress][_fromChain] = _globalAddress;
+        getLocalTokenFromGlobal[_globalAddress][_fromChain] = _localAddress;
+        getLocalTokenFromUnder[_underlyingAddress][_fromChain] = _localAddress;
+        getUnderlyingTokenFromLocal[_localAddress][_fromChain] = _underlyingAddress;
     }
 
     /// @inheritdoc IRootPort
@@ -297,8 +241,8 @@ contract RootPort is Ownable, IRootPort {
         external
         requiresCoreBridgeAgent
     {
-        getGlobalAddressFromLocal[_fromChain][_localAddress] = _globalAddress;
-        getLocalAddressFromGlobal[_fromChain][_globalAddress] = _localAddress;
+        getGlobalTokenFromLocal[_localAddress][_fromChain] = _globalAddress;
+        getLocalTokenFromGlobal[_globalAddress][_fromChain] = _localAddress;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -402,7 +346,7 @@ contract RootPort is Ownable, IRootPort {
         if (IBridgeAgent(_rootBridgeAgent).getBranchBridgeAgent(_branchChainId) != address(0)) {
             revert AlreadyAddedBridgeAgent();
         }
-        if (!IBridgeAgent(_rootBridgeAgent).isBranchBridgeAgentAllowed(_branchChainId, _newBranchBridgeAgent)) {
+        if (!IBridgeAgent(_rootBridgeAgent).isBranchBridgeAgentAllowed(_branchChainId)) {
             revert BridgeAgentNotAllowed();
         }
         IBridgeAgent(_rootBridgeAgent).syncBranchBridgeAgent(_newBranchBridgeAgent, _branchChainId);
@@ -442,6 +386,7 @@ contract RootPort is Ownable, IRootPort {
 
     /// @inheritdoc IRootPort
     function addNewChain(
+        address _coreBranchBridgeAgentAddress,
         uint24 _chainId,
         string memory _gasTokenName,
         string memory _gasTokenSymbol,
@@ -457,6 +402,9 @@ contract RootPort is Ownable, IRootPort {
             revert UnknowHTokenFactory();
         }
         {
+            IBridgeAgent(ICoreRootRouter(coreRootRouterAddress).bridgeAgentAddress()).syncBranchBridgeAgent(
+                _coreBranchBridgeAgentAddress, _chainId
+            );
             getWrappedNativeToken[_chainId] = _newUnderlyingBranchWrappedNativeTokenAddress;
         }
 
@@ -468,17 +416,15 @@ contract RootPort is Ownable, IRootPort {
             address(IERC20hTokenRootFactory(_hTokenFactoryAddress).createToken(_gasTokenName, _gasTokenSymbol));
 
         isGlobalAddress[newGlobalToken] = true;
-        getGlobalAddressFromLocal[_chainId][_newLocalBranchWrappedNativeTokenAddress] = newGlobalToken;
-        getLocalAddressFromGlobal[_chainId][newGlobalToken] = _newLocalBranchWrappedNativeTokenAddress;
-        getLocalAddressFromUnder[_chainId][_newUnderlyingBranchWrappedNativeTokenAddress] =
+        getGlobalTokenFromLocal[_newLocalBranchWrappedNativeTokenAddress][_chainId] = newGlobalToken;
+        getLocalTokenFromGlobal[newGlobalToken][_chainId] = _newLocalBranchWrappedNativeTokenAddress;
+        getLocalTokenFromUnder[_newUnderlyingBranchWrappedNativeTokenAddress][_chainId] =
             _newLocalBranchWrappedNativeTokenAddress;
-        getUnderlyingAddressFromLocal[_chainId][_newLocalBranchWrappedNativeTokenAddress] =
+        getUnderlyingTokenFromLocal[_newLocalBranchWrappedNativeTokenAddress][_chainId] =
             _newUnderlyingBranchWrappedNativeTokenAddress;
-
 
         {
             if (newGlobalToken < wrappedNativeTokenAddress) {
-
                 zeroForOneOnInflow = true;
                 newGasPoolAddress = INonfungiblePositionManager(_nonFungiblePositionManagerAddress)
                     .createAndInitializePoolIfNecessary(newGlobalToken, wrappedNativeTokenAddress, _fee, _sqrtPriceX96);
@@ -502,11 +448,11 @@ contract RootPort is Ownable, IRootPort {
         getGasPoolInfo[_chainId] = _gasPoolInfo;
     }
 
-    bool setup;
+    bool internal _setup;
 
     /// @inheritdoc IRootPort
     function addChainToCore(address _branchBridgeAgent, uint24 _chainId) external onlyOwner {
-        require(setup, "Setup ended!");
+        require(_setup, "Setup ended!");
         IBridgeAgent(coreRootBridgeAgentAddress).syncBranchBridgeAgent(_branchBridgeAgent, _chainId);
     }
 
@@ -519,11 +465,11 @@ contract RootPort is Ownable, IRootPort {
         external
         onlyOwner
     {
-        getGlobalAddressFromLocal[localChainId][hermesGlobalAddress] = hermesGlobalAddress;
-        getLocalAddressFromGlobal[localChainId][hermesGlobalAddress] = hermesGlobalAddress;
+        getGlobalTokenFromLocal[hermesGlobalAddress][localChainId] = hermesGlobalAddress;
+        getLocalTokenFromGlobal[hermesGlobalAddress][localChainId] = hermesGlobalAddress;
 
-        getGlobalAddressFromLocal[localChainId][maiaGlobalAddress] = maiaGlobalAddress;
-        getLocalAddressFromGlobal[localChainId][maiaGlobalAddress] = maiaGlobalAddress;
+        getGlobalTokenFromLocal[maiaGlobalAddress][localChainId] = maiaGlobalAddress;
+        getLocalTokenFromGlobal[maiaGlobalAddress][localChainId] = maiaGlobalAddress;
     }
 
     /// @inheritdoc IRootPort
@@ -531,8 +477,8 @@ contract RootPort is Ownable, IRootPort {
         external
         onlyOwner
     {
-        getGlobalAddressFromLocal[toChainId][ecoTokenLocalAddress] = ecoTokenGlobalAddress;
-        getLocalAddressFromGlobal[toChainId][ecoTokenGlobalAddress] = ecoTokenLocalAddress;
+        getGlobalTokenFromLocal[ecoTokenLocalAddress][toChainId] = ecoTokenGlobalAddress;
+        getLocalTokenFromGlobal[ecoTokenGlobalAddress][toChainId] = ecoTokenLocalAddress;
     }
 
     /*///////////////////////////////////////////////////////////////

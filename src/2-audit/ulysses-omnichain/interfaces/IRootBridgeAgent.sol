@@ -162,9 +162,11 @@ interface IRootBridgeAgent is IApp {
 
     function userFeeInfo() external view returns (uint128, uint128, uint256);
 
+    function factoryAddress() external view returns (address);
+
     function getBranchBridgeAgent(uint256 _chainId) external view returns (address);
 
-    function isBranchBridgeAgentAllowed(uint256 _chainId, address _branchBridgeAgent) external view returns (bool);
+    function isBranchBridgeAgentAllowed(uint256 _chainId) external view returns (bool);
 
     /*///////////////////////////////////////////////////////////////
                         TOKEN BRIDGING FUNCTIONS
@@ -287,10 +289,9 @@ interface IRootBridgeAgent is IApp {
 
     /**
      * @notice Adds a new branch bridge agent to a given branch chainId
-     * @param _newBranchBridgeAgent address of the new branch bridge agent
      * @param _branchChainId chainId of the branch chain
      */
-    function approveBranchBridgeAgent(address _newBranchBridgeAgent, uint256 _branchChainId) external;
+    function approveBranchBridgeAgent(uint256 _branchChainId) external;
 
     /*///////////////////////////////////////////////////////////////
                              EVENTS

@@ -6,8 +6,6 @@ import "./BranchBridgeAgent.sol";
 import {IArbBranchPort as IArbPort} from "./interfaces/IArbBranchPort.sol";
 import {IRootBridgeAgent} from "./interfaces/IRootBridgeAgent.sol";
 
-import {console2} from "forge-std/console2.sol";
-
 /**
  * @title Base Bridge Agent implementation for the Arbitrum deployment.
  * @author MaiaDAO
@@ -72,39 +70,17 @@ contract ArbitrumBranchBridgeAgent is BranchBridgeAgent {
 
     /// @notice Internal function to pay for execution gas.
     /// @param _recipient address to take gas from.
-    /// @param _depositedGasTokens amount of gas tokens deposited.
     /// @param _feesOwed amount of fees owed.
-    function _payExecutionGas(address _recipient, uint256, uint256 _depositedGasTokens, uint256 _feesOwed)
-        internal
-        override
-    {
-        //Get initial gas
-        uint256 initialGas = IRootBridgeAgent(rootBridgeAgentAddress).initialGas();
-
-        //Check if remote initiated call
-        if (initialGas == 0) return;
-
-        //Get Branch Environment Execution Cost
-        uint256 minExecCost = tx.gasprice * (MIN_EXECUTION_OVERHEAD + initialGas - _feesOwed - gasleft());
-
-        //Unwrap Gas
-        wrappedNativeToken.withdraw(_depositedGasTokens);
-
-        //Replenish Gas
-        _replenishGas(minExecCost);
-
-        //Transfer gas remaining to recipient
-        if (minExecCost < _depositedGasTokens) {
-            SafeTransferLib.safeTransferETH(_recipient, _depositedGasTokens - minExecCost);
-        }
-    }
+    function _payExecutionGas(address _recipient, uint256, uint256 _feesOwed) internal override {}
 
     /// @notice Internal function to deposit gas to the AnycallProxy.
     /// @notice Runs after every remote initiated call.
     /// @param _executionGasSpent amount of gas spent on execution.
     function _replenishGas(uint256 _executionGasSpent) internal override {
         //Deposit Gas
-        IAnycallConfig(IAnycallProxy(localAnyCallAddress).config()).deposit{value: _executionGasSpent}(address(this));
+        IAnycallConfig(IAnycallProxy(localAnyCallAddress).config()).deposit{value: _executionGasSpent}(
+            rootBridgeAgentAddress
+        );
     }
 
     /**
@@ -121,5 +97,17 @@ contract ArbitrumBranchBridgeAgent is BranchBridgeAgent {
     /// @notice reuse to reduce contract bytesize
     function _requiresExecutor() internal view override {
         if (msg.sender != rootBridgeAgentAddress) revert AnycallUnauthorizedCaller();
+    }
+
+    /// @notice reuse to reduce contract bytesize
+    function _requiresFallbackGas() internal view override {
+        if (IRootBridgeAgent(rootBridgeAgentAddress).initialGas() == 0) return;
+        if (msg.value <= MIN_FALLBACK_OVERHEAD) revert InsufficientGas();
+    }
+
+    /// @notice reuse to reduce contract bytesize
+    function _requiresFallbackGas(uint256 _depositedGas) internal view override {
+        if (IRootBridgeAgent(rootBridgeAgentAddress).initialGas() == 0) return;
+        if (_depositedGas <= MIN_FALLBACK_OVERHEAD) revert InsufficientGas();
     }
 }

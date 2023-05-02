@@ -11,6 +11,7 @@ import {console2} from "forge-std/console2.sol";
 //COMPONENTS
 import {RootPort} from "@omni/RootPort.sol";
 import {ArbitrumBranchPort} from "@omni/ArbitrumBranchPort.sol";
+import {BranchPort} from "@omni/BranchPort.sol";
 
 import {RootBridgeAgent, WETH9} from "./mocks/MockRootBridgeAgent.t.sol";
 import {BranchBridgeAgent} from "./mocks/MockBranchBridgeAgent.t.sol";
@@ -19,8 +20,10 @@ import {ArbitrumBranchBridgeAgent} from "@omni/ArbitrumBranchBridgeAgent.sol";
 import {BaseBranchRouter} from "@omni/BaseBranchRouter.sol";
 import {MulticallRootRouter} from "@omni/MulticallRootRouter.sol";
 import {CoreRootRouter} from "@omni/CoreRootRouter.sol";
+import {CoreBranchRouter} from "@omni/CoreBranchRouter.sol";
 import {ArbitrumCoreBranchRouter} from "@omni/ArbitrumCoreBranchRouter.sol";
 
+import {ERC20hTokenBranch} from "@omni/token/ERC20hTokenBranch.sol";
 import {ERC20hTokenRoot} from "@omni/token/ERC20hTokenRoot.sol";
 import {ERC20hTokenRootFactory} from "@omni/factories/ERC20hTokenRootFactory.sol";
 import {ERC20hTokenBranchFactory} from "@omni/factories/ERC20hTokenBranchFactory.sol";
@@ -37,6 +40,73 @@ import {Multicall2} from "@omni/lib/Multicall2.sol";
 import {RLPDecoder} from "@rlp/RLPDecoder.sol";
 import {RLPEncoder} from "@rlp/RLPEncoder.sol";
 
+interface IAnycallApp {
+    /// (required) call on the destination chain to exec the interaction
+    function anyExecute(bytes calldata _data) external returns (bool success, bytes memory result);
+
+    /// (optional,advised) call back on the originating chain if the cross chain interaction fails
+    /// `_data` is the orignal interaction arguments exec on the destination chain
+    function anyFallback(bytes calldata _data) external returns (bool success, bytes memory result);
+}
+
+contract MockAnycall is DSTestPlus {
+    address lastFrom;
+
+    function executor() external view returns (address) {
+        return address(0xABFD);
+    }
+
+    function config() external view returns (address) {
+        return address(0xCAFF);
+    }
+
+    function anyCall(address _to, bytes calldata _data, uint256 _toChainID, uint256 _flags, bytes calldata _extdata)
+        external
+        payable
+    {
+        lastFrom = msg.sender;
+
+        console2.log("anycall");
+        console2.log("from", lastFrom);
+        console2.log("fromChain", BranchBridgeAgent(payable(msg.sender)).localChainId());
+
+        // Mock anycall context
+        hevm.mockCall(
+            address(0xABFD),
+            abi.encodeWithSignature("context()"),
+            abi.encode(address(msg.sender), BranchBridgeAgent(payable(msg.sender)).localChainId(), 22)
+        );
+
+        //Mock Anycallconfig fees
+        hevm.mockCall(
+            address(0xCAFF),
+            abi.encodeWithSignature(
+                "calcSrcFees(address,uint256,uint256)",
+                address(0),
+                BranchBridgeAgent(payable(msg.sender)).localChainId(),
+                _data.length
+            ),
+            abi.encode(0)
+        );
+
+        hevm.prank(address(0xABFD));
+        IAnycallApp(_to).anyExecute(_data);
+    }
+
+    function anyCall(
+        string calldata _to,
+        bytes calldata _data,
+        uint256 _toChainID,
+        uint256 _flags,
+        bytes calldata _extdata
+    ) external payable {
+        lastFrom = msg.sender;
+
+        hevm.prank(address(0xABFD));
+        IAnycallApp(address(bytes20(bytes(_to)))).anyExecute(_data);
+    }
+}
+
 interface IUniswapV3SwapCallback {
     function uniswapV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata _data) external;
 }
@@ -46,11 +116,11 @@ contract MockPool is Test {
         address tokenIn;
     }
 
-    address wrappedNativeTokenAddress;
+    address arbitrumWrappedNativeTokenAddress;
     address globalGasToken;
 
-    constructor(address _wrappedNativeTokenAddress, address _globalGasToken) {
-        wrappedNativeTokenAddress = _wrappedNativeTokenAddress;
+    constructor(address _arbitrumWrappedNativeTokenAddress, address _globalGasToken) {
+        arbitrumWrappedNativeTokenAddress = _arbitrumWrappedNativeTokenAddress;
         globalGasToken = _globalGasToken;
     }
 
@@ -63,27 +133,21 @@ contract MockPool is Test {
     ) external returns (int256 amount0, int256 amount1) {
         SwapCallbackData memory _data = abi.decode(data, (SwapCallbackData));
 
-        address tokenOut = (_data.tokenIn == wrappedNativeTokenAddress ? globalGasToken : wrappedNativeTokenAddress);
+        address tokenOut =
+            (_data.tokenIn == arbitrumWrappedNativeTokenAddress ? globalGasToken : arbitrumWrappedNativeTokenAddress);
 
-        console2.log("swapp");
+        console2.log("Gas Swap Data");
         console2.log("tokenIn", _data.tokenIn);
         console2.log("tokenOut", tokenOut);
-        console2.log("isWrappedGasToken");
-        console2.log(_data.tokenIn != wrappedNativeTokenAddress);
+        console2.log("isWrappedGasToken", _data.tokenIn != arbitrumWrappedNativeTokenAddress);
 
-        if (tokenOut == wrappedNativeTokenAddress) {
-            // hevm.deal(msg.sender)
+        if (tokenOut == arbitrumWrappedNativeTokenAddress) {
             deal(address(this), uint256(amountSpecified));
-            WETH(wrappedNativeTokenAddress).deposit{value: uint256(amountSpecified)}();
-            MockERC20(wrappedNativeTokenAddress).transfer(msg.sender, uint256(amountSpecified));
+            WETH(arbitrumWrappedNativeTokenAddress).deposit{value: uint256(amountSpecified)}();
+            MockERC20(arbitrumWrappedNativeTokenAddress).transfer(msg.sender, uint256(amountSpecified));
         } else {
             deal({token: tokenOut, to: msg.sender, give: uint256(amountSpecified)});
-            // hevm.startPrank(address(0xF62849F9A0B5Bf2913b396098F7c7019b51A820a));
-            // ERC20hTokenRoot(tokenOut).mint(msg.sender, uint256(-amountSpecified), 2040);
-            // hevm.stopPrank();
         }
-        console2.log(MockERC20(tokenOut).balanceOf(msg.sender));
-        console2.log(amountSpecified);
 
         if (zeroForOne) {
             amount1 = amountSpecified;
@@ -111,30 +175,22 @@ contract MockPool is Test {
     }
 }
 
-contract ArbitrumBranchPortTest is DSTestPlus {
-    MockERC20 avaxNativeAssethToken;
+contract BranchPortTest is DSTestPlus {
+    // Consts
 
-    MockERC20 avaxNativeToken;
+    uint24 constant rootChainId = uint24(42161);
 
-    MockERC20 ftmNativeAssethToken;
+    uint24 constant avaxChainId = uint24(43114);
 
-    MockERC20 ftmNativeToken;
+    uint24 constant ftmChainId = uint24(2040);
 
-    ERC20hTokenRoot arbitrumNativeAssethToken;
+    //// System contracts
 
-    MockERC20 arbitrumNativeToken;
-
-    MockERC20 rewardToken;
-
-    ERC20hTokenRoot testToken;
-
-    ERC20hTokenRootFactory hTokenFactory;
+    // Root
 
     RootPort rootPort;
 
-    CoreRootRouter rootCoreRouter;
-
-    MulticallRootRouter rootMulticallRouter;
+    ERC20hTokenRootFactory hTokenFactory;
 
     RootBridgeAgentFactory bridgeAgentFactory;
 
@@ -142,31 +198,85 @@ contract ArbitrumBranchPortTest is DSTestPlus {
 
     RootBridgeAgent multicallBridgeAgent;
 
-    ArbitrumBranchPort localPortAddress;
+    CoreRootRouter rootCoreRouter;
 
-    ArbitrumCoreBranchRouter arbitrumCoreRouter;
+    MulticallRootRouter rootMulticallRouter;
 
-    BaseBranchRouter arbitrumMulticallRouter;
+    // Arbitrum Branch
+
+    ArbitrumBranchPort arbitrumPort;
+
+    ERC20hTokenBranchFactory localHTokenFactory;
+
+    ArbitrumBranchBridgeAgentFactory arbitrumBranchBridgeAgentFactory;
 
     ArbitrumBranchBridgeAgent arbitrumCoreBridgeAgent;
 
     ArbitrumBranchBridgeAgent arbitrumMulticallBridgeAgent;
 
-    ERC20hTokenBranchFactory localHTokenFactory;
+    ArbitrumCoreBranchRouter arbitrumCoreRouter;
 
-    ArbitrumBranchBridgeAgentFactory localBranchBridgeAgentFactory;
+    BaseBranchRouter arbitrumMulticallRouter;
 
-    uint24 rootChainId = uint24(42161);
+    // Avax Branch
 
-    uint24 avaxChainId = uint24(1088);
+    BranchPort avaxPort;
 
-    uint24 ftmChainId = uint24(2040);
+    ERC20hTokenBranchFactory avaxHTokenFactory;
 
+    BranchBridgeAgentFactory avaxBranchBridgeAgentFactory;
+
+    BranchBridgeAgent avaxCoreBridgeAgent;
+
+    BranchBridgeAgent avaxMulticallBridgeAgent;
+
+    CoreBranchRouter avaxCoreRouter;
+
+    BaseBranchRouter avaxMulticallRouter;
+
+    // Ftm Branch
+
+    BranchPort ftmPort;
+
+    ERC20hTokenBranchFactory ftmHTokenFactory;
+
+    BranchBridgeAgentFactory ftmBranchBridgeAgentFactory;
+
+    BranchBridgeAgent ftmCoreBridgeAgent;
+
+    BranchBridgeAgent ftmMulticallBridgeAgent;
+
+    CoreBranchRouter ftmCoreRouter;
+
+    BaseBranchRouter ftmMulticallRouter;
+
+    // ERC20s from different chains.
+
+    address avaxMockAssethToken;
+
+    MockERC20 avaxMockAssetToken;
+
+    address ftmMockAssethToken;
+
+    MockERC20 ftmMockAssetToken;
+
+    ERC20hTokenRoot arbitrumMockAssethToken;
+
+    MockERC20 arbitrumMockToken;
+
+    // Mocks
+
+    address arbitrumGlobalToken;
     address avaxGlobalToken;
-
     address ftmGlobalToken;
 
-    address wrappedNativeToken;
+    address arbitrumWrappedNativeToken;
+    address avaxWrappedNativeToken;
+    address ftmWrappedNativeToken;
+
+    address arbitrumLocalWrappedNativeToken;
+    address avaxLocalWrappedNativeToken;
+    address ftmLocalWrappedNativeToken;
 
     address multicallAddress;
 
@@ -174,11 +284,11 @@ contract ArbitrumBranchPortTest is DSTestPlus {
 
     address nonFungiblePositionManagerAddress = address(0xABAD);
 
-    address avaxLocalWrappedNativeTokenAddress = address(0xBFFF);
-    address avaxUnderlyingWrappedNativeTokenAddress = address(0xFFFB);
+    address avaxLocalarbitrumWrappedNativeTokenAddress = address(0xBFFF);
+    address avaxUnderlyingarbitrumWrappedNativeTokenAddress = address(0xFFFB);
 
-    address ftmLocalWrappedNativeTokenAddress = address(0xABBB);
-    address ftmUnderlyingWrappedNativeTokenAddress = address(0xAAAB);
+    address ftmLocalarbitrumWrappedNativeTokenAddress = address(0xABBB);
+    address ftmUnderlyingarbitrumWrappedNativeTokenAddress = address(0xAAAB);
 
     address avaxCoreBridgeAgentAddress = address(0xBEEF);
 
@@ -192,9 +302,9 @@ contract ArbitrumBranchPortTest is DSTestPlus {
 
     address ftmPortAddressM = address(0xABAC);
 
-    address localAnyCallAddress = address(0xCAFE);
+    address localAnyCallAddress = address(new MockAnycall());
 
-    address localAnyCongfig = address(0xCAFF);
+    address localAnyConfig = address(0xCAFF);
 
     address localAnyCallExecutorAddress = address(0xABFD);
 
@@ -203,34 +313,38 @@ contract ArbitrumBranchPortTest is DSTestPlus {
     address dao = address(this);
 
     function setUp() public {
-        //Mock calls
+        //Mock calls (currently redundant)
         hevm.mockCall(
             localAnyCallAddress, abi.encodeWithSignature("executor()"), abi.encode(localAnyCallExecutorAddress)
         );
 
-        hevm.mockCall(localAnyCallAddress, abi.encodeWithSignature("config()"), abi.encode(localAnyCongfig));
+        hevm.mockCall(localAnyCallAddress, abi.encodeWithSignature("config()"), abi.encode(localAnyConfig));
 
         /////////////////////////////////
         //      Deploy Root Utils      //
         /////////////////////////////////
-        wrappedNativeToken = address(new WETH());
+
+        arbitrumWrappedNativeToken = address(new WETH());
+        avaxWrappedNativeToken = address(new WETH());
+        ftmWrappedNativeToken = address(new WETH());
 
         multicallAddress = address(new Multicall2());
 
         /////////////////////////////////
         //    Deploy Root Contracts    //
         /////////////////////////////////
-        rootPort = new RootPort(rootChainId, wrappedNativeToken);
+
+        rootPort = new RootPort(rootChainId, arbitrumWrappedNativeToken);
 
         bridgeAgentFactory = new RootBridgeAgentFactory(
             rootChainId,
-            WETH9(wrappedNativeToken),
+            WETH9(arbitrumWrappedNativeToken),
             localAnyCallAddress,
             address(rootPort),
             dao
         );
 
-        rootCoreRouter = new CoreRootRouter(rootChainId, wrappedNativeToken, address(rootPort));
+        rootCoreRouter = new CoreRootRouter(rootChainId, arbitrumWrappedNativeToken, address(rootPort));
 
         rootMulticallRouter = new MulticallRootRouter(
             rootChainId,
@@ -243,11 +357,12 @@ contract ArbitrumBranchPortTest is DSTestPlus {
         /////////////////////////////////
         //  Initialize Root Contracts  //
         /////////////////////////////////
+
         rootPort.initialize(address(bridgeAgentFactory), address(rootCoreRouter));
 
         hevm.deal(address(rootPort), 1 ether);
         hevm.prank(address(rootPort));
-        WETH(wrappedNativeToken).deposit{value: 1 ether}();
+        WETH(arbitrumWrappedNativeToken).deposit{value: 1 ether}();
 
         hTokenFactory.initialize(address(rootCoreRouter));
 
@@ -267,113 +382,121 @@ contract ArbitrumBranchPortTest is DSTestPlus {
         //Deploy Local Branch Contracts//
         /////////////////////////////////
 
-        localPortAddress = new ArbitrumBranchPort(rootChainId, address(rootPort), owner);
+        arbitrumPort = new ArbitrumBranchPort(rootChainId, address(rootPort), owner);
 
         arbitrumMulticallRouter = new BaseBranchRouter();
 
-        arbitrumCoreRouter = new ArbitrumCoreBranchRouter(address(0), address(localPortAddress));
+        arbitrumCoreRouter = new ArbitrumCoreBranchRouter(address(0), address(arbitrumPort));
 
-        localBranchBridgeAgentFactory = new ArbitrumBranchBridgeAgentFactory(
+        arbitrumBranchBridgeAgentFactory = new ArbitrumBranchBridgeAgentFactory(
             rootChainId,
             address(bridgeAgentFactory),
-            WETH9(wrappedNativeToken),
+            WETH9(arbitrumWrappedNativeToken),
             localAnyCallAddress,
             localAnyCallExecutorAddress,
             address(arbitrumCoreRouter),
-            address(localPortAddress),
+            address(arbitrumPort),
             owner
         );
 
-        localPortAddress.initialize(address(arbitrumCoreRouter), address(localBranchBridgeAgentFactory));
+        arbitrumPort.initialize(address(arbitrumCoreRouter), address(arbitrumBranchBridgeAgentFactory));
 
-        hevm.startPrank(address(arbitrumCoreRouter));
-
-        arbitrumCoreBridgeAgent = ArbitrumBranchBridgeAgent(
-            payable(
-                localBranchBridgeAgentFactory.createBridgeAgent(
-                    address(arbitrumCoreRouter), address(coreBridgeAgent), address(bridgeAgentFactory)
-                )
-            )
-        );
-
-        arbitrumMulticallBridgeAgent = ArbitrumBranchBridgeAgent(
-            payable(
-                localBranchBridgeAgentFactory.createBridgeAgent(
-                    address(arbitrumMulticallRouter), address(multicallBridgeAgent), address(bridgeAgentFactory)
-                )
-            )
-        );
-
-        hevm.stopPrank();
+        arbitrumBranchBridgeAgentFactory.initialize(address(coreBridgeAgent));
+        arbitrumCoreBridgeAgent = ArbitrumBranchBridgeAgent(payable(arbitrumPort.bridgeAgents(0)));
 
         arbitrumCoreRouter.initialize(address(arbitrumCoreBridgeAgent));
-        arbitrumMulticallRouter.initialize(address(arbitrumMulticallBridgeAgent));
+        // arbitrumMulticallRouter.initialize(address(arbitrumMulticallBridgeAgent));
 
-        ///////////////////////////////////
-        //Deploy Remote Branchs Contracts//
-        ///////////////////////////////////
+        //////////////////////////////////
+        // Deploy Avax Branch Contracts //
+        //////////////////////////////////
 
-        ///////////////////////////////////
-        //  Sync Root with new branches  //
-        ///////////////////////////////////
+        avaxPort = new BranchPort(owner);
 
-        rootPort.initializeCore(address(coreBridgeAgent), address(arbitrumCoreBridgeAgent), address(localPortAddress));
+        avaxHTokenFactory = new ERC20hTokenBranchFactory(rootChainId, address(avaxPort));
 
-        multicallBridgeAgent.approveBranchBridgeAgent(rootChainId);
+        avaxMulticallRouter = new BaseBranchRouter();
 
-        coreBridgeAgent.approveBranchBridgeAgent(avaxChainId);
+        avaxCoreRouter = new CoreBranchRouter(address(avaxHTokenFactory), address(avaxPort));
 
-        multicallBridgeAgent.approveBranchBridgeAgent(avaxChainId);
-
-        coreBridgeAgent.approveBranchBridgeAgent(ftmChainId);
-
-        multicallBridgeAgent.approveBranchBridgeAgent(ftmChainId);
-
-        hevm.prank(address(rootCoreRouter));
-        RootPort(rootPort).syncBranchBridgeAgentWithRoot(
-            address(arbitrumMulticallBridgeAgent), address(multicallBridgeAgent), rootChainId
+        avaxBranchBridgeAgentFactory = new BranchBridgeAgentFactory(
+            avaxChainId,
+            rootChainId,
+            address(bridgeAgentFactory),
+            WETH9(avaxWrappedNativeToken),
+            localAnyCallAddress,
+            localAnyCallExecutorAddress,
+            address(avaxCoreRouter),
+            address(avaxPort),
+            owner
         );
 
-        hevm.prank(address(rootCoreRouter));
-        RootPort(rootPort).syncBranchBridgeAgentWithRoot(
-            avaxCoreBridgeAgentAddress, address(coreBridgeAgent), avaxChainId
+        avaxPort.initialize(address(avaxCoreRouter), address(avaxBranchBridgeAgentFactory));
+
+        avaxBranchBridgeAgentFactory.initialize(address(coreBridgeAgent));
+        avaxCoreBridgeAgent = BranchBridgeAgent(payable(avaxPort.bridgeAgents(0)));
+
+        avaxHTokenFactory.initialize(avaxWrappedNativeToken, address(avaxCoreRouter));
+        avaxLocalWrappedNativeToken = 0xfA0e6015e8AD40Aa4535C477142a2eCdb824F2f7;
+
+        avaxCoreRouter.initialize(address(avaxCoreBridgeAgent));
+
+        //////////////////////////////////
+        // Deploy Ftm Branch Contracts //
+        //////////////////////////////////
+
+        ftmPort = new BranchPort(owner);
+
+        ftmHTokenFactory = new ERC20hTokenBranchFactory(rootChainId, address(ftmPort));
+
+        ftmMulticallRouter = new BaseBranchRouter();
+
+        ftmCoreRouter = new CoreBranchRouter(address(ftmHTokenFactory), address(ftmPort));
+
+        ftmBranchBridgeAgentFactory = new BranchBridgeAgentFactory(
+            ftmChainId,
+            rootChainId,
+            address(bridgeAgentFactory),
+            WETH9(ftmWrappedNativeToken),
+            localAnyCallAddress,
+            localAnyCallExecutorAddress,
+            address(ftmCoreRouter),
+            address(ftmPort),
+            owner
         );
 
-        hevm.prank(address(rootCoreRouter));
-        RootPort(rootPort).syncBranchBridgeAgentWithRoot(
-            avaxMulticallBridgeAgentAddress, address(multicallBridgeAgent), avaxChainId
-        );
+        ftmPort.initialize(address(ftmCoreRouter), address(ftmBranchBridgeAgentFactory));
 
-        hevm.prank(address(rootCoreRouter));
-        RootPort(rootPort).syncBranchBridgeAgentWithRoot(
-            ftmCoreBridgeAgentAddress, address(coreBridgeAgent), ftmChainId
-        );
+        ftmBranchBridgeAgentFactory.initialize(address(coreBridgeAgent));
+        ftmCoreBridgeAgent = BranchBridgeAgent(payable(ftmPort.bridgeAgents(0)));
 
-        hevm.prank(address(rootCoreRouter));
-        RootPort(rootPort).syncBranchBridgeAgentWithRoot(
-            ftmMulticallBridgeAgentAddress, address(multicallBridgeAgent), ftmChainId
-        );
+        ftmHTokenFactory.initialize(ftmWrappedNativeToken, address(ftmCoreRouter));
+        ftmLocalWrappedNativeToken = 0x1f8FC9dBEbe2d5471b686313fd2546f2d3D4f9Cc;
 
-        //Add new chains
+        ftmCoreRouter.initialize(address(ftmCoreBridgeAgent));
 
-        avaxGlobalToken = 0x45C92C2Cd0dF7B2d705EF12CfF77Cb0Bc557Ed22;
+        /////////////////////////////
+        //  Add new branch chains  //
+        /////////////////////////////
 
-        ftmGlobalToken = 0x9914ff9347266f1949C557B717936436402fc636;
+        avaxGlobalToken = 0xDDA0a8D7486686d36449792617565E6C474fBa3f;
+
+        ftmGlobalToken = 0x19a75C5AE908D442fbdbe3F03AfECF6231107e27;
 
         hevm.mockCall(
             nonFungiblePositionManagerAddress,
             abi.encodeWithSignature(
                 "createAndInitializePoolIfNecessary(address,address,uint24,uint160)",
+                arbitrumWrappedNativeToken,
                 avaxGlobalToken,
-                wrappedNativeToken,
                 uint24(100),
                 uint160(200)
             ),
-            abi.encode(address(new MockPool(wrappedNativeToken,address(avaxGlobalToken))))
+            abi.encode(address(new MockPool(arbitrumWrappedNativeToken,avaxGlobalToken)))
         );
 
         RootPort(rootPort).addNewChain(
-            avaxCoreBridgeAgentAddress,
+            address(avaxCoreBridgeAgent),
             avaxChainId,
             "Avalanche",
             "AVAX",
@@ -381,26 +504,29 @@ contract ArbitrumBranchPortTest is DSTestPlus {
             50,
             200,
             nonFungiblePositionManagerAddress,
-            avaxLocalWrappedNativeTokenAddress,
-            avaxUnderlyingWrappedNativeTokenAddress,
+            avaxLocalWrappedNativeToken,
+            avaxWrappedNativeToken,
             address(hTokenFactory)
         );
+
+        // address _newLocalBranchWrappedNativeTokenAddress,
+        // address _newUnderlyingBranchWrappedNativeTokenAddress,
 
         //Mock calls
         hevm.mockCall(
             nonFungiblePositionManagerAddress,
             abi.encodeWithSignature(
                 "createAndInitializePoolIfNecessary(address,address,uint24,uint160)",
-                wrappedNativeToken,
                 ftmGlobalToken,
+                arbitrumWrappedNativeToken,
                 uint24(100),
                 uint160(200)
             ),
-            abi.encode(address(new MockPool(wrappedNativeToken, address(ftmGlobalToken))))
+            abi.encode(address(new MockPool(arbitrumWrappedNativeToken, ftmGlobalToken)))
         );
 
         RootPort(rootPort).addNewChain(
-            ftmCoreBridgeAgentAddress,
+            address(ftmCoreBridgeAgent),
             ftmChainId,
             "Fantom Opera",
             "FTM",
@@ -408,74 +534,139 @@ contract ArbitrumBranchPortTest is DSTestPlus {
             50,
             200,
             nonFungiblePositionManagerAddress,
-            ftmLocalWrappedNativeTokenAddress,
-            ftmUnderlyingWrappedNativeTokenAddress,
+            ftmLocalWrappedNativeToken,
+            ftmWrappedNativeToken,
             address(hTokenFactory)
         );
 
         //Ensure there are gas tokens from each chain in the system.
         hevm.startPrank(address(rootPort));
         ERC20hTokenRoot(avaxGlobalToken).mint(address(rootPort), 1 ether, avaxChainId);
+        hevm.stopPrank();
+
+        hevm.deal(address(this), 1 ether);
+        WETH9(avaxWrappedNativeToken).deposit{value: 1 ether}();
+        ERC20hTokenRoot(avaxWrappedNativeToken).transfer(address(avaxPort), 1 ether);
+
+        hevm.startPrank(address(rootPort));
         ERC20hTokenRoot(ftmGlobalToken).mint(address(rootPort), 1 ether, ftmChainId);
         hevm.stopPrank();
 
+        hevm.deal(address(this), 1 ether);
+        WETH9(ftmWrappedNativeToken).deposit{value: 1 ether}();
+        ERC20hTokenRoot(ftmWrappedNativeToken).transfer(address(ftmPort), 1 ether);
+        hevm.stopPrank();
+
+        //////////////////////
+        // Verify Addition  //
+        //////////////////////
+
         require(
-            RootPort(rootPort).getGlobalTokenFromLocal(address(avaxLocalWrappedNativeTokenAddress), avaxChainId)
+            RootPort(rootPort).getGlobalTokenFromLocal(address(avaxLocalWrappedNativeToken), avaxChainId)
                 == avaxGlobalToken,
             "Token should be added"
         );
 
         require(
             RootPort(rootPort).getLocalTokenFromGlobal(avaxGlobalToken, avaxChainId)
-                == address(avaxLocalWrappedNativeTokenAddress),
+                == address(avaxLocalWrappedNativeToken),
             "Token should be added"
         );
         require(
-            RootPort(rootPort).getUnderlyingTokenFromLocal(address(avaxLocalWrappedNativeTokenAddress), avaxChainId)
-                == address(avaxUnderlyingWrappedNativeTokenAddress),
+            RootPort(rootPort).getUnderlyingTokenFromLocal(address(avaxLocalWrappedNativeToken), avaxChainId)
+                == address(avaxWrappedNativeToken),
             "Token should be added"
         );
 
         require(
-            RootPort(rootPort).getGlobalTokenFromLocal(address(ftmLocalWrappedNativeTokenAddress), ftmChainId)
+            RootPort(rootPort).getGlobalTokenFromLocal(address(ftmLocalWrappedNativeToken), ftmChainId)
                 == ftmGlobalToken,
             "Token should be added"
         );
 
         require(
             RootPort(rootPort).getLocalTokenFromGlobal(ftmGlobalToken, ftmChainId)
-                == address(ftmLocalWrappedNativeTokenAddress),
+                == address(ftmLocalWrappedNativeToken),
             "Token should be added"
         );
         require(
-            RootPort(rootPort).getUnderlyingTokenFromLocal(address(ftmLocalWrappedNativeTokenAddress), ftmChainId)
-                == address(ftmUnderlyingWrappedNativeTokenAddress),
+            RootPort(rootPort).getUnderlyingTokenFromLocal(address(ftmLocalWrappedNativeToken), ftmChainId)
+                == address(ftmWrappedNativeToken),
             "Token should be added"
         );
+
+        ///////////////////////////////////
+        //  Approve new Branchs in Root  //
+        ///////////////////////////////////
+
+        rootPort.initializeCore(address(coreBridgeAgent), address(arbitrumCoreBridgeAgent), address(arbitrumPort));
+
+        multicallBridgeAgent.approveBranchBridgeAgent(rootChainId);
+
+        multicallBridgeAgent.approveBranchBridgeAgent(avaxChainId);
+
+        multicallBridgeAgent.approveBranchBridgeAgent(ftmChainId);
+
+        ///////////////////////////////////////
+        //  Add new branches to  Root Agents //
+        ///////////////////////////////////////
+
+        hevm.deal(address(this), 3 ether);
+
+        rootCoreRouter.addBranchToBridgeAgent{value: 1 ether}(
+            address(multicallBridgeAgent),
+            address(avaxBranchBridgeAgentFactory),
+            address(avaxMulticallRouter),
+            address(avaxCoreRouter),
+            avaxChainId,
+            0.01 ether
+        );
+
+        rootCoreRouter.addBranchToBridgeAgent{value: 1 ether}(
+            address(multicallBridgeAgent),
+            address(ftmBranchBridgeAgentFactory),
+            address(ftmMulticallRouter),
+            address(ftmCoreRouter),
+            ftmChainId,
+            0.5 ether
+        );
+
+        rootCoreRouter.addBranchToBridgeAgent(
+            address(multicallBridgeAgent),
+            address(arbitrumBranchBridgeAgentFactory),
+            address(arbitrumMulticallRouter),
+            address(arbitrumCoreRouter),
+            rootChainId,
+            0
+        );
+
+        /////////////////////////////////////
+        //  Initialize new Branch Routers  //
+        /////////////////////////////////////
+
+        arbitrumMulticallBridgeAgent = ArbitrumBranchBridgeAgent(payable(arbitrumPort.bridgeAgents(1)));
+        avaxMulticallBridgeAgent = BranchBridgeAgent(payable(avaxPort.bridgeAgents(1)));
+        ftmMulticallBridgeAgent = BranchBridgeAgent(payable(ftmPort.bridgeAgents(1)));
+
+        arbitrumMulticallRouter.initialize(address(arbitrumMulticallBridgeAgent));
+        avaxMulticallRouter.initialize(address(avaxMulticallBridgeAgent));
+        ftmMulticallRouter.initialize(address(ftmMulticallBridgeAgent));
 
         //////////////////////////////////////
         //Deploy Underlying Tokens and Mocks//
         //////////////////////////////////////
 
-        rewardToken = new MockERC20("hermes token", "HERMES", 18);
+        // avaxMockAssethToken = new MockERC20("hTOKEN-AVAX", "LOCAL hTOKEN FOR TOKEN IN AVAX", 18);
+        avaxMockAssetToken = new MockERC20("underlying token", "UNDER", 18);
 
-        testToken = new ERC20hTokenRoot(
-            rootChainId,
-            address(bridgeAgentFactory),
-            address(rootPort),
-            "Hermes Global hToken 1",
-            "hGT1"
-        );
+        // ftmMockAssethToken = new MockERC20("hTOKEN-FTM", "LOCAL hTOKEN FOR TOKEN IN FMT", 18);
+        ftmMockAssetToken = new MockERC20("underlying token", "UNDER", 18);
 
-        avaxNativeAssethToken = new MockERC20("hTOKEN-AVAX", "LOCAL hTOKEN FOR TOKEN IN AVAX", 18);
-        avaxNativeToken = new MockERC20("underlying token", "UNDER", 18);
-
-        ftmNativeAssethToken = new MockERC20("hTOKEN-FTM", "LOCAL hTOKEN FOR TOKEN IN FMT", 18);
-        ftmNativeToken = new MockERC20("underlying token", "UNDER", 18);
-
-        // arbitrumNativeAssethToken
-        arbitrumNativeToken = new MockERC20("underlying token", "UNDER", 18);
+        //arbitrumMockAssethToken is global
+        arbitrumMockToken = new MockERC20("underlying token", "UNDER", 18);
     }
+
+    fallback() external payable {}
 
     struct OutputParams {
         address recipient;
@@ -491,117 +682,115 @@ contract ArbitrumBranchPortTest is DSTestPlus {
         uint256[] depositsOut;
     }
 
+    function testAddBridgeAgent() public {
+        uint256 balanceBefore = MockERC20(arbitrumWrappedNativeToken).balanceOf(address(coreBridgeAgent));
+
+        //Get some gas
+        hevm.deal(address(this), 1 ether);
+
+        //Create Root Bridge Agent
+        MulticallRootRouter testMulticallRouter = new MulticallRootRouter(
+            rootChainId,
+            address(rootPort),
+            multicallAddress
+        );
+
+        // Create Bridge Agent
+        multicallBridgeAgent = RootBridgeAgent(
+            payable(RootBridgeAgentFactory(bridgeAgentFactory).createBridgeAgent(address(testMulticallRouter)))
+        );
+
+        //Save Bridge Agent Address
+        RootBridgeAgent testRootBridgeAgent = RootBridgeAgent(payable(rootPort.bridgeAgents(2)));
+
+        //Create Branch Router
+        BaseBranchRouter ftmTestRouter = new BaseBranchRouter();
+
+        //Allow new branch
+        testRootBridgeAgent.approveBranchBridgeAgent(ftmChainId);
+
+        //Create Branch Bridge Agent
+        rootCoreRouter.addBranchToBridgeAgent{value: 0.00005 ether}(
+            address(testRootBridgeAgent),
+            address(ftmBranchBridgeAgentFactory),
+            address(testMulticallRouter),
+            address(this),
+            ftmChainId,
+            0.0000025 ether
+        );
+
+        BranchBridgeAgent ftmTestBranchBridgeAgent = BranchBridgeAgent(payable(ftmPort.bridgeAgents(2)));
+
+        testMulticallRouter.initialize(address(ftmTestBranchBridgeAgent));
+
+        uint256 balanceAfter = MockERC20(arbitrumWrappedNativeToken).balanceOf(address(coreBridgeAgent));
+
+        // require(balanceAfter - balanceBefore == 0.00005 ether, "Fee should be paid");
+    }
+
     address public newAvaxAssetGlobalAddress;
 
     function testAddLocalToken() public {
-        //Encode Data
-        bytes memory data =
-            abi.encode(address(avaxNativeToken), address(avaxNativeAssethToken), "UnderLocal Coin", "UL");
+        uint256 balanceBefore = MockERC20(arbitrumWrappedNativeToken).balanceOf(address(coreBridgeAgent));
 
-        //Pack FuncId
-        bytes memory packedData = abi.encodePacked(bytes1(0x02), data);
+        hevm.deal(address(this), 1 ether);
 
-        uint256 balanceBefore = MockERC20(wrappedNativeToken).balanceOf(address(coreBridgeAgent));
+        avaxCoreRouter.addLocalToken{value: 0.00005 ether}(address(avaxMockAssetToken));
 
-        //Call Deposit function
-        encodeCallNoDeposit(
-            payable(avaxCoreBridgeAgentAddress),
-            payable(address(coreBridgeAgent)),
-            uint32(1),
-            packedData,
-            0.00005 ether,
-            0,
-            avaxChainId
-        );
+        avaxMockAssethToken = RootPort(rootPort).getLocalTokenFromUnder(address(avaxMockAssetToken), avaxChainId);
 
-        newAvaxAssetGlobalAddress =
-            RootPort(rootPort).getGlobalTokenFromLocal(address(avaxNativeAssethToken), avaxChainId);
+        newAvaxAssetGlobalAddress = RootPort(rootPort).getGlobalTokenFromLocal(avaxMockAssethToken, avaxChainId);
 
-        console2.log("New: ", newAvaxAssetGlobalAddress);
+        console2.log("New Global: ", newAvaxAssetGlobalAddress);
+        console2.log("New Local: ", avaxMockAssethToken);
 
         require(
-            RootPort(rootPort).getGlobalTokenFromLocal(address(avaxNativeAssethToken), avaxChainId) != address(0),
+            RootPort(rootPort).getGlobalTokenFromLocal(avaxMockAssethToken, avaxChainId) == newAvaxAssetGlobalAddress,
             "Token should be added"
         );
         require(
-            RootPort(rootPort).getLocalTokenFromGlobal(newAvaxAssetGlobalAddress, avaxChainId)
-                == address(avaxNativeAssethToken),
+            RootPort(rootPort).getLocalTokenFromGlobal(newAvaxAssetGlobalAddress, avaxChainId) == avaxMockAssethToken,
             "Token should be added"
         );
         require(
-            RootPort(rootPort).getUnderlyingTokenFromLocal(address(avaxNativeAssethToken), avaxChainId)
-                == address(avaxNativeToken),
+            RootPort(rootPort).getUnderlyingTokenFromLocal(avaxMockAssethToken, avaxChainId)
+                == address(avaxMockAssetToken),
             "Token should be added"
         );
 
         console2.log("Balance Before: ", balanceBefore);
         console2.log("Balance After: ", address(coreBridgeAgent).balance);
-
-        // require (balanceBefore == MockERC20(wrappedNativeToken).balanceOf(address(coreBridgeAgent)), "Balance should not change");
     }
 
     address public newFtmAssetGlobalAddress;
+
+    address public newAvaxAssetLocalToken;
 
     function testAddGlobalToken() public {
         //Add Local Token from Avax
         testAddLocalToken();
 
-        //Encode Call Data
-        bytes memory data = abi.encode(ftmCoreBridgeAgentAddress, newAvaxAssetGlobalAddress, ftmChainId, 0.000025 ether);
+        uint256 balanceBefore = MockERC20(arbitrumWrappedNativeToken).balanceOf(address(coreBridgeAgent));
 
-        //Pack FuncId
-        bytes memory packedData = abi.encodePacked(bytes1(0x01), data);
-
-        uint256 balanceBefore = MockERC20(wrappedNativeToken).balanceOf(address(coreBridgeAgent));
-
-        //Call Deposit function
-        encodeCallNoDeposit(
-            payable(ftmCoreBridgeAgentAddress),
-            payable(address(coreBridgeAgent)),
-            uint32(1),
-            packedData,
-            0.0001 ether,
-            0.00005 ether,
-            ftmChainId
-        );
-    }
-
-    address public newAvaxAssetLocalToken = address(0xFAFA);
-
-    function testSetLocalToken() public {
-        //Add Local Token from Avax
-        testAddGlobalToken();
-
-        //Encode Data
-        bytes memory data = abi.encode(newAvaxAssetGlobalAddress, newAvaxAssetLocalToken, "UnderLocal Coin", "UL");
-
-        //Pack FuncId
-        bytes memory packedData = abi.encodePacked(bytes1(0x03), data);
-
-        uint256 balanceBefore = MockERC20(wrappedNativeToken).balanceOf(address(coreBridgeAgent));
-
-        //Call Deposit function
-        encodeSystemCall(
-            payable(ftmCoreBridgeAgentAddress),
-            payable(address(coreBridgeAgent)),
-            uint32(1),
-            packedData,
-            0.00001 ether,
-            0,
-            ftmChainId
+        avaxCoreRouter.addGlobalToken{value: 0.0005 ether}(
+            newAvaxAssetGlobalAddress, ftmChainId, 0.000025 ether, 0.00001 ether
         );
 
-        require(
-            RootPort(rootPort).getGlobalTokenFromLocal(newAvaxAssetLocalToken, ftmChainId) == newAvaxAssetGlobalAddress,
-            "Token should be added"
-        );
+        newAvaxAssetLocalToken = RootPort(rootPort).getLocalTokenFromGlobal(newAvaxAssetGlobalAddress, ftmChainId);
+
+        newFtmAssetGlobalAddress = RootPort(rootPort).getGlobalTokenFromLocal(newAvaxAssetLocalToken, ftmChainId);
+
+        console2.log("New Global: ", newFtmAssetGlobalAddress);
+        console2.log("New Local: ", newAvaxAssetLocalToken);
+
         require(
             RootPort(rootPort).getLocalTokenFromGlobal(newAvaxAssetGlobalAddress, ftmChainId) == newAvaxAssetLocalToken,
             "Token should be added"
         );
+
         require(
-            RootPort(rootPort).getUnderlyingTokenFromLocal(address(newAvaxAssetLocalToken), ftmChainId) == address(0),
-            "Token should not exist"
+            RootPort(rootPort).getUnderlyingTokenFromLocal(newAvaxAssetLocalToken, ftmChainId) == address(0),
+            "Underlying should not be added"
         );
     }
 
@@ -611,18 +800,18 @@ contract ArbitrumBranchPortTest is DSTestPlus {
 
     function testAddLocalTokenArbitrum() public {
         //Set up
-        // testSetLocalToken();
+        testAddGlobalToken();
 
         //Get some gas.
         hevm.deal(address(this), 1 ether);
 
         //Add new localToken
-        arbitrumCoreRouter.addLocalToken(address(arbitrumNativeToken));
+        arbitrumCoreRouter.addLocalToken{value: 0.0005 ether}(address(arbitrumMockToken));
 
-        uint256 balanceBefore = MockERC20(wrappedNativeToken).balanceOf(address(coreBridgeAgent));
+        uint256 balanceBefore = MockERC20(arbitrumWrappedNativeToken).balanceOf(address(coreBridgeAgent));
 
         newArbitrumAssetGlobalAddress =
-            RootPort(rootPort).getLocalTokenFromUnder(address(arbitrumNativeToken), rootChainId);
+            RootPort(rootPort).getLocalTokenFromUnder(address(arbitrumMockToken), rootChainId);
 
         console2.log("New: ", newArbitrumAssetGlobalAddress);
 
@@ -638,18 +827,16 @@ contract ArbitrumBranchPortTest is DSTestPlus {
         );
         require(
             RootPort(rootPort).getUnderlyingTokenFromLocal(address(newArbitrumAssetGlobalAddress), rootChainId)
-                == address(arbitrumNativeToken),
+                == address(arbitrumMockToken),
             "Token should be added"
         );
 
         console2.log("Balance Before: ", balanceBefore);
         console2.log("Balance After: ", address(coreBridgeAgent).balance);
-
-        // require (balanceBefore == MockERC20(wrappedNativeToken).balanceOf(address(coreBridgeAgent)), "Balance should not change");
     }
 
-    // ftmLocalWrappedNativeTokenAddress
-    // ftmUnderlyingWrappedNativeTokenAddress
+    // ftmLocalarbitrumWrappedNativeTokenAddress
+    // ftmUnderlyingarbitrumWrappedNativeTokenAddress
 
     function testCallOutWithDeposit() public {
         //Set up
@@ -689,26 +876,19 @@ contract ArbitrumBranchPortTest is DSTestPlus {
         hevm.deal(address(this), 1 ether);
 
         //Mint Underlying Token.
-        arbitrumNativeToken.mint(address(this), 100 ether);
+        arbitrumMockToken.mint(address(this), 100 ether);
 
         //Approve spend by router
-        arbitrumNativeToken.approve(address(localPortAddress), 100 ether);
+        arbitrumMockToken.approve(address(arbitrumPort), 100 ether);
 
         //Prepare deposit info
         DepositInput memory depositInput = DepositInput({
             hToken: address(newArbitrumAssetGlobalAddress),
-            token: address(arbitrumNativeToken),
+            token: address(arbitrumMockToken),
             amount: 100 ether,
             deposit: 100 ether,
             toChain: rootChainId
         });
-
-        //Mock messaging layer fees
-        hevm.mockCall(
-            address(localAnyCongfig),
-            abi.encodeWithSignature("calcSrcFees(address,uint256,uint256)", address(0), 0, 100),
-            abi.encode(0)
-        );
 
         //Call Deposit function
         arbitrumMulticallBridgeAgent.callOutSignedAndBridge{value: 1 ether}(packedData, depositInput, 0.5 ether);
@@ -719,21 +899,20 @@ contract ArbitrumBranchPortTest is DSTestPlus {
             uint32(1),
             address(this),
             address(newArbitrumAssetGlobalAddress),
-            address(arbitrumNativeToken),
+            address(arbitrumMockToken),
             100 ether,
             100 ether,
             1 ether,
             0.5 ether
         );
 
-        console2.log("LocalPort Balance:", MockERC20(arbitrumNativeToken).balanceOf(address(localPortAddress)));
+        console2.log("LocalPort Balance:", MockERC20(arbitrumMockToken).balanceOf(address(arbitrumPort)));
         require(
-            MockERC20(arbitrumNativeToken).balanceOf(address(localPortAddress)) == 50 ether,
-            "LocalPort should have 50 tokens"
+            MockERC20(arbitrumMockToken).balanceOf(address(arbitrumPort)) == 50 ether, "LocalPort should have 50 tokens"
         );
 
-        console2.log("User Balance:", MockERC20(arbitrumNativeToken).balanceOf(address(this)));
-        require(MockERC20(arbitrumNativeToken).balanceOf(address(this)) == 50 ether, "User should have 50 tokens");
+        console2.log("User Balance:", MockERC20(arbitrumMockToken).balanceOf(address(this)));
+        require(MockERC20(arbitrumMockToken).balanceOf(address(this)) == 50 ether, "User should have 50 tokens");
 
         console2.log("User Global Balance:", MockERC20(newArbitrumAssetGlobalAddress).balanceOf(address(this)));
         require(
@@ -788,30 +967,30 @@ contract ArbitrumBranchPortTest is DSTestPlus {
             hevm.startPrank(address(rootPort));
             ERC20hTokenRoot(newArbitrumAssetGlobalAddress).mint(_user, _amount - _deposit, rootChainId);
             hevm.stopPrank();
-            arbitrumNativeToken.mint(address(localPortAddress), _amount - _deposit);
+            arbitrumMockToken.mint(address(arbitrumPort), _amount - _deposit);
         }
 
         //Mint Underlying Token.
-        if (_deposit > 0) arbitrumNativeToken.mint(_user, _deposit);
+        if (_deposit > 0) arbitrumMockToken.mint(_user, _deposit);
 
         //Prepare deposit info
         DepositInput memory depositInput = DepositInput({
             hToken: address(newArbitrumAssetGlobalAddress),
-            token: address(arbitrumNativeToken),
+            token: address(arbitrumMockToken),
             amount: _amount,
             deposit: _deposit,
             toChain: rootChainId
         });
 
         console2.log("BALANCE BEFORE:");
-        console2.log("arbitrumNativeToken Balance:", MockERC20(arbitrumNativeToken).balanceOf(_user));
+        console2.log("arbitrumMockToken Balance:", MockERC20(arbitrumMockToken).balanceOf(_user));
         console2.log(
             "newArbitrumAssetGlobalAddress Balance:", MockERC20(newArbitrumAssetGlobalAddress).balanceOf(_user)
         );
 
         //Call Deposit function
         hevm.startPrank(_user);
-        arbitrumNativeToken.approve(address(localPortAddress), _deposit);
+        arbitrumMockToken.approve(address(arbitrumPort), _deposit);
         ERC20hTokenRoot(newArbitrumAssetGlobalAddress).approve(address(rootPort), _amount - _deposit);
         arbitrumMulticallBridgeAgent.callOutSignedAndBridge{value: 1 ether}(packedData, depositInput, 0.5 ether);
         hevm.stopPrank();
@@ -822,7 +1001,7 @@ contract ArbitrumBranchPortTest is DSTestPlus {
             uint32(1),
             _user,
             address(newArbitrumAssetGlobalAddress),
-            address(arbitrumNativeToken),
+            address(arbitrumMockToken),
             _amount,
             _deposit,
             1 ether,
@@ -837,11 +1016,10 @@ contract ArbitrumBranchPortTest is DSTestPlus {
 
         address userAccount = address(RootPort(rootPort).getUserAccount(_user));
 
-        console2.log("LocalPort Balance:", MockERC20(arbitrumNativeToken).balanceOf(address(localPortAddress)));
+        console2.log("LocalPort Balance:", MockERC20(arbitrumMockToken).balanceOf(address(arbitrumPort)));
         console2.log("Expected:", _amount - _deposit + _deposit - _depositOut);
         require(
-            MockERC20(arbitrumNativeToken).balanceOf(address(localPortAddress))
-                == _amount - _deposit + _deposit - _depositOut,
+            MockERC20(arbitrumMockToken).balanceOf(address(arbitrumPort)) == _amount - _deposit + _deposit - _depositOut,
             "LocalPort tokens"
         );
 
@@ -849,9 +1027,9 @@ contract ArbitrumBranchPortTest is DSTestPlus {
         // console2.log("Expected:", 0); SINCE ORIGIN == DESTINATION == ARBITRUM
         require(MockERC20(newArbitrumAssetGlobalAddress).balanceOf(address(rootPort)) == 0, "RootPort tokens");
 
-        console2.log("User Balance:", MockERC20(arbitrumNativeToken).balanceOf(_user));
+        console2.log("User Balance:", MockERC20(arbitrumMockToken).balanceOf(_user));
         console2.log("Expected:", _depositOut);
-        require(MockERC20(arbitrumNativeToken).balanceOf(_user) == _depositOut, "User tokens");
+        require(MockERC20(arbitrumMockToken).balanceOf(_user) == _depositOut, "User tokens");
 
         console2.log("User Global Balance:", MockERC20(newArbitrumAssetGlobalAddress).balanceOf(_user));
         console2.log("Expected:", _amountOut - _depositOut);
@@ -920,11 +1098,11 @@ contract ArbitrumBranchPortTest is DSTestPlus {
 
         console2.log("TEST DEPOSIT~");
         console2.logUint(deposit.depositedGas);
-        console2.logUint(WETH9(wrappedNativeToken).balanceOf(address(localPortAddress)));
+        console2.logUint(WETH9(arbitrumWrappedNativeToken).balanceOf(address(arbitrumPort)));
 
         // require(deposit.depositedGas == _depositedGas, "Deposit depositedGas doesn't match");
         // require(
-        //     WETH9(wrappedNativeToken).balanceOf(address(rootPort)) == _depositedGas - _gasToBridgeOut,
+        //     WETH9(arbitrumWrappedNativeToken).balanceOf(address(rootPort)) == _depositedGas - _gasToBridgeOut,
         //     "Deposit depositedGas balance doesn't match"
         // );
 
@@ -940,13 +1118,13 @@ contract ArbitrumBranchPortTest is DSTestPlus {
 
         //         console2.log("2");
         //         require(
-        //             MockERC20(hTokens[0]).balanceOf(address(localPortAddress)) == 0,
+        //             MockERC20(hTokens[0]).balanceOf(address(arbitrumPort)) == 0,
         //             "Deposit hToken balance doesn't match"
         //         );
         //     } else if (amounts[0] - deposits[0] > 0 && deposits[0] > 0) {
         //         console2.log("3");
         //         console2.log(_user);
-        //         console2.log(address(localPortAddress));
+        //         console2.log(address(arbitrumPort));
 
         //         require(MockERC20(hTokens[0]).balanceOf(_user) == 0, "Deposit hToken balance doesn't match");
         //         console2.log("4");
@@ -954,7 +1132,7 @@ contract ArbitrumBranchPortTest is DSTestPlus {
         //         require(MockERC20(tokens[0]).balanceOf(_user) == 0, "Deposit token balance doesn't match");
         //         console2.log("5");
         //         require(
-        //             MockERC20(tokens[0]).balanceOf(address(localPortAddress)) == _deposit,
+        //             MockERC20(tokens[0]).balanceOf(address(arbitrumPort)) == _deposit,
         //             "Deposit token balance doesn't match"
         //         );
         //     } else {
@@ -962,7 +1140,7 @@ contract ArbitrumBranchPortTest is DSTestPlus {
         //         // require(MockERC20(tokens[0]).balanceOf(_user) == 0, "Deposit token balance doesn't match");
         //         // console2.log("7");
         //         // require(
-        //         //     MockERC20(tokens[0]).balanceOf(address(localPortAddress)) == _deposit,
+        //         //     MockERC20(tokens[0]).balanceOf(address(arbitrumPort)) == _deposit,
         //         //     "Deposit token balance doesn't match"
         //         // );
 
@@ -993,7 +1171,7 @@ contract ArbitrumBranchPortTest is DSTestPlus {
         bytes memory inputCalldata = abi.encodePacked(bytes1(0x00), _nonce, _data, _rootExecGas, _remoteExecGas);
 
         hevm.mockCall(
-            address(localAnyCongfig),
+            address(localAnyConfig),
             abi.encodeWithSignature(
                 "calcSrcFees(address,uint256,uint256)", address(0), _fromChainId, inputCalldata.length
             ),
@@ -1034,7 +1212,7 @@ contract ArbitrumBranchPortTest is DSTestPlus {
         console2.logBytes(inputCalldata);
 
         hevm.mockCall(
-            address(localAnyCongfig),
+            address(localAnyConfig),
             abi.encodeWithSignature(
                 "calcSrcFees(address,uint256,uint256)", address(0), _fromChainId, inputCalldata.length
             ),
@@ -1075,7 +1253,7 @@ contract ArbitrumBranchPortTest is DSTestPlus {
         bytes memory inputCalldata = abi.encodePacked(bytes1(0x04), _user, _nonce, _data, _rootExecGas, _remoteExecGas);
 
         hevm.mockCall(
-            address(localAnyCongfig),
+            address(localAnyConfig),
             abi.encodeWithSignature(
                 "calcSrcFees(address,uint256,uint256)", address(0), _fromChainId, inputCalldata.length
             ),
@@ -1106,7 +1284,7 @@ contract ArbitrumBranchPortTest is DSTestPlus {
         );
 
         hevm.mockCall(
-            address(localAnyCongfig),
+            address(localAnyConfig),
             abi.encodeWithSignature(
                 "calcSrcFees(address,uint256,uint256)", address(0), _fromChainId, _packedData.length
             ),
@@ -1140,7 +1318,7 @@ contract ArbitrumBranchPortTest is DSTestPlus {
         );
 
         hevm.mockCall(
-            address(localAnyCongfig),
+            address(localAnyConfig),
             abi.encodeWithSignature(
                 "calcSrcFees(address,uint256,uint256)", address(0), _fromChainId, _packedData.length
             ),
@@ -1305,8 +1483,8 @@ contract ArbitrumBranchPortTest is DSTestPlus {
     //     hevm.deal(_user, 1 ether);
 
     //     // Approve spend by router
-    //     ERC20hTokenBranch(_hToken).approve(localPortAddress, _amount - _deposit);
-    //     MockERC20(_token).approve(localPortAddress, _deposit);
+    //     ERC20hTokenBranch(_hToken).approve(arbitrumPort, _amount - _deposit);
+    //     MockERC20(_token).approve(arbitrumPort, _deposit);
 
     //     //Call Deposit function
     //     IBranchRouter(bRouter).callOutAndBridge{value: 1 ether}(bytes("testdata"), depositInput, _rootExecGas);
@@ -1345,10 +1523,10 @@ contract ArbitrumBranchPortTest is DSTestPlus {
     //     console2.log(_hTokens[0], _deposits[0]);
 
     //     // Approve spend by router
-    //     MockERC20(_hTokens[0]).approve(localPortAddress, _amounts[0] - _deposits[0]);
-    //     MockERC20(_tokens[0]).approve(localPortAddress, _deposits[0]);
-    //     MockERC20(_hTokens[1]).approve(localPortAddress, _amounts[1] - _deposits[1]);
-    //     MockERC20(_tokens[1]).approve(localPortAddress, _deposits[1]);
+    //     MockERC20(_hTokens[0]).approve(arbitrumPort, _amounts[0] - _deposits[0]);
+    //     MockERC20(_tokens[0]).approve(arbitrumPort, _deposits[0]);
+    //     MockERC20(_hTokens[1]).approve(arbitrumPort, _amounts[1] - _deposits[1]);
+    //     MockERC20(_tokens[1]).approve(arbitrumPort, _deposits[1]);
 
     //     //Call Deposit function
     //     IBranchRouter(bRouter).callOutAndBridgeMultiple{value: 1 ether}(bytes("test"), depositInput, _rootExecGas);

@@ -71,7 +71,9 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
 
     uint256 internal constant MIN_FALLBACK_OVERHEAD = 150000;
 
-    uint256 public accumulatedFees;
+    uint128 public accumulatedFees;
+
+    uint128 public remoteCallDepositedGas;
 
     constructor(
         WETH9 _wrappedNativeToken,
@@ -117,120 +119,149 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
         (from, fromChainId,) = IAnycallExecutor(localAnyCallExecutorAddress).context();
     }
 
-    /// @notice reuse to reduce contract bytesize
-    function _requiresExecutor() internal view virtual {
-        if (msg.sender != localAnyCallExecutorAddress) revert AnycallUnauthorizedCaller();
-        (address from,,) = IAnycallExecutor(localAnyCallExecutorAddress).context();
-        if (from != rootBridgeAgentAddress) revert AnycallUnauthorizedCaller();
-    }
-
-    /// @notice reuse to reduce contract bytesize
-    function _requiresRouter() internal view {
-        if (msg.sender != localRouterAddress) revert UnauthorizedCallerNotRouter();
-    }
-
-    /// @notice reuse to reduce contract bytesize
-    function _requiresFallbackGas() internal view {
-        if (msg.value <= MIN_FALLBACK_OVERHEAD) revert InsufficientGas();
-    }
-
     /*///////////////////////////////////////////////////////////////
                     LOCAL USER EXTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IBranchBridgeAgent
-    function callOut(bytes calldata params, uint128 rootExecutionGas) external payable lock requiresFallbackGas {
-        _callOut(msg.sender, params, rootExecutionGas);
+    function callOut(bytes calldata _params, uint128 _remoteExecutionGas) external payable lock requiresFallbackGas {
+        //Wrap the gas allocated for omnichain execution.
+        wrappedNativeToken.deposit{value: msg.value}();
+
+        //Perform Call without deposit
+        _callOut(msg.sender, _params, msg.value.toUint128(), _remoteExecutionGas);
     }
 
     /// @inheritdoc IBranchBridgeAgent
-    function callOutAndBridge(bytes calldata params, DepositInput memory dParams, uint128 rootExecutionGas)
+    function callOutAndBridge(bytes calldata _params, DepositInput memory _dParams, uint128 _remoteExecutionGas)
         external
         payable
         lock
         requiresFallbackGas
     {
-        _callOutAndBridge(msg.sender, params, dParams, rootExecutionGas);
+        //Wrap the gas allocated for omnichain execution.
+        wrappedNativeToken.deposit{value: msg.value}();
+
+        //Perform Call with deposit
+        _callOutAndBridge(msg.sender, _params, _dParams, msg.value.toUint128(), _remoteExecutionGas);
     }
 
     /// @inheritdoc IBranchBridgeAgent
     function callOutAndBridgeMultiple(
-        bytes calldata params,
-        DepositMultipleInput memory dParams,
-        uint128 rootExecutionGas
+        bytes calldata _params,
+        DepositMultipleInput memory _dParams,
+        uint128 _remoteExecutionGas
     ) external payable lock requiresFallbackGas {
-        _callOutAndBridgeMultiple(msg.sender, params, dParams, rootExecutionGas);
+        //Wrap the gas allocated for omnichain execution.
+        wrappedNativeToken.deposit{value: msg.value}();
+
+        //Perform Call with multiple deposits
+        _callOutAndBridgeMultiple(msg.sender, _params, _dParams, msg.value.toUint128(), _remoteExecutionGas);
     }
 
     /// @inheritdoc IBranchBridgeAgent
-    function callOutSigned(bytes calldata params, uint128 rootExecutionGas) external payable lock requiresFallbackGas {
-        //Encode Data for cross-chain call.
-        bytes memory data =
-            abi.encodePacked(bytes1(0x04), msg.sender, depositNonce, params, msg.value.toUint128(), rootExecutionGas);
-
-        //Create Deposit and Send Cross-Chain request
-        _depositAndCall(msg.sender, data, address(0), address(0), 0, 0);
-    }
-
-    /// @inheritdoc IBranchBridgeAgent
-    function callOutSignedAndBridge(bytes calldata params, DepositInput memory dParams, uint128 rootExecutionGas)
+    function callOutSigned(bytes calldata _params, uint128 _remoteExecutionGas)
         external
         payable
         lock
         requiresFallbackGas
     {
         //Encode Data for cross-chain call.
-        bytes memory data = abi.encodePacked(
+        bytes memory packedData = abi.encodePacked(
+            bytes1(0x04), msg.sender, depositNonce, _params, msg.value.toUint128(), _remoteExecutionGas
+        );
+
+        //Wrap the gas allocated for omnichain execution.
+        wrappedNativeToken.deposit{value: msg.value}();
+
+        //Perform Signed Call without deposit
+        _noDepositCall(msg.sender, packedData, msg.value.toUint128());
+    }
+
+    /// @inheritdoc IBranchBridgeAgent
+    function callOutSignedAndBridge(bytes calldata _params, DepositInput memory _dParams, uint128 _remoteExecutionGas)
+        external
+        payable
+        lock
+        requiresFallbackGas
+    {
+        //Encode Data for cross-chain call.
+        bytes memory packedData = abi.encodePacked(
             bytes1(0x05),
             msg.sender,
             depositNonce,
-            dParams.hToken,
-            dParams.token,
-            dParams.amount,
-            dParams.deposit,
-            dParams.toChain,
-            params,
+            _dParams.hToken,
+            _dParams.token,
+            _dParams.amount,
+            _dParams.deposit,
+            _dParams.toChain,
+            _params,
             msg.value.toUint128(),
-            rootExecutionGas
+            _remoteExecutionGas
         );
 
+        //Wrap the gas allocated for omnichain execution.
+        wrappedNativeToken.deposit{value: msg.value}();
+
         //Create Deposit and Send Cross-Chain request
-        _depositAndCall(msg.sender, data, dParams.hToken, dParams.token, dParams.amount, dParams.deposit);
+        _depositAndCall(
+            msg.sender,
+            packedData,
+            _dParams.hToken,
+            _dParams.token,
+            _dParams.amount,
+            _dParams.deposit,
+            msg.value.toUint128()
+        );
     }
 
     /// @inheritdoc IBranchBridgeAgent
     function callOutSignedAndBridgeMultiple(
-        bytes calldata params,
-        DepositMultipleInput memory dParams,
-        uint128 rootExecutionGas
+        bytes calldata _params,
+        DepositMultipleInput memory _dParams,
+        uint128 _remoteExecutionGas
     ) external payable lock requiresFallbackGas {
         //Encode Data for cross-chain call.
-        bytes memory data = abi.encodePacked(
+        bytes memory packedData = abi.encodePacked(
             bytes1(0x06),
             msg.sender,
-            uint8(dParams.hTokens.length),
+            uint8(_dParams.hTokens.length),
             depositNonce,
-            dParams.hTokens,
-            dParams.tokens,
-            dParams.amounts,
-            dParams.deposits,
-            dParams.toChain,
-            params,
+            _dParams.hTokens,
+            _dParams.tokens,
+            _dParams.amounts,
+            _dParams.deposits,
+            _dParams.toChain,
+            _params,
             msg.value.toUint128(),
-            rootExecutionGas
+            _remoteExecutionGas
         );
 
+        //Wrap the gas allocated for omnichain execution.
+        wrappedNativeToken.deposit{value: msg.value}();
+
         //Create Deposit and Send Cross-Chain request
-        _depositAndCallMultiple(msg.sender, data, dParams.hTokens, dParams.tokens, dParams.amounts, dParams.deposits);
+        _depositAndCallMultiple(
+            msg.sender,
+            packedData,
+            _dParams.hTokens,
+            _dParams.tokens,
+            _dParams.amounts,
+            _dParams.deposits,
+            msg.value.toUint128()
+        );
     }
 
     /// @inheritdoc IBranchBridgeAgent
     function retrySettlement(uint32 _settlementNonce) external payable lock requiresFallbackGas {
         //Encode Data for cross-chain call.
-        bytes memory data = abi.encodePacked(bytes1(0x07), _settlementNonce, msg.value.toUint128());
+        bytes memory packedData = abi.encodePacked(bytes1(0x07), _settlementNonce, msg.value.toUint128());
 
-        //Create Deposit and Send Cross-Chain request maybe mstore instead of casting two times
-        _depositAndCall(msg.sender, data, address(0), address(0), 0, 0);
+        //Deposit Gas for call.
+        _createGasDeposit(msg.sender, msg.value.toUint128());
+
+        //Perform Call
+        _performCall(packedData);
     }
 
     /// @inheritdoc IBranchBridgeAgent
@@ -247,50 +278,93 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IBranchBridgeAgent
-    function performSystemCallOut(address depositor, bytes calldata params, uint128 rootExecutionGas)
-        external
-        payable
-        lock
-        requiresRouter
-        requiresFallbackGas
-    {
-        //Encode Data for cross-chain call.
-        bytes memory data =
-            abi.encodePacked(bytes1(0x00), depositNonce, params, msg.value.toUint128(), rootExecutionGas);
+    function performSystemCallOut(
+        address _depositor,
+        bytes calldata _params,
+        uint128 _gasToBridgeOut,
+        uint128 _remoteExecutionGas
+    ) external payable lock requiresRouter {
+        //Get remote call execution deposited gas.
+        (uint128 gasToBridgeOut, bool isRemote) =
+            (remoteCallDepositedGas > 0 ? (_gasToBridgeOut, true) : (msg.value.toUint128(), false));
 
-        //Create Deposit and Send Cross-Chain request
-        _depositAndCall(depositor, data, address(0), address(0), 0, 0);
+        //Wrap the gas allocated for omnichain execution.
+        if (isRemote) wrappedNativeToken.deposit{value: msg.value}();
+
+        //Check Fallback Gas
+        _requiresFallbackGas(gasToBridgeOut);
+
+        //Encode Data for cross-chain call.
+        bytes memory packedData =
+            abi.encodePacked(bytes1(0x00), depositNonce, _params, gasToBridgeOut, _remoteExecutionGas);
+
+        //Perform Call
+        _noDepositCall(_depositor, packedData, gasToBridgeOut);
     }
 
     /// @inheritdoc IBranchBridgeAgent
-    function performCallOut(address depositor, bytes calldata params, uint128 rootExecutionGas)
-        external
-        payable
-        lock
-        requiresRouter
-        requiresFallbackGas
-    {
-        _callOut(depositor, params, rootExecutionGas);
+    function performCallOut(
+        address _depositor,
+        bytes calldata _params,
+        uint128 _gasToBridgeOut,
+        uint128 _remoteExecutionGas
+    ) external payable lock requiresRouter {
+        //Get remote call execution deposited gas.
+        (uint128 gasToBridgeOut, bool isRemote) =
+            (remoteCallDepositedGas > 0 ? (_gasToBridgeOut, true) : (msg.value.toUint128(), false));
+
+        //Wrap the gas allocated for omnichain execution.
+        if (!isRemote) wrappedNativeToken.deposit{value: msg.value}();
+
+        //Check Fallback Gas
+        _requiresFallbackGas(gasToBridgeOut);
+
+        //Perform Call
+        _callOut(_depositor, _params, gasToBridgeOut, _remoteExecutionGas);
     }
 
     /// @inheritdoc IBranchBridgeAgent
     function performCallOutAndBridge(
-        address depositor,
-        bytes calldata params,
-        DepositInput memory dParams,
-        uint128 rootExecutionGas
-    ) external payable lock requiresRouter requiresFallbackGas {
-        _callOutAndBridge(depositor, params, dParams, rootExecutionGas);
+        address _depositor,
+        bytes calldata _params,
+        DepositInput memory _dParams,
+        uint128 _gasToBridgeOut,
+        uint128 _remoteExecutionGas
+    ) external payable lock requiresRouter {
+        //Get remote call execution deposited gas.
+        (uint128 gasToBridgeOut, bool isRemote) =
+            (remoteCallDepositedGas > 0 ? (_gasToBridgeOut, true) : (msg.value.toUint128(), false));
+
+        //Wrap the gas allocated for omnichain execution.
+        if (!isRemote) wrappedNativeToken.deposit{value: msg.value}();
+
+        //Check Fallback Gas
+        _requiresFallbackGas(gasToBridgeOut);
+
+        //Perform Call
+        _callOutAndBridge(_depositor, _params, _dParams, gasToBridgeOut, _remoteExecutionGas);
     }
 
     /// @inheritdoc IBranchBridgeAgent
     function performCallOutAndBridgeMultiple(
-        address depositor,
-        bytes calldata params,
-        DepositMultipleInput memory dParams,
-        uint128 rootExecutionGas
-    ) external payable lock requiresRouter requiresFallbackGas {
-        _callOutAndBridgeMultiple(depositor, params, dParams, rootExecutionGas);
+        address _depositor,
+        bytes calldata _params,
+        DepositMultipleInput memory _dParams,
+        uint128 _gasToBridgeOut,
+        uint128 _remoteExecutionGas
+    ) external payable lock requiresRouter {
+        //Get remote call execution deposited gas.
+        (uint128 gasToBridgeOut, bool isRemote) =
+            (remoteCallDepositedGas > 0 ? (_gasToBridgeOut, true) : (msg.value.toUint128(), false));
+
+        //Wrap the gas allocated for omnichain execution.
+        if (!isRemote) wrappedNativeToken.deposit{value: msg.value}();
+
+        //Check Fallback Gas
+        _requiresFallbackGas(gasToBridgeOut);
+
+        //Perform Call
+        _callOutAndBridgeMultiple(_depositor, _params, _dParams, gasToBridgeOut, _remoteExecutionGas);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -299,83 +373,117 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
 
     /**
      * @notice Function to perform a call to the Root Omnichain Router without token deposit.
-     *   @param params RLP enconded parameters to execute on the root chain.
-     *   @param rootExecutionGas gas allocated for omnichain execution.
+     *   @param _depositor address of the user that will deposit the funds.
+     *   @param _params RLP enconded parameters to execute on the root chain.
+     *   @param _gasToBridgeOut gas allocated for the cross-chain call.
+     *   @param _remoteExecutionGas gas allocated for branch chain execution.
      *   @dev ACTION ID: 1 (Call without deposit)
      *
      */
-    function _callOut(address depositor, bytes calldata params, uint128 rootExecutionGas) internal {
+    function _callOut(address _depositor, bytes calldata _params, uint128 _gasToBridgeOut, uint128 _remoteExecutionGas)
+        internal
+    {
         //Encode Data for cross-chain call.
-        bytes memory data =
-            abi.encodePacked(bytes1(0x01), depositNonce, params, msg.value.toUint128(), rootExecutionGas);
+        bytes memory packedData =
+            abi.encodePacked(bytes1(0x01), depositNonce, _params, _gasToBridgeOut, _remoteExecutionGas);
 
-        //Create Deposit and Send Cross-Chain request
-        _depositAndCall(depositor, data, address(0), address(0), 0, 0);
+        //Perform Call
+        _noDepositCall(_depositor, packedData, _gasToBridgeOut);
     }
 
     /**
      * @notice Function to perform a call to the Root Omnichain Router while depositing a single asset.
-     *   @param params RLP enconded parameters to execute on the root chain.
-     *   @param dParams additional token deposit parameters.
-     *   @param rootExecutionGas gas allocated for omnichain execution.
+     *   @param _depositor address of the user that will deposit the funds.
+     *   @param _params RLP enconded parameters to execute on the root chain.
+     *   @param _dParams additional token deposit parameters.
+     *   @param _gasToBridgeOut gas allocated for the cross-chain call.
+     *   @param _remoteExecutionGas gas allocated for branch chain execution.
      *   @dev ACTION ID: 2 (Call with single deposit)
      *
      */
     function _callOutAndBridge(
-        address depositor,
-        bytes calldata params,
-        DepositInput memory dParams,
-        uint128 rootExecutionGas
+        address _depositor,
+        bytes calldata _params,
+        DepositInput memory _dParams,
+        uint128 _gasToBridgeOut,
+        uint128 _remoteExecutionGas
     ) internal {
         //Encode Data for cross-chain call.
-        bytes memory data = abi.encodePacked(
+        bytes memory packedData = abi.encodePacked(
             bytes1(0x02),
             depositNonce,
-            dParams.hToken,
-            dParams.token,
-            dParams.amount,
-            dParams.deposit,
-            dParams.toChain,
-            params,
-            msg.value.toUint128(),
-            rootExecutionGas
+            _dParams.hToken,
+            _dParams.token,
+            _dParams.amount,
+            _dParams.deposit,
+            _dParams.toChain,
+            _params,
+            _gasToBridgeOut,
+            _remoteExecutionGas
         );
 
         //Create Deposit and Send Cross-Chain request
-        _depositAndCall(depositor, data, dParams.hToken, dParams.token, dParams.amount, dParams.deposit);
+        _depositAndCall(
+            _depositor, packedData, _dParams.hToken, _dParams.token, _dParams.amount, _dParams.deposit, _gasToBridgeOut
+        );
     }
 
     /**
      * @notice Function to perform a call to the Root Omnichain Router while depositing two or more assets.
-     *   @param params RLP enconded parameters to execute on the root chain.
-     *   @param dParams additional token deposit parameters.
-     *   @param rootExecutionGas gas allocated for omnichain execution.
+     *   @param _params RLP enconded parameters to execute on the root chain.
+     *   @param _dParams additional token deposit parameters.
+     *   @param _gasToBridgeOut gas allocated for the cross-chain call.
+     *   @param _remoteExecutionGas gas allocated for branch chain execution.
      *   @dev ACTION ID: 3 (Call with multiple deposit)
      *
      */
     function _callOutAndBridgeMultiple(
-        address depositor,
-        bytes calldata params,
-        DepositMultipleInput memory dParams,
-        uint128 rootExecutionGas
+        address _depositor,
+        bytes calldata _params,
+        DepositMultipleInput memory _dParams,
+        uint128 _gasToBridgeOut,
+        uint128 _remoteExecutionGas
     ) internal {
         //Encode Data for cross-chain call.
-        bytes memory data = abi.encodePacked(
+        bytes memory packedData = abi.encodePacked(
             bytes1(0x03),
-            uint8(dParams.hTokens.length),
+            uint8(_dParams.hTokens.length),
             depositNonce,
-            dParams.hTokens,
-            dParams.tokens,
-            dParams.amounts,
-            dParams.deposits,
-            dParams.toChain,
-            params,
-            msg.value.toUint128(),
-            rootExecutionGas
+            _dParams.hTokens,
+            _dParams.tokens,
+            _dParams.amounts,
+            _dParams.deposits,
+            _dParams.toChain,
+            _params,
+            _gasToBridgeOut,
+            _remoteExecutionGas
         );
 
         //Create Deposit and Send Cross-Chain request
-        _depositAndCallMultiple(depositor, data, dParams.hTokens, dParams.tokens, dParams.amounts, dParams.deposits);
+        _depositAndCallMultiple(
+            _depositor,
+            packedData,
+            _dParams.hTokens,
+            _dParams.tokens,
+            _dParams.amounts,
+            _dParams.deposits,
+            _gasToBridgeOut
+        );
+    }
+
+    /**
+     * @notice Internal function to move assets from branch chain to root omnichain environment. Naive assets are deposited and hTokens are bridgedOut.
+     *   @param _depositor token depositor.
+     *   @param _data data to be sent to cross-chain messaging layer.
+     *   @param _gasToBridgeOut gas allocated for the cross-chain call.
+     *
+     */
+    function _noDepositCall(address _depositor, bytes memory _data, uint128 _gasToBridgeOut) internal {
+        //Deposit Gas for call.
+        _createGasDeposit(_depositor, _gasToBridgeOut);
+
+        //Perform Call
+        _performCall(_data);
     }
 
     /**
@@ -386,6 +494,7 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
      *   @param _token Native / Underlying Token Address.
      *   @param _amount Amount of Local hTokens deposited for trade.
      *   @param _deposit Amount of native tokens deposited for trade.
+     *   @param _gasToBridgeOut gas allocated for the cross-chain call.
      *
      */
     function _depositAndCall(
@@ -394,10 +503,11 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
         address _hToken,
         address _token,
         uint256 _amount,
-        uint256 _deposit
+        uint256 _deposit,
+        uint128 _gasToBridgeOut
     ) internal {
         //Deposit and Store Info
-        _createDepositSingle(_depositor, _hToken, _token, _amount, _deposit);
+        _createDepositSingle(_depositor, _hToken, _token, _amount, _deposit, _gasToBridgeOut);
 
         //Perform Call
         _performCall(_data);
@@ -411,6 +521,7 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
      *   @param _tokens Native / Underlying Token Address.
      *   @param _amounts Amount of Local hTokens deposited for trade.
      *   @param _deposits  Amount of native tokens deposited for trade.
+     *   @param _gasToBridgeOut gas allocated for the cross-chain call.
      *
      */
     function _depositAndCallMultiple(
@@ -419,7 +530,8 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
         address[] memory _hTokens,
         address[] memory _tokens,
         uint256[] memory _amounts,
-        uint256[] memory _deposits
+        uint256[] memory _deposits,
+        uint128 _gasToBridgeOut
     ) internal {
         //Validate Input
         if (
@@ -428,10 +540,32 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
         ) revert InvalidInput();
 
         //Deposit and Store Info
-        _createDepositMultiple(_depositor, _hTokens, _tokens, _amounts, _deposits);
+        _createDepositMultiple(_depositor, _hTokens, _tokens, _amounts, _deposits, _gasToBridgeOut);
 
         //Perform Call
         _performCall(_data);
+    }
+
+    /**
+     * @dev Function to create a pending deposit.
+     *    @param _user user address.
+     *    @param _gasToBridgeOut gas allocated for omnichain execution.
+     *
+     */
+    function _createGasDeposit(address _user, uint128 _gasToBridgeOut) internal {
+        //Deposit Gas to Port
+        address(wrappedNativeToken).safeTransfer(localPortAddress, _gasToBridgeOut);
+
+        // Update State
+        getDeposit[_getAndIncrementDepositNonce()] = Deposit({
+            owner: _user,
+            hTokens: new address[](0),
+            tokens: new address[](0),
+            amounts: new uint256[](0),
+            deposits: new uint256[](0),
+            status: DepositStatus.Success,
+            depositedGas: _gasToBridgeOut
+        });
     }
 
     /**
@@ -441,11 +575,24 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
      *    @param _token deposited native / underlying Token addresses.
      *    @param _amount amounts of hTokens input.
      *    @param _deposit amount of deposited underlying / native tokens.
+     *    @param _gasToBridgeOut gas allocated for omnichain execution.
      *
      */
-    function _createDepositSingle(address _user, address _hToken, address _token, uint256 _amount, uint256 _deposit)
-        internal
-    {
+    function _createDepositSingle(
+        address _user,
+        address _hToken,
+        address _token,
+        uint256 _amount,
+        uint256 _deposit,
+        uint128 _gasToBridgeOut
+    ) internal {
+        //Deposit / Lock Tokens into Port
+        IPort(localPortAddress).bridgeOut(_user, _hToken, _token, _amount, _deposit);
+
+        //Deposit Gas to Port
+        address(wrappedNativeToken).safeTransfer(localPortAddress, _gasToBridgeOut);
+
+        // Cast to dynamic memory array
         address[] memory hTokens = new address[](1);
         hTokens[0] = _hToken;
         address[] memory tokens = new address[](1);
@@ -455,8 +602,16 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
         uint256[] memory deposits = new uint256[](1);
         deposits[0] = _deposit;
 
-        //Create Deposit
-        _createDepositMultiple(_user, hTokens, tokens, amounts, deposits);
+        // Update State
+        getDeposit[_getAndIncrementDepositNonce()] = Deposit({
+            owner: _user,
+            hTokens: hTokens,
+            tokens: tokens,
+            amounts: amounts,
+            deposits: deposits,
+            status: DepositStatus.Success,
+            depositedGas: _gasToBridgeOut
+        });
     }
 
     /**
@@ -466,6 +621,7 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
      *    @param _tokens deposited native / underlying Token addresses.
      *    @param _amounts amounts of hTokens input.
      *    @param _deposits amount of deposited underlying / native tokens.
+     *    @param _gasToBridgeOut gas allocated for omnichain execution.
      *
      */
     function _createDepositMultiple(
@@ -473,16 +629,14 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
         address[] memory _hTokens,
         address[] memory _tokens,
         uint256[] memory _amounts,
-        uint256[] memory _deposits
+        uint256[] memory _deposits,
+        uint128 _gasToBridgeOut
     ) internal {
         //Deposit / Lock Tokens into Port
         IPort(localPortAddress).bridgeOutMultiple(_user, _hTokens, _tokens, _amounts, _deposits);
 
-        //Wrap the gas allocated for omnichain execution.
-        wrappedNativeToken.deposit{value: msg.value}();
-
         //Deposit Gas to Port
-        address(wrappedNativeToken).safeTransfer(localPortAddress, msg.value);
+        address(wrappedNativeToken).safeTransfer(localPortAddress, _gasToBridgeOut);
 
         // Update State
         getDeposit[_getAndIncrementDepositNonce()] = Deposit({
@@ -492,7 +646,7 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
             amounts: _amounts,
             deposits: _deposits,
             status: DepositStatus.Success,
-            depositedGas: msg.value.toUint128()
+            depositedGas: _gasToBridgeOut
         });
     }
 
@@ -658,28 +812,30 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
         );
     }
 
-    function _payExecutionGas(address _recipient, uint256 _initialGas, uint256 _depositedGasTokens, uint256 _feesOwed)
-        internal
-        virtual
-    {
+    function _payExecutionGas(address _recipient, uint256 _initialGas, uint256 _feesOwed) internal virtual {
+        //Gas remaining
+        uint256 gasRemaining = wrappedNativeToken.balanceOf(address(this));
+
         //Unwrap Gas
-        wrappedNativeToken.withdraw(_depositedGasTokens);
+        wrappedNativeToken.withdraw(gasRemaining);
 
         //Get Branch Environment Execution Cost
-        uint256 minExecCost = tx.gasprice * (MIN_EXECUTION_OVERHEAD + _initialGas - _feesOwed - gasleft());
+        uint256 minExecCost = _feesOwed + tx.gasprice * (MIN_EXECUTION_OVERHEAD + _initialGas - gasleft());
 
         //Replenish Gas
         _replenishGas(minExecCost);
 
         //Transfer gas remaining to recipient
-        if (minExecCost < _depositedGasTokens) {
-            SafeTransferLib.safeTransferETH(_recipient, _depositedGasTokens - minExecCost);
+        if (minExecCost < gasRemaining) {
+            SafeTransferLib.safeTransferETH(_recipient, gasRemaining - minExecCost);
         }
+
+        delete(remoteCallDepositedGas);
     }
 
     function _payFallbackGas(uint32 _depositNonce, uint256 _initialGas, uint256 _feesOwed) internal virtual {
         //Get Branch Environment Execution Cost
-        uint256 minExecCost = tx.gasprice * (MIN_FALLBACK_OVERHEAD + _initialGas - _feesOwed - gasleft());
+        uint256 minExecCost = _feesOwed + tx.gasprice * (MIN_FALLBACK_OVERHEAD + _initialGas - gasleft());
 
         //Update user deposit reverts if not enough gas => user must boost deposit with gas
         getDeposit[_depositNonce].depositedGas -= minExecCost.toUint128();
@@ -726,6 +882,10 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
 
         //Save Length
         uint256 dataLength = data.length;
+
+        //Store deposited gas
+        uint128 depositedGas = _gasSwapIn(data[data.length - PARAMS_GAS_OUT:dataLength]).toUint128();
+        remoteCallDepositedGas = depositedGas;
 
         //Action Recipient
         address recipient = address(uint160(bytes20(data[PARAMS_START:PARAMS_START_SIGNED])));
@@ -788,19 +948,14 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
                 );
             }
 
-            _payExecutionGas(
-                recipient,
-                initialGas,
-                _gasSwapIn(data[data.length - PARAMS_GAS_OUT:dataLength]),
-                _computeAnyCallFees(dataLength)
-            );
-
             emit LogCallin(flag, data, rootChainId);
 
             //Unrecognized Function Selector
         } else {
+            _payExecutionGas(recipient, initialGas, _computeAnyCallFees(dataLength));
             return (false, "unknown selector");
         }
+        _payExecutionGas(recipient, initialGas, _computeAnyCallFees(dataLength));
         return (true, "");
     }
 
@@ -913,16 +1068,38 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
         _;
     }
 
+    /// @notice reuse to reduce contract bytesize
+    function _requiresExecutor() internal view virtual {
+        if (msg.sender != localAnyCallExecutorAddress) revert AnycallUnauthorizedCaller();
+        (address from,,) = IAnycallExecutor(localAnyCallExecutorAddress).context();
+        if (from != rootBridgeAgentAddress) revert AnycallUnauthorizedCaller();
+    }
+
     /// @notice require msg sender == active branch interface
     modifier requiresRouter() {
         _requiresRouter();
         _;
     }
 
+    /// @notice reuse to reduce contract bytesize
+    function _requiresRouter() internal view {
+        if (msg.sender != localRouterAddress) revert UnauthorizedCallerNotRouter();
+    }
+
     /// @notice Modifier that verifies msg sender is the RootInterface Contract from Root Chain.
     modifier requiresFallbackGas() {
         _requiresFallbackGas();
         _;
+    }
+
+    /// @notice reuse to reduce contract bytesize
+    function _requiresFallbackGas() internal view virtual {
+        if (msg.value <= MIN_FALLBACK_OVERHEAD) revert InsufficientGas();
+    }
+
+    /// @notice reuse to reduce contract bytesize
+    function _requiresFallbackGas(uint256 _depositedGas) internal view virtual {
+        if (_depositedGas <= MIN_FALLBACK_OVERHEAD) revert InsufficientGas();
     }
 
     fallback() external payable {}

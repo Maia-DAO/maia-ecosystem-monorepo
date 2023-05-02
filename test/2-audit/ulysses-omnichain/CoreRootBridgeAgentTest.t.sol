@@ -1,6 +1,7 @@
 //SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity ^0.8.16;
 //TEST
+
 import {DSTestPlus} from "solmate/test/utils/DSTestPlus.sol";
 import {MockERC20} from "solmate/test/utils/mocks/MockERC20.sol";
 import {stdError} from "forge-std/StdError.sol";
@@ -45,10 +46,39 @@ contract MockPool is Test {
     }
 
     address wrappedNativeTokenAddress;
+    address globalGasToken;
 
-    constructor(address _wrappedNativeTokenAddress) {
+    constructor(address _wrappedNativeTokenAddress, address _globalGasToken) {
         wrappedNativeTokenAddress = _wrappedNativeTokenAddress;
+        globalGasToken = _globalGasToken;
     }
+
+    // function swap(
+    //     address recipient,
+    //     bool zeroForOne,
+    //     int256 amountSpecified,
+    //     uint160 sqrtPriceLimitX96,
+    //     bytes calldata data
+    // ) external returns (int256 amount0, int256 amount1) {
+    //     SwapCallbackData memory _data = abi.decode(data, (SwapCallbackData));
+    //     address tokenOut = (_data.tokenIn != wrappedNativeTokenAddress ? _data.tokenIn : wrappedNativeTokenAddress);
+    //     // hevm.deal(msg.sender)
+    //     deal(address(this), uint256(amountSpecified));
+    //     WETH(wrappedNativeTokenAddress).deposit{value: uint256(amountSpecified)}();
+    //     MockERC20(wrappedNativeTokenAddress).transfer(msg.sender, uint256(amountSpecified));
+
+    //     console2.log(MockERC20(tokenOut).balanceOf(msg.sender));
+    //     console2.log(amountSpecified);
+
+    //     if (zeroForOne) {
+    //         amount1 = amountSpecified;
+    //     } else {
+    //         amount0 = amountSpecified;
+    //     }
+    //     console2.log("ugh");
+
+    //     IUniswapV3SwapCallback(msg.sender).uniswapV3SwapCallback(amount0, amount1, data);
+    // }
 
     function swap(
         address recipient,
@@ -58,14 +88,27 @@ contract MockPool is Test {
         bytes calldata data
     ) external returns (int256 amount0, int256 amount1) {
         SwapCallbackData memory _data = abi.decode(data, (SwapCallbackData));
-        address tokenOut = (_data.tokenIn != wrappedNativeTokenAddress ? _data.tokenIn : wrappedNativeTokenAddress);
-        // hevm.deal(msg.sender)
-        deal(address(this), uint256(amountSpecified));
-        WETH(wrappedNativeTokenAddress).deposit{value: uint256(amountSpecified)}();
-        MockERC20(wrappedNativeTokenAddress).transfer(msg.sender, uint256(amountSpecified));
 
+        address tokenOut = (_data.tokenIn == wrappedNativeTokenAddress ? globalGasToken : wrappedNativeTokenAddress);
+
+        console2.log("swapp");
+        console2.log("tokenIn", _data.tokenIn);
+        console2.log("tokenOut", tokenOut);
+        console2.log("isWrappedGasToken");
+        console2.log(_data.tokenIn != wrappedNativeTokenAddress);
+
+        if (tokenOut == wrappedNativeTokenAddress) {
+            // hevm.deal(msg.sender)
+            deal(address(this), uint256(amountSpecified));
+            WETH(wrappedNativeTokenAddress).deposit{value: uint256(amountSpecified)}();
+            MockERC20(wrappedNativeTokenAddress).transfer(msg.sender, uint256(amountSpecified));
+        } else {
+            deal({token: tokenOut, to: msg.sender, give: uint256(amountSpecified)});
+            // hevm.startPrank(address(0xF62849F9A0B5Bf2913b396098F7c7019b51A820a));
+            // ERC20hTokenRoot(tokenOut).mint(msg.sender, uint256(-amountSpecified), 2040);
+            // hevm.stopPrank();
+        }
         console2.log(MockERC20(tokenOut).balanceOf(msg.sender));
-        console2.log("asdsadsa");
         console2.log(amountSpecified);
 
         if (zeroForOne) {
@@ -73,10 +116,8 @@ contract MockPool is Test {
         } else {
             amount0 = amountSpecified;
         }
-        console2.log("ugh");
 
         IUniswapV3SwapCallback(msg.sender).uniswapV3SwapCallback(amount0, amount1, data);
-        console2.log("asdsadsa");
     }
 
     function slot0()
@@ -241,6 +282,7 @@ contract CoreRootBridgeAgentTest is DSTestPlus {
 
         localBranchBridgeAgentFactory = new ArbitrumBranchBridgeAgentFactory(
             rootChainId,
+            address(bridgeAgentFactory),
             WETH9(wrappedNativeToken),
             localAnyCallAddress,
             localAnyCallExecutorAddress,
@@ -251,21 +293,25 @@ contract CoreRootBridgeAgentTest is DSTestPlus {
 
         localPortAddress.initialize(address(arbitrumCoreRouter), address(localBranchBridgeAgentFactory));
 
+        hevm.startPrank(address(arbitrumCoreRouter));
+
         arbitrumCoreBridgeAgent = ArbitrumBranchBridgeAgent(
             payable(
-                localBranchBridgeAgentFactory.createBridgeAgent(address(arbitrumCoreRouter), address(coreBridgeAgent))
+                localBranchBridgeAgentFactory.createBridgeAgent(
+                    address(arbitrumCoreRouter), address(coreBridgeAgent), address(bridgeAgentFactory)
+                )
             )
         );
-        console2.log("wqWWWWWWWWWWWWWWWWW");
-        console2.log(localPortAddress.coreBranchRouterAddress());
 
         arbitrumMulticallBridgeAgent = ArbitrumBranchBridgeAgent(
             payable(
                 localBranchBridgeAgentFactory.createBridgeAgent(
-                    address(arbitrumMulticallRouter), address(rootMulticallRouter)
+                    address(arbitrumMulticallRouter), address(rootMulticallRouter), address(bridgeAgentFactory)
                 )
             )
         );
+
+        hevm.stopPrank();
 
         arbitrumCoreRouter.initialize(address(arbitrumCoreBridgeAgent));
         arbitrumMulticallRouter.initialize(address(arbitrumMulticallBridgeAgent));
@@ -278,13 +324,13 @@ contract CoreRootBridgeAgentTest is DSTestPlus {
 
         rootPort.initializeCore(address(coreBridgeAgent), address(arbitrumCoreBridgeAgent), address(localPortAddress));
 
-        coreBridgeAgent.approveBranchBridgeAgent(avaxCoreBridgeAgentAddress, avaxChainId);
+        coreBridgeAgent.approveBranchBridgeAgent(avaxChainId);
 
-        multicallBridgeAgent.approveBranchBridgeAgent(avaxMulticallBridgeAgentAddress, avaxChainId);
+        multicallBridgeAgent.approveBranchBridgeAgent(avaxChainId);
 
-        coreBridgeAgent.approveBranchBridgeAgent(ftmCoreBridgeAgentAddress, ftmChainId);
+        coreBridgeAgent.approveBranchBridgeAgent(ftmChainId);
 
-        multicallBridgeAgent.approveBranchBridgeAgent(ftmMulticallBridgeAgentAddress, ftmChainId);
+        multicallBridgeAgent.approveBranchBridgeAgent(ftmChainId);
 
         hevm.prank(address(rootCoreRouter));
         RootPort(rootPort).syncBranchBridgeAgentWithRoot(
@@ -316,10 +362,11 @@ contract CoreRootBridgeAgentTest is DSTestPlus {
                 uint24(100),
                 uint160(200)
             ),
-            abi.encode(address(new MockPool(wrappedNativeToken)))
+            abi.encode(address((new MockPool(wrappedNativeToken,0x45C92C2Cd0dF7B2d705EF12CfF77Cb0Bc557Ed22))))
         );
 
         RootPort(rootPort).addNewChain(
+            avaxCoreBridgeAgentAddress,
             avaxChainId,
             "Avalanche",
             "AVAX",
@@ -342,10 +389,11 @@ contract CoreRootBridgeAgentTest is DSTestPlus {
                 uint24(100),
                 uint160(200)
             ),
-            abi.encode(address(new MockPool(wrappedNativeToken)))
+            abi.encode(address(new MockPool(wrappedNativeToken, 0x9914ff9347266f1949C557B717936436402fc636)))
         );
 
         RootPort(rootPort).addNewChain(
+            ftmCoreBridgeAgentAddress,
             ftmChainId,
             "Fantom Opera",
             "FTM",
@@ -365,6 +413,12 @@ contract CoreRootBridgeAgentTest is DSTestPlus {
             "Hermes Global hToken 1",
             "hGT1"
         );
+
+        //Ensure there are gas tokens from each chain in the system.
+        hevm.startPrank(address(rootPort));
+        ERC20hTokenRoot(0x45C92C2Cd0dF7B2d705EF12CfF77Cb0Bc557Ed22).mint(address(rootPort), 1 ether, avaxChainId);
+        ERC20hTokenRoot(0x9914ff9347266f1949C557B717936436402fc636).mint(address(rootPort), 1 ether, ftmChainId);
+        hevm.stopPrank();
 
         wAvaxLocalhToken = new MockERC20("hAVAX-AVAX", "LOCAL hTOKEN FOR AVAX IN AVAX", 18);
 
@@ -387,7 +441,7 @@ contract CoreRootBridgeAgentTest is DSTestPlus {
         uint256 balanceBefore = MockERC20(wrappedNativeToken).balanceOf(address(coreBridgeAgent));
 
         //Call Deposit function
-        encodeSystemCall(
+        encodeCallNoDeposit(
             payable(avaxCoreBridgeAgentAddress),
             payable(address(coreBridgeAgent)),
             uint32(1),
@@ -438,7 +492,7 @@ contract CoreRootBridgeAgentTest is DSTestPlus {
         hevm.expectRevert(abi.encodeWithSignature("TokenAlreadyAdded()"));
 
         //Call Deposit function
-        encodeSystemCall(
+        encodeCallNoDeposit(
             payable(avaxCoreBridgeAgentAddress),
             payable(address(coreBridgeAgent)),
             uint32(1),
@@ -503,6 +557,7 @@ contract CoreRootBridgeAgentTest is DSTestPlus {
             RootPort(rootPort).getLocalTokenFromGlobal(newGlobalAddress, rootChainId) == address(newGlobalAddress),
             "Token should be added"
         );
+        console2.log("NOWNOWNOWON");
         require(
             RootPort(rootPort).getUnderlyingTokenFromLocal(address(newGlobalAddress), rootChainId)
                 == address(arbAssetToken),
@@ -520,7 +575,7 @@ contract CoreRootBridgeAgentTest is DSTestPlus {
         testAddLocalToken();
 
         //Encode Call Data
-        bytes memory data = abi.encode(ftmCoreBridgeAgentAddress, newGlobalAddress, ftmChainId, 0.0005 ether);
+        bytes memory data = abi.encode(ftmCoreBridgeAgentAddress, newGlobalAddress, ftmChainId, 0.0000025 ether);
 
         //Pack FuncId
         bytes memory packedData = abi.encodePacked(bytes1(0x01), data);
@@ -528,20 +583,15 @@ contract CoreRootBridgeAgentTest is DSTestPlus {
         uint256 balanceBefore = MockERC20(wrappedNativeToken).balanceOf(address(coreBridgeAgent));
 
         //Call Deposit function
-        encodeSystemCall(
+        encodeCallNoDeposit(
             payable(ftmCoreBridgeAgentAddress),
             payable(address(coreBridgeAgent)),
             uint32(1),
             packedData,
-            0.00005 ether,
-            0,
+            0.0001 ether,
+            0.000005 ether,
             ftmChainId
         );
-
-        console2.log("Balance Before: ", balanceBefore);
-        console2.log("Balance After: ", address(coreBridgeAgent).balance);
-
-        // require (balanceBefore == MockERC20(wrappedNativeToken).balanceOf(address(coreBridgeAgent)), "Balance should not change");
     }
 
     function testAddGlobalTokenAlreadyAdded() public {
@@ -549,7 +599,7 @@ contract CoreRootBridgeAgentTest is DSTestPlus {
         testAddGlobalToken();
 
         //Encode Call Data
-        bytes memory data = abi.encode(ftmCoreBridgeAgentAddress, newGlobalAddress, avaxChainId, 0.0005 ether);
+        bytes memory data = abi.encode(ftmCoreBridgeAgentAddress, newGlobalAddress, ftmChainId, 0.000025 ether);
 
         //Pack FuncId
         bytes memory packedData = abi.encodePacked(bytes1(0x01), data);
@@ -557,20 +607,15 @@ contract CoreRootBridgeAgentTest is DSTestPlus {
         uint256 balanceBefore = MockERC20(wrappedNativeToken).balanceOf(address(coreBridgeAgent));
 
         //Call Deposit function
-        encodeSystemCall(
-            payable(avaxCoreBridgeAgentAddress),
+        encodeCallNoDeposit(
+            payable(ftmCoreBridgeAgentAddress),
             payable(address(coreBridgeAgent)),
             uint32(1),
             packedData,
+            0.0001 ether,
             0.00005 ether,
-            0,
-            avaxChainId
+            ftmChainId
         );
-
-        console2.log("Balance Before: ", balanceBefore);
-        console2.log("Balance After: ", address(coreBridgeAgent).balance);
-
-        // require (balanceBefore == MockERC20(wrappedNativeToken).balanceOf(address(coreBridgeAgent)), "Balance should not change");
     }
 
     function testAddGlobalTokenNotEnoughGas() public {
@@ -578,7 +623,7 @@ contract CoreRootBridgeAgentTest is DSTestPlus {
         testAddLocalToken();
 
         //Encode Call Data
-        bytes memory data = abi.encode(ftmCoreBridgeAgentAddress, newGlobalAddress, avaxChainId, 200);
+        bytes memory data = abi.encode(ftmCoreBridgeAgentAddress, newGlobalAddress, ftmChainId, 200);
 
         //Pack FuncId
         bytes memory packedData = abi.encodePacked(bytes1(0x01), data);
@@ -586,20 +631,15 @@ contract CoreRootBridgeAgentTest is DSTestPlus {
         uint256 balanceBefore = MockERC20(wrappedNativeToken).balanceOf(address(coreBridgeAgent));
 
         //Call Deposit function
-        encodeSystemCall(
-            payable(avaxCoreBridgeAgentAddress),
+        encodeCallNoDeposit(
+            payable(ftmCoreBridgeAgentAddress),
             payable(address(coreBridgeAgent)),
             uint32(1),
             packedData,
+            0.0001 ether,
             0.00005 ether,
-            0,
-            avaxChainId
+            ftmChainId
         );
-
-        console2.log("Balance Before: ", balanceBefore);
-        console2.log("Balance After: ", address(coreBridgeAgent).balance);
-
-        // require (balanceBefore == MockERC20(wrappedNativeToken).balanceOf(address(coreBridgeAgent)), "Balance should not change");
     }
 
     address public newLocalToken = address(0xFAFA);
@@ -639,10 +679,6 @@ contract CoreRootBridgeAgentTest is DSTestPlus {
             RootPort(rootPort).getUnderlyingTokenFromLocal(address(newLocalToken), avaxChainId) == address(0),
             "Token should be added"
         );
-
-        console2.log("Balance Before: ", balanceBefore);
-        console2.log("Balance After: ", address(coreBridgeAgent).balance);
-        // require (balanceBefore == MockERC20(wrappedNativeToken).balanceOf(address(coreBridgeAgent)), "Balance should not change");
     }
 
     // function testAddGlobalTokenAlreadyAdded() public {
@@ -1590,6 +1626,14 @@ contract CoreRootBridgeAgentTest is DSTestPlus {
         //Encode Data
         bytes memory inputCalldata = abi.encodePacked(bytes1(0x01), _nonce, _data, _rootExecGas, _remoteExecGas);
 
+        hevm.mockCall(
+            address(localAnyCongfig),
+            abi.encodeWithSignature(
+                "calcSrcFees(address,uint256,uint256)", address(0), _fromChainId, inputCalldata.length
+            ),
+            abi.encode(0)
+        );
+
         // Prank into user account
         hevm.startPrank(localAnyCallExecutorAddress);
 
@@ -1627,6 +1671,14 @@ contract CoreRootBridgeAgentTest is DSTestPlus {
         //Encode Data
         bytes memory inputCalldata = abi.encodePacked(
             bytes1(0x02), _nonce, _hToken, _token, _amount, _deposit, _toChain, _data, _rootExecGas, _remoteExecGas
+        );
+
+        hevm.mockCall(
+            address(localAnyCongfig),
+            abi.encodeWithSignature(
+                "calcSrcFees(address,uint256,uint256)", address(0), _fromChainId, inputCalldata.length
+            ),
+            abi.encode(0)
         );
 
         // Prank into user account
@@ -1677,6 +1729,14 @@ contract CoreRootBridgeAgentTest is DSTestPlus {
             _data,
             _rootExecGas,
             _remoteExecGas
+        );
+
+        hevm.mockCall(
+            address(localAnyCongfig),
+            abi.encodeWithSignature(
+                "calcSrcFees(address,uint256,uint256)", address(0), _fromChainId, inputCalldata.length
+            ),
+            abi.encode(0)
         );
 
         // Prank into user account
