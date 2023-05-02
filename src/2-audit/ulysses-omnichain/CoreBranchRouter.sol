@@ -187,6 +187,7 @@ contract CoreBranchRouter is BaseBranchRouter {
         external
         virtual
         override
+        requiresBridgeAgent
         returns (bool success, bytes memory result)
     {
         /// _receiveAddGlobalToken
