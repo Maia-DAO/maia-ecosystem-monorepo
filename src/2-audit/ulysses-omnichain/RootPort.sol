@@ -292,7 +292,6 @@ contract RootPort is Ownable, IRootPort {
 
     /// @inheritdoc IRootPort
     function mintToLocalBranch(address _recipient, address _hToken, uint256 _amount) external requiresLocalBranchPort {
-        // mint(_recipient, _hToken, _amount, localChainId);
         _hToken.safeTransfer(_recipient, _amount);
     }
 
