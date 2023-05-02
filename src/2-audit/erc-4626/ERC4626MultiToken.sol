@@ -40,6 +40,9 @@ abstract contract ERC4626MultiToken is ERC20, ReentrancyGuard, IERC4626MultiToke
 
         uint256 length = _weights.length;
         uint256 _totalWeights;
+
+        if (length != _assets.length || length == 0) revert InvalidLength();
+
         for (uint256 i = 0; i < length;) {
             require(ERC20(_assets[i]).decimals() == 18);
 
@@ -187,6 +190,8 @@ abstract contract ERC4626MultiToken is ERC20, ReentrancyGuard, IERC4626MultiToke
         uint256 _totalWeights = totalWeights;
         uint256 length = assetsAmounts.length;
 
+        if (length != assets.length) revert InvalidLength();
+
         shares = type(uint256).max;
         for (uint256 i = 0; i < length;) {
             uint256 share = assetsAmounts[i].mulDiv(_totalWeights, weights[i]);
@@ -232,6 +237,8 @@ abstract contract ERC4626MultiToken is ERC20, ReentrancyGuard, IERC4626MultiToke
     function previewWithdraw(uint256[] memory assetsAmounts) public view virtual returns (uint256 shares) {
         uint256 _totalWeights = totalWeights;
         uint256 length = assetsAmounts.length;
+
+        if (length != assets.length) revert InvalidLength();
 
         for (uint256 i = 0; i < length;) {
             uint256 share = assetsAmounts[i].mulDivUp(_totalWeights, weights[i]);
@@ -284,6 +291,7 @@ abstract contract ERC4626MultiToken is ERC20, ReentrancyGuard, IERC4626MultiToke
     //////////////////////////////////////////////////////////////*/
     error ZeroAssets();
 
+    error InvalidLength();
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
