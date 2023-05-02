@@ -122,8 +122,10 @@ contract ArbitrumCoreBranchRouter is CoreBranchRouter {
             _receiveAddBridgeAgent(
                 newBranchRouter, branchBridgeAgentFactory, rootBridgeAgent, rootBridgeAgentFactory, 0
             );
+
             /// _receiveAddBridgeAgentFactory
         } else if (_data[0] == 0x03) {
+            
             (address newBridgeAgentFactoryAddress) = abi.decode(_data[1:], (address));
 
             _receiveAddBridgeAgentFactory(newBridgeAgentFactoryAddress);

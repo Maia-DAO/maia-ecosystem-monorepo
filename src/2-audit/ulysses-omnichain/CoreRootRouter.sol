@@ -103,6 +103,30 @@ contract CoreRootRouter is IRootRouter, Ownable {
     }
 
     /**
+     * @notice Add a new global token to the omnichain environment.
+     * @param _rootBridgeAgentFactory Address of the root Bridge Agent Factory.
+     * @param _branchBridgeAgentFactory Address of the branch Bridge Agent Factory.
+     * @param _toChain Chain Id of the branch chain where the new Bridge Agent will be deployed.
+     */
+    function addBranchBridgeAgentFactory(
+        address _rootBridgeAgentFactory,
+        address _branchBridgeAgentFactory,
+        address _gasReceiver,
+        uint24 _toChain
+    ) external payable onlyOwner {
+        require(IPort(rootPortAddress).isBridgeAgentFactory(_rootBridgeAgentFactory), "Unregistered Factory");
+
+        //Encode CallData
+        bytes memory data = abi.encode(_branchBridgeAgentFactory);
+
+        //Pack funcId into data
+        bytes memory packedData = abi.encodePacked(bytes1(0x03), data);
+
+        //Add new global token to branch chain
+        IBridgeAgent(bridgeAgentAddress).callOut{value: msg.value}(_gasReceiver, packedData, _toChain);
+    }
+
+    /**
      * @dev Internal function to add a global token to a specific chain. Must be called from a branch interface.
      *   @param _newBranchBridgeAgent new branch bridge agent address
      *   @param _rootBridgeAgent new branch bridge agent address
@@ -308,6 +332,7 @@ contract CoreRootRouter is IRootRouter, Ownable {
     function anyExecuteSignedDepositMultiple(bytes1, bytes memory, DepositMultipleParams memory, address, uint24)
         external
         payable
+        requiresAgent
         returns (bool, bytes memory)
     {
         revert();

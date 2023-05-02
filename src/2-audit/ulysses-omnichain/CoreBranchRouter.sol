@@ -208,6 +208,11 @@ contract CoreBranchRouter is BaseBranchRouter {
             _receiveAddBridgeAgent(
                 newBranchRouter, branchBridgeAgentFactory, rootBridgeAgent, rootBridgeAgentFactory, remoteExecutionGas
             );
+            /// _receiveAddBridgeAgentFactory
+        } else if (_data[0] == 0x03) {
+            (address newBridgeAgentFactoryAddress) = abi.decode(_data[1:], (address));
+
+            _receiveAddBridgeAgentFactory(newBridgeAgentFactoryAddress);
             /// Unrecognized Function Selector
         } else {
             return (false, "unknown selector");
