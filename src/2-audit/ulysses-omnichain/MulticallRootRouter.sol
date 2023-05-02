@@ -478,7 +478,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
     /**
      *  @inheritdoc IRootRouter
      */
-    function anyFallback(bytes calldata) external pure requiresAgent returns (bool, bytes memory) {
+    function anyFallback(bytes calldata) external pure returns (bool, bytes memory) {
         return (true, "");
     }
 
