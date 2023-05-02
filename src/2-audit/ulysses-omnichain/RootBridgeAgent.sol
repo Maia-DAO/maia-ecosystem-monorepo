@@ -1122,8 +1122,9 @@ contract RootBridgeAgent is IRootBridgeAgent {
 
     function sweep() external {
         if (msg.sender != daoAddress) revert UnauthorizedCaller();
+        uint256 _accumulatedFees = accumulatedFees;
         accumulatedFees = 0;
-        SafeTransferLib.safeTransferETH(daoAddress, accumulatedFees);
+        SafeTransferLib.safeTransferETH(daoAddress, _accumulatedFees);
     }
 
     /*///////////////////////////////////////////////////////////////
