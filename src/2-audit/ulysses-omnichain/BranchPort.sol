@@ -156,9 +156,11 @@ contract BranchPort is Ownable, IBranchPort {
 
         uint256 reservesLacking = _reservesLacking(_token);
 
-        IPortStrategy(_strategy).withdraw(address(this), _token, _amount < reservesLacking ? _amount : reservesLacking);
+        uint256 amountToWithdraw = _amount < reservesLacking ? _amount : reservesLacking;
 
-        getPortStrategyTokenDebt[msg.sender][_token] -= _amount;
+        IPortStrategy(_strategy).withdraw(address(this), _token, amountToWithdraw);
+
+        getPortStrategyTokenDebt[_strategy][_token] -= _amount;
         getStrategyTokenDebt[_token] -= _amount;
 
         emit DebtRepaid(_strategy, _token, _amount);
