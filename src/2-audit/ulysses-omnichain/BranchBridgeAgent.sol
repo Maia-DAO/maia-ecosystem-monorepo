@@ -673,6 +673,9 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
             }
         }
         IPort(localPortAddress).withdraw(deposit.owner, address(wrappedNativeToken), deposit.depositedGas);
+
+        //Delete Failed Deposit
+        delete getDeposit[_depositNonce];
     }
 
     /**
