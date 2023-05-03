@@ -24,6 +24,8 @@ contract ArbitrumBranchPort is BranchPort, IArbBranchPort {
      * @param _rootPortAddress address of the Root Port.
      */
     constructor(uint24 _localChainId, address _rootPortAddress, address _owner) BranchPort(_owner) {
+        require(_rootPortAddress != address(0), "Root Port Address cannot be 0");
+
         localChainId = _localChainId;
         rootPortAddress = _rootPortAddress;
     }
@@ -140,7 +142,7 @@ contract ArbitrumBranchPort is BranchPort, IArbBranchPort {
                     _depositor, _localAddresses[i], _amounts[i] - _deposits[i]
                 );
             }
-            
+
             unchecked {
                 ++i;
             }

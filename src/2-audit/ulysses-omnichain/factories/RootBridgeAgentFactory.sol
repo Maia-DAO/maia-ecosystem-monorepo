@@ -3,15 +3,15 @@ pragma solidity ^0.8.0;
 
 import "../interfaces/IRootBridgeAgentFactory.sol";
 
-import { RootBridgeAgent } from "../RootBridgeAgent.sol";
+import {RootBridgeAgent} from "../RootBridgeAgent.sol";
 
-import { IRootPort } from "../interfaces/IRootPort.sol";
+import {IRootPort} from "../interfaces/IRootPort.sol";
 
 /**
-@title BridgeAgentFactory.
-@author MaiaDAO.
-@notice This contract is used to deploy new Bridge Agents which are in charge of managing the deposit and withdrawal of assets between the branch chains and the omnichain environment.
-*/
+ * @title BridgeAgentFactory.
+ * @author MaiaDAO.
+ * @notice This contract is used to deploy new Bridge Agents which are in charge of managing the deposit and withdrawal of assets between the branch chains and the omnichain environment.
+ */
 contract RootBridgeAgentFactory is IRootBridgeAgentFactory {
     /// @notice Root Chain Id
     uint24 public immutable rootChainId;
@@ -35,12 +35,12 @@ contract RootBridgeAgentFactory is IRootBridgeAgentFactory {
     mapping(address => address) public getBridgeAgentManager;
 
     /**
-        @notice Constructor for Bridge Agent.
-        @param _rootChainId Root Chain Id.
-        @param _wrappedNativeToken Local Wrapped Native Token.
-        @param _localAnyCallAddress Local Anycall Address.
-        @param _rootPortAddress Local Port Address.
-        @param _daoAddress DAO Address.
+     * @notice Constructor for Bridge Agent.
+     *     @param _rootChainId Root Chain Id.
+     *     @param _wrappedNativeToken Local Wrapped Native Token.
+     *     @param _localAnyCallAddress Local Anycall Address.
+     *     @param _rootPortAddress Local Port Address.
+     *     @param _daoAddress DAO Address.
      */
     constructor(
         uint24 _rootChainId,
@@ -49,6 +49,10 @@ contract RootBridgeAgentFactory is IRootBridgeAgentFactory {
         address _rootPortAddress,
         address _daoAddress
     ) {
+        require(address(_wrappedNativeToken) != address(0), "Wrapped Native Token cannot be 0");
+        require(_rootPortAddress != address(0), "Root Port Address cannot be 0");
+        require(_daoAddress != address(0), "DAO Address cannot be 0");
+
         rootChainId = _rootChainId;
         wrappedNativeToken = _wrappedNativeToken;
         localAnyCallAddress = _localAnyCallAddress;
@@ -61,13 +65,11 @@ contract RootBridgeAgentFactory is IRootBridgeAgentFactory {
                         BRIDGE AGENT FUNCTIONS
     //////////////////////////////////////////////////////////////*/
     /**
-        @notice Creates a new Bridge Agent.
-        @param _newRootRouterAddress New Root Router Address.
-        @return newBridgeAgent New Bridge Agent Address.
+     * @notice Creates a new Bridge Agent.
+     *     @param _newRootRouterAddress New Root Router Address.
+     *     @return newBridgeAgent New Bridge Agent Address.
      */
-    function createBridgeAgent(
-        address _newRootRouterAddress
-    ) external returns (address newBridgeAgent) {
+    function createBridgeAgent(address _newRootRouterAddress) external returns (address newBridgeAgent) {
         newBridgeAgent = address(
             new RootBridgeAgent(
                 wrappedNativeToken,

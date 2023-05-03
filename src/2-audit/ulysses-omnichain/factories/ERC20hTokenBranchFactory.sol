@@ -4,10 +4,10 @@ pragma solidity ^0.8.0;
 import "../interfaces/IERC20hTokenBranchFactory.sol";
 
 /**
-@title ERC20 hToken Contract for deployment in Branch Chains of Hermes Omnichain Incentives System
-@author MaiaDAO
-@dev
-*/
+ * @title ERC20 hToken Contract for deployment in Branch Chains of Hermes Omnichain Incentives System
+ * @author MaiaDAO
+ * @dev
+ */
 contract ERC20hTokenBranchFactory is Ownable, IERC20hTokenBranchFactory {
     /// @notice Local Network Identifier.
     uint24 public immutable localChainId;
@@ -31,6 +31,8 @@ contract ERC20hTokenBranchFactory is Ownable, IERC20hTokenBranchFactory {
     }
 
     function initialize(address _wrappedNativeTokenAddress, address _coreRouter) external onlyOwner {
+        require(_coreRouter != address(0), "CoreRouter address cannot be 0");
+
         ERC20hTokenBranch newToken = new ERC20hTokenBranch(
             ERC20(_wrappedNativeTokenAddress).name(),
             ERC20(_wrappedNativeTokenAddress).symbol(),
@@ -50,10 +52,11 @@ contract ERC20hTokenBranchFactory is Ownable, IERC20hTokenBranchFactory {
     /// @notice Function to create a new hToken.
     /// @param _name Name of the Token.
     /// @param _symbol Symbol of the Token.
-    function createToken(
-        string memory _name,
-        string memory _symbol
-    ) external requiresCoreRouter returns (ERC20hTokenBranch newToken) {
+    function createToken(string memory _name, string memory _symbol)
+        external
+        requiresCoreRouter
+        returns (ERC20hTokenBranch newToken)
+    {
         newToken = new ERC20hTokenBranch(_name, _symbol, localPortAddress);
         hTokens.push(newToken);
         hTokensLenght++;

@@ -2,15 +2,15 @@
 
 pragma solidity ^0.8.0;
 
-import { Ownable } from "solady/auth/Ownable.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
 
-import { ERC20 } from "solmate/tokens/ERC20.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
-import { CoreBranchRouter } from "./CoreBranchRouter.sol";
+import {CoreBranchRouter} from "./CoreBranchRouter.sol";
 
 /**
-@title Base Port Gauge contract 
-@notice 
+ * @title Base Port Gauge contract 
+ * @notice
  */
 abstract contract BasePortGauge {
     /*///////////////////////////////////////////////////////////////
@@ -24,6 +24,8 @@ abstract contract BasePortGauge {
     uint256 globalGaugeId;
 
     constructor(CoreBranchRouter _bRouter) {
+        require(address(_bRouter) != address(0), "CoreRouter address cannot be 0");
+
         bRouter = _bRouter;
     }
 

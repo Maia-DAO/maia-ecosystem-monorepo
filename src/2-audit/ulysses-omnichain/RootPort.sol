@@ -105,6 +105,8 @@ contract RootPort is Ownable, IRootPort {
      *     @param _wrappedNativeToken The address of the wrapped native token.
      */
     constructor(uint24 _localChainId, address _wrappedNativeToken) {
+        require(_wrappedNativeToken != address(0), "Invalid wrapped native token address.");
+
         localChainId = _localChainId;
         wrappedNativeTokenAddress = _wrappedNativeToken;
 
@@ -114,6 +116,9 @@ contract RootPort is Ownable, IRootPort {
 
     function initialize(address _bridgeAgentFactory, address _coreRootRouter) external onlyOwner {
         require(_setup, "Setup ended.");
+        require(_bridgeAgentFactory != address(0), "Bridge Agent Factory cannot be 0 address.");
+        require(_coreRootRouter != address(0), "Core Root Router cannot be 0 address.");
+
         isBridgeAgentFactory[_bridgeAgentFactory] = true;
         bridgeAgentFactories.push(_bridgeAgentFactory);
         bridgeAgentFactoriesLenght++;
@@ -128,6 +133,10 @@ contract RootPort is Ownable, IRootPort {
     ) external onlyOwner {
         require(_setup, "Setup ended.");
         require(isBridgeAgent[_coreRootBridgeAgent], "Core Bridge Agent doesn't exist.");
+        require(_coreRootBridgeAgent != address(0), "Core Root Bridge Agent cannot be 0 address.");
+        require(_coreLocalBranchBridgeAgent != address(0), "Core Local Branch Bridge Agent cannot be 0 address.");
+        require(_localBranchPortAddress != address(0), "Local Branch Port Address cannot be 0 address.");
+
         coreRootBridgeAgentAddress = _coreRootBridgeAgent;
         localBranchPortAddress = _localBranchPortAddress;
         IBridgeAgent(_coreRootBridgeAgent).syncBranchBridgeAgent(_coreLocalBranchBridgeAgent, localChainId);
@@ -135,6 +144,7 @@ contract RootPort is Ownable, IRootPort {
     }
 
     function forefeitOwnership(address _owner) external onlyOwner {
+        require(_owner != address(0), "Owner cannot be 0 address.");
         _setOwner(address(_owner));
         _setup = false;
     }
@@ -256,11 +266,13 @@ contract RootPort is Ownable, IRootPort {
      * @param _fromChain The chainId of the chain where the token is deployed.
      */
     function mint(address _to, address _hToken, uint256 _amount, uint24 _fromChain) internal {
+        if (!isGlobalAddress[_hToken]) revert UnrecognizedToken();
         ERC20hTokenRoot(_hToken).mint(_to, _amount, _fromChain);
     }
 
     /// @inheritdoc IRootPort
     function burn(address _from, address _hToken, uint256 _amount, uint24 _fromChain) external requiresBridgeAgent {
+        if (!isGlobalAddress[_hToken]) revert UnrecognizedToken();
         ERC20hTokenRoot(_hToken).burn(_from, _amount, _fromChain);
     }
 
@@ -269,6 +281,8 @@ contract RootPort is Ownable, IRootPort {
         external
         requiresBridgeAgent
     {
+        if (!isGlobalAddress[_hToken]) revert UnrecognizedToken();
+
         if (_amount - _deposit > 0) _hToken.safeTransfer(_recipient, _amount - _deposit);
         if (_deposit > 0) mint(_recipient, _hToken, _deposit, _fromChainId);
     }
@@ -278,6 +292,8 @@ contract RootPort is Ownable, IRootPort {
         external
         requiresLocalBranchPort
     {
+        if (!isGlobalAddress[_hToken]) revert UnrecognizedToken();
+
         _hToken.safeTransferFrom(_from, address(this), _amount);
     }
 
@@ -286,17 +302,23 @@ contract RootPort is Ownable, IRootPort {
         external
         requiresLocalBranchPort
     {
+        if (!isGlobalAddress[_hToken]) revert UnrecognizedToken();
+
         if (_amount - _deposit > 0) _hToken.safeTransfer(_recipient, _amount - _deposit);
         if (_deposit > 0) mint(_recipient, _hToken, _amount - _deposit, localChainId);
     }
 
     /// @inheritdoc IRootPort
     function mintToLocalBranch(address _recipient, address _hToken, uint256 _amount) external requiresLocalBranchPort {
+        if (!isGlobalAddress[_hToken]) revert UnrecognizedToken();
+
         _hToken.safeTransfer(_recipient, _amount);
     }
 
     /// @inheritdoc IRootPort
     function burnFromLocalBranch(address _from, address _hToken, uint256 _amount) external requiresLocalBranchPort {
+        if (!isGlobalAddress[_hToken]) revert UnrecognizedToken();
+
         ERC20hTokenRoot(_hToken).burn(_from, _amount, localChainId);
     }
 

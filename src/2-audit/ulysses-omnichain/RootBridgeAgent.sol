@@ -165,6 +165,13 @@ contract RootBridgeAgent is IRootBridgeAgent {
         address _localPortAddress,
         address _localRouterAddress
     ) {
+        require(address(_wrappedNativeToken) != address(0), "Wrapped native token cannot be zero address");
+        require(_daoAddress != address(0), "DAO cannot be zero address");
+        require(_localAnyCallAddress != address(0), "Anycall Address cannot be zero address");
+        require(_localAnyCallExecutorAddress != address(0), "Anycall Executor Address cannot be zero address");
+        require(_localPortAddress != address(0), "Port Address cannot be zero address");
+        require(_localRouterAddress != address(0), "Router Address cannot be zero address");
+
         wrappedNativeToken = _wrappedNativeToken;
         factoryAddress = msg.sender;
         daoAddress = _daoAddress;
@@ -256,6 +263,11 @@ contract RootBridgeAgent is IRootBridgeAgent {
         //Get destination Underlying Address from Local Address.
         address underlyingAddress = IPort(localPortAddress).getUnderlyingTokenFromLocal(localAddress, _toChain);
 
+        //Check if valid assets
+        if (localAddress == address(0) || (underlyingAddress == address(0) && _deposit > 0)) {
+            revert InvalidInputParams();
+        }
+
         //Create Settlement Entry + Perform Call to destination Branch Chain.
         _settleAndCall(
             msg.sender, _recipient, _globalAddress, localAddress, underlyingAddress, _amount, _deposit, _toChain, _data
@@ -277,6 +289,9 @@ contract RootBridgeAgent is IRootBridgeAgent {
             //Populate Addresses for Settlement
             hTokens[i] = IPort(localPortAddress).getLocalTokenFromGlobal(_globalAddresses[i], _toChain);
             tokens[i] = IPort(localPortAddress).getUnderlyingTokenFromLocal(hTokens[i], _toChain);
+
+            if (hTokens[i] == address(0) || (tokens[i] == address(0) && _deposits[i] > 0)) revert InvalidInputParams();
+
             _updateStateOnBridgeOut(
                 msg.sender, _globalAddresses[i], hTokens[i], tokens[i], _amounts[i], _deposits[i], _toChain
             );
@@ -325,6 +340,9 @@ contract RootBridgeAgent is IRootBridgeAgent {
 
         //Get global address
         address globalAddress = IPort(localPortAddress).getGlobalTokenFromLocal(_dParams.hToken, _fromChain);
+
+        //Check if valid asset
+        if (globalAddress == address(0)) revert InvalidInputParams();
 
         //Move hTokens from Branch to Root + Mint Sufficient hTokens to match new port deposit
         IPort(localPortAddress).bridgeToRoot(_recipient, globalAddress, _dParams.amount, _dParams.deposit, _fromChain);
@@ -678,6 +696,9 @@ contract RootBridgeAgent is IRootBridgeAgent {
         (bool zeroForOneOnInflow, uint24 priceImpactPercentage, address gasTokenGlobalAddress, address poolAddress) =
             IPort(localPortAddress).getGasPoolInfo(_fromChain);
 
+        //Check if valid addresses
+        if (gasTokenGlobalAddress == address(0) || poolAddress == address(0)) revert InvalidGasPool();
+
         //Move Gas hTokens from Branch to Root / Mint Sufficient hTokens to match new port deposit
         IPort(localPortAddress).bridgeToRoot(address(this), gasTokenGlobalAddress, _amount, _amount, _fromChain);
 
@@ -714,6 +735,9 @@ contract RootBridgeAgent is IRootBridgeAgent {
         //Get fromChain's Gas Pool Info
         (bool zeroForOneOnInflow, uint24 priceImpactPercentage, address gasTokenGlobalAddress, address poolAddress) =
             IPort(localPortAddress).getGasPoolInfo(_toChain);
+
+        //Check if valid addresses
+        if (gasTokenGlobalAddress == address(0) || poolAddress == address(0)) revert InvalidGasPool();
 
         //Save Gas Pool for future use
         if (!approvedGasPool[poolAddress]) approvedGasPool[poolAddress] = true;

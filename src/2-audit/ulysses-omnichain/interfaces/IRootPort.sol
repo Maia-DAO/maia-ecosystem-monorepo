@@ -346,6 +346,8 @@ interface IRootPort {
     error UnrecognizedBridgeAgentFactory();
     error UnrecognizedBridgeAgent();
 
+    error UnrecognizedToken();
+
     error AlreadyAddedBridgeAgent();
     error BridgeAgentNotAllowed();
     error UnrecognizedCoreBridgeAgent();

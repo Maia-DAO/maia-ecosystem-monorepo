@@ -62,6 +62,9 @@ contract MulticallRootRouter is IRootRouter, Ownable {
     uint256 public constant MIN_AMOUNT = 10 ** 6;
 
     constructor(uint256 _localChainId, address _localPortAddress, address _multicallAddress) {
+        require(_localPortAddress != address(0), "Local Port Address cannot be 0");
+        require(_multicallAddress != address(0), "Multicall Address cannot be 0");
+
         localChainId = _localChainId;
         localPortAddress = _localPortAddress;
         multicallAddress = _multicallAddress;
@@ -69,6 +72,8 @@ contract MulticallRootRouter is IRootRouter, Ownable {
     }
 
     function initialize(address _bridgeAgentAddress) external onlyOwner {
+        require(_bridgeAgentAddress != address(0), "Bridge Agent Address cannot be 0");
+
         bridgeAgentAddress = payable(_bridgeAgentAddress);
         renounceOwnership();
     }

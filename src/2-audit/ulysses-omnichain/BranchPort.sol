@@ -92,8 +92,11 @@ contract BranchPort is Ownable, IBranchPort {
         _initializeOwner(_owner);
     }
 
-    function initialize(address _coreBranchRouterAddress, address _bridgeAgentFactory) external virtual onlyOwner {
-        coreBranchRouterAddress = _coreBranchRouterAddress;
+    function initialize(address _coreBranchRouter, address _bridgeAgentFactory) external virtual onlyOwner {
+        require(_coreBranchRouter != address(0), "CoreBranchRouter is zero address");
+        require(_bridgeAgentFactory != address(0), "BridgeAgentFactory is zero address");
+
+        coreBranchRouterAddress = _coreBranchRouter;
         isBridgeAgentFactory[_bridgeAgentFactory] = true;
         bridgeAgentFactories.push(_bridgeAgentFactory);
         bridgeAgentFactoriesLenght++;
@@ -283,6 +286,8 @@ contract BranchPort is Ownable, IBranchPort {
 
     /// @inheritdoc IBranchPort
     function setCoreRouter(address _newCoreRouter) external onlyOwner {
+        require(coreBranchRouterAddress != address(0), "CoreRouter address is zero");
+        require(_newCoreRouter != address(0), "New CoreRouter address is zero");
         coreBranchRouterAddress = _newCoreRouter;
     }
 

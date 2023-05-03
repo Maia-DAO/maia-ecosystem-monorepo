@@ -50,13 +50,13 @@ contract RootBridgeAgentDecodeTest is DSTestPlus {
         testToken = new MockERC20("A", "AAA", 18);
 
         mockRootBridgeAgent = new MockRootBridgeAgent(
-            WETH9(address(0)),
+            WETH9(address(1)),
         0,
-        address(0),
-        address(0),
-        address(0),
-        address(0),
-        address(0));
+        address(1),
+        address(1),
+        address(1),
+        address(1),
+        address(1));
     }
 
     function testFuzzReadDepositData(

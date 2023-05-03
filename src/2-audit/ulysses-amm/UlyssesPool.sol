@@ -1153,6 +1153,13 @@ contract UlyssesPool is UlyssesERC4626, Ownable, IUlyssesPool {
                 // Revert with (offset, size).
                 revert(0x1c, 0x04)
             }
+            // Revert if the amount is zero
+            if iszero(assets) {
+                // Store the function selector of `AmountTooSmall()`.
+                mstore(0x00, 0xc2f5625a)
+                // Revert with (offset, size).
+                revert(0x1c, 0x04)
+            }
         }
 
         // Update bandwidths and get the negative fee

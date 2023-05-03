@@ -42,6 +42,7 @@ contract UlyssesToken is ERC4626MultiToken, Ownable, IUlyssesToken {
     function addAsset(address asset, uint256 _weight) external nonReentrant onlyOwner {
         if (assetId[asset] != 0) revert AssetAlreadyAdded();
         require(ERC20(asset).decimals() == 18);
+        require(_weight > 0);
 
         assetId[asset] = assets.length + 1;
         assets.push(asset);

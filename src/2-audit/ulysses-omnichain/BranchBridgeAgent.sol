@@ -87,6 +87,12 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
         address _localRouterAddress,
         address _localPortAddress
     ) {
+        require(_rootBridgeAgentAddress != address(0), "Root Bridge Agent Address cannot be the zero address.");
+        require(_localAnyCallAddress != address(0), "AnyCall Address cannot be the zero address.");
+        require(_localAnyCallExecutorAddress != address(0), "AnyCall Executor Address cannot be the zero address.");
+        require(_localRouterAddress != address(0), "Local Router Address cannot be the zero address.");
+        require(_localPortAddress != address(0), "Local Port Address cannot be the zero address.");
+
         wrappedNativeToken = _wrappedNativeToken;
         localChainId = _localChainId;
         rootChainId = _rootChainId;

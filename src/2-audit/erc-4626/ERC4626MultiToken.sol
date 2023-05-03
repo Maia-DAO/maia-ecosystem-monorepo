@@ -45,6 +45,7 @@ abstract contract ERC4626MultiToken is ERC20, ReentrancyGuard, IERC4626MultiToke
 
         for (uint256 i = 0; i < length;) {
             require(ERC20(_assets[i]).decimals() == 18);
+            require(_weights[i] > 0);
 
             _totalWeights += _weights[i];
             assetId[_assets[i]] = i + 1;

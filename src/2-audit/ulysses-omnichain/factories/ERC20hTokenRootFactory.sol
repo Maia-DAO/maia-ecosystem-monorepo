@@ -4,10 +4,10 @@ pragma solidity ^0.8.0;
 import "../interfaces/IERC20hTokenRootFactory.sol";
 
 /**
-@title ERC20 hToken Contract for deployment in Root Chain of Hermes Omnichain Incentives System
-@author MaiaDAO
-@dev
-*/
+ * @title ERC20 hToken Contract for deployment in Root Chain of Hermes Omnichain Incentives System
+ * @author MaiaDAO
+ * @dev
+ */
 contract ERC20hTokenRootFactory is Ownable, IERC20hTokenRootFactory {
     using SafeTransferLib for address;
 
@@ -25,20 +25,19 @@ contract ERC20hTokenRootFactory is Ownable, IERC20hTokenRootFactory {
     uint256 public hTokensLenght;
 
     /**
-        @notice Constructor for ERC20 hToken Contract
-        @param _localChainId Local Network Identifier.
-        @param _rootPortAddress Root Port Address
+     * @notice Constructor for ERC20 hToken Contract
+     *     @param _localChainId Local Network Identifier.
+     *     @param _rootPortAddress Root Port Address
      */
-    constructor(
-        uint256 _localChainId,
-        address _rootPortAddress
-    ) {
+    constructor(uint256 _localChainId, address _rootPortAddress) {
+        require(_rootPortAddress != address(0), "Root Port Address cannot be 0");
         localChainId = _localChainId;
         rootPortAddress = _rootPortAddress;
         _initializeOwner(msg.sender);
     }
 
     function initialize(address _coreRouter) external onlyOwner {
+        require(_coreRouter != address(0), "CoreRouter address cannot be 0");
         coreRootRouterAddress = _coreRouter;
         renounceOwnership();
     }
@@ -49,10 +48,11 @@ contract ERC20hTokenRootFactory is Ownable, IERC20hTokenRootFactory {
     /// @notice Function to create a new hToken.
     /// @param _name Name of the Token.
     /// @param _symbol Symbol of the Token.
-    function createToken(
-        string memory _name,
-        string memory _symbol
-    ) external requiresCoreRouter returns (ERC20hTokenRoot newToken) {
+    function createToken(string memory _name, string memory _symbol)
+        external
+        requiresCoreRouter
+        returns (ERC20hTokenRoot newToken)
+    {
         newToken = new ERC20hTokenRoot(
             localChainId,
             address(this),
@@ -69,8 +69,9 @@ contract ERC20hTokenRootFactory is Ownable, IERC20hTokenRootFactory {
     //////////////////////////////////////////////////////////////*/
     /// @notice Modifier that verifies msg sender is the RootInterface Contract from Root Chain.
     modifier requiresCoreRouter() {
-        if (msg.sender != coreRootRouterAddress && msg.sender != rootPortAddress)
+        if (msg.sender != coreRootRouterAddress && msg.sender != rootPortAddress) {
             revert UnrecognizedCoreRouter();
+        }
         _;
     }
 }

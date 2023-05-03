@@ -17,6 +17,7 @@ contract BaseBranchRouter is IBranchRouter, Ownable {
     }
 
     function initialize(address _localBridgeAgentAddress) external onlyOwner {
+        require(_localBridgeAgentAddress != address(0), "Bridge Agent address cannot be 0");
         localBridgeAgentAddress = _localBridgeAgentAddress;
         renounceOwnership();
     }

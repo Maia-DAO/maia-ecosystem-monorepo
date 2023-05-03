@@ -561,6 +561,8 @@ contract BranchPortTest is DSTestPlus {
         // Verify Addition  //
         //////////////////////
 
+        require(RootPort(rootPort).isGlobalAddress(avaxGlobalToken), "Token should be added");
+
         require(
             RootPort(rootPort).getGlobalTokenFromLocal(address(avaxLocalWrappedNativeToken), avaxChainId)
                 == avaxGlobalToken,

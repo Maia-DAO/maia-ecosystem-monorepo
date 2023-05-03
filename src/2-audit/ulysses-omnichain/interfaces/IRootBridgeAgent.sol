@@ -322,6 +322,7 @@ interface IRootBridgeAgent is IApp {
     error InsufficientBalanceForSettlement();
     error InsufficientGasForFees();
     error InvalidInputParams();
+    error InvalidGasPool();
 
     error CallerIsNotPool();
     error AmountsAreZero();
