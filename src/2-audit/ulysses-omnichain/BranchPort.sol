@@ -89,6 +89,7 @@ contract BranchPort is Ownable, IBranchPort {
     uint256 internal constant MIN_RESERVE_RATIO = 3e3;
 
     constructor(address _owner) {
+        require(_owner != address(0), "Owner is zero address");
         _initializeOwner(_owner);
     }
 

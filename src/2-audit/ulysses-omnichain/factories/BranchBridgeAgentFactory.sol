@@ -56,6 +56,14 @@ contract BranchBridgeAgentFactory is Ownable, IBranchBridgeAgentFactory {
         address _localPortAddress,
         address _owner
     ) {
+        require(_rootBridgeAgentFactoryAddress != address(0), "Root Bridge Agent Factory Address cannot be 0");
+        require(address(_wrappedNativeToken) != address(0), "Wrapped Native Token cannot be 0");
+        require(_localAnyCallAddress != address(0), "Anycall Address cannot be 0");
+        require(_localAnyCallExecutorAddress != address(0), "Anyexec Address cannot be 0");
+        require(_localCoreBranchRouterAddress != address(0), "Core Branch Router Address cannot be 0");
+        require(_localPortAddress != address(0), "Port Address cannot be 0");
+        require(_owner != address(0), "Owner cannot be 0");
+
         localChainId = _localChainId;
         rootChainId = _rootChainId;
         rootBridgeAgentFactoryAddress = _rootBridgeAgentFactoryAddress;
@@ -68,6 +76,8 @@ contract BranchBridgeAgentFactory is Ownable, IBranchBridgeAgentFactory {
     }
 
     function initialize(address _coreRootBridgeAgent) external virtual onlyOwner {
+        require(_coreRootBridgeAgent != address(0), "Core Root Bridge Agent cannot be 0");
+
         address newCoreBridgeAgent = address(
             new BranchBridgeAgent(
                 wrappedNativeToken,

@@ -25,6 +25,8 @@ contract ERC20hTokenBranchFactory is Ownable, IERC20hTokenBranchFactory {
     uint256 public hTokensLenght;
 
     constructor(uint24 _localChainId, address _localPortAddress) {
+        require(_localPortAddress != address(0), "Port address cannot be 0");
+
         localChainId = _localChainId;
         localPortAddress = _localPortAddress;
         _initializeOwner(msg.sender);

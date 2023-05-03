@@ -84,6 +84,7 @@ contract UlyssesPool is UlyssesERC4626, Ownable, IUlyssesPool {
         address _owner,
         address _factory
     ) UlyssesERC4626(_asset, _name, _symbol) {
+        require(_owner != address(0));
         factory = UlyssesFactory(_factory);
         _initializeOwner(_owner);
         require(_id != 0);
@@ -145,7 +146,7 @@ contract UlyssesPool is UlyssesERC4626, Ownable, IUlyssesPool {
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IUlyssesPool
-    function claimProtocolFees() external nonReentrant onlyOwner returns (uint256 claimed) {
+    function claimProtocolFees() external nonReentrant returns (uint256 claimed) {
         claimed = getProtocolFees();
 
         if (claimed > 0) {
