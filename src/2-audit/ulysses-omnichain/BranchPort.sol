@@ -94,6 +94,9 @@ contract BranchPort is Ownable, IBranchPort {
     }
 
     function initialize(address _coreBranchRouter, address _bridgeAgentFactory) external virtual onlyOwner {
+        require(coreBranchRouterAddress == address(0), "Contract already initialized");
+        require(!isBridgeAgentFactory[_bridgeAgentFactory], "Contract already initialized");
+
         require(_coreBranchRouter != address(0), "CoreBranchRouter is zero address");
         require(_bridgeAgentFactory != address(0), "BridgeAgentFactory is zero address");
 
@@ -101,6 +104,10 @@ contract BranchPort is Ownable, IBranchPort {
         isBridgeAgentFactory[_bridgeAgentFactory] = true;
         bridgeAgentFactories.push(_bridgeAgentFactory);
         bridgeAgentFactoriesLenght++;
+    }
+
+    function renounceOwnership() public payable override onlyOwner {
+        revert("Cannot renounce ownership");
     }
 
     /*///////////////////////////////////////////////////////////////

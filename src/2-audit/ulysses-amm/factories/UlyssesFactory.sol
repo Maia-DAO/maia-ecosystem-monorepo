@@ -54,7 +54,12 @@ contract UlyssesFactory is Ownable, IUlyssesFactory {
     mapping(uint256 => UlyssesToken) public tokens;
 
     constructor(address _owner) {
+        require(_owner != address(0), "Owner cannot be 0");
         _initializeOwner(_owner);
+    }
+
+    function renounceOwnership() public payable override onlyOwner {
+        revert("Cannot renounce ownership");
     }
 
     /*//////////////////////////////////////////////////////////////

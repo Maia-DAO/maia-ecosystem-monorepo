@@ -92,6 +92,8 @@ contract BranchBridgeAgentFactory is Ownable, IBranchBridgeAgentFactory {
         );
 
         IPort(localPortAddress).addBridgeAgent(newCoreBridgeAgent);
+
+        renounceOwnership();
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -130,13 +132,5 @@ contract BranchBridgeAgentFactory is Ownable, IBranchBridgeAgentFactory {
         );
 
         IPort(localPortAddress).addBridgeAgent(newBridgeAgent);
-    }
-
-    /**
-     * @notice Toggles a bridge agent on or off.
-     * @param _bridgeAgentAddress Address of the bridge agent to toggle.
-     */
-    function toggleBridgeAgent(address _bridgeAgentAddress) external onlyOwner {
-        IPort(localPortAddress).toggleBridgeAgent(_bridgeAgentAddress);
     }
 }

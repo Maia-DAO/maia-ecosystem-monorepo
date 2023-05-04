@@ -151,6 +151,10 @@ contract RootPort is Ownable, IRootPort {
         _setup = false;
     }
 
+    function renounceOwnership() public payable override onlyOwner {
+        revert("Cannot renounce ownership");
+    }
+
     /*///////////////////////////////////////////////////////////////
                         EXTERNAL VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
