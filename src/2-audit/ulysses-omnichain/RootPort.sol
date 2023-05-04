@@ -358,6 +358,8 @@ contract RootPort is Ownable, IRootPort {
 
     /// @inheritdoc IRootPort
     function addBridgeAgent(address _manager, address _bridgeAgent) external requiresBridgeAgentFactory {
+        if (isBridgeAgent[_bridgeAgent]) revert AlreadyAddedBridgeAgent();
+
         bridgeAgents.push(_bridgeAgent);
         bridgeAgentsLenght++;
         getBridgeAgentManager[_bridgeAgent] = _manager;
