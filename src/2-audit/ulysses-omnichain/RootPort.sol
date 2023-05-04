@@ -114,6 +114,8 @@ contract RootPort is Ownable, IRootPort {
         _setup = true;
     }
 
+    bool internal _setup;
+
     function initialize(address _bridgeAgentFactory, address _coreRootRouter) external onlyOwner {
         require(_setup, "Setup ended.");
         require(_bridgeAgentFactory != address(0), "Bridge Agent Factory cannot be 0 address.");
@@ -226,18 +228,9 @@ contract RootPort is Ownable, IRootPort {
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IRootPort
-    function setUnderlyingAddress(address _localAddress, address _underlyingAddress, uint24 _fromChain)
-        external
-        requiresCoreBridgeAgent
-    {
-        getUnderlyingTokenFromLocal[_localAddress][_fromChain] = _underlyingAddress;
-        getLocalTokenFromUnder[_underlyingAddress][_fromChain] = _localAddress;
-    }
-
-    /// @inheritdoc IRootPort
     function setAddresses(address _globalAddress, address _localAddress, address _underlyingAddress, uint24 _fromChain)
         external
-        requiresCoreBridgeAgent
+        requiresCoreRootRouter
     {
         isGlobalAddress[_globalAddress] = true;
         getGlobalTokenFromLocal[_localAddress][_fromChain] = _globalAddress;
@@ -249,10 +242,19 @@ contract RootPort is Ownable, IRootPort {
     /// @inheritdoc IRootPort
     function setLocalAddress(address _globalAddress, address _localAddress, uint24 _fromChain)
         external
-        requiresCoreBridgeAgent
+        requiresCoreRootRouter
     {
         getGlobalTokenFromLocal[_localAddress][_fromChain] = _globalAddress;
         getLocalTokenFromGlobal[_globalAddress][_fromChain] = _localAddress;
+    }
+
+    /// @inheritdoc IRootPort
+    function setUnderlyingAddress(address _localAddress, address _underlyingAddress, uint24 _fromChain)
+        external
+        requiresCoreRootRouter
+    {
+        getUnderlyingTokenFromLocal[_localAddress][_fromChain] = _underlyingAddress;
+        getLocalTokenFromUnder[_underlyingAddress][_fromChain] = _localAddress;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -363,7 +365,7 @@ contract RootPort is Ownable, IRootPort {
         address _newBranchBridgeAgent,
         address _rootBridgeAgent,
         uint24 _branchChainId
-    ) external requiresCoreBridgeAgent {
+    ) external requiresCoreRootRouter {
         if (IBridgeAgent(_rootBridgeAgent).getBranchBridgeAgent(_branchChainId) != address(0)) {
             revert AlreadyAddedBridgeAgent();
         }
@@ -396,14 +398,6 @@ contract RootPort is Ownable, IRootPort {
     function setLocalBranchPort(address _branchPort) external onlyOwner {
         localBranchPortAddress = _branchPort;
     }
-
-    // function setCoreBridgeAgent(address _coreRootRouterAddress, address _coreBranchBridgeA) external onlyOwner {
-    //     coreRootRouterAddress = _coreRootRouterAddress;
-    //     isBridgeAgent[_coreRootRouterAddress] = true;
-    //     bridgeAgents.push(_coreRootRouterAddress);
-    //     bridgeAgentsLenght++;
-    //     getBridgeAgentManager[_coreRootRouterAddress] = owner();
-    // }
 
     /// @inheritdoc IRootPort
     function addNewChain(
@@ -469,37 +463,17 @@ contract RootPort is Ownable, IRootPort {
         getGasPoolInfo[_chainId] = _gasPoolInfo;
     }
 
-    bool internal _setup;
-
     /// @inheritdoc IRootPort
-    function addChainToCore(address _branchBridgeAgent, uint24 _chainId) external onlyOwner {
-        require(_setup, "Setup ended!");
-        IBridgeAgent(coreRootBridgeAgentAddress).syncBranchBridgeAgent(_branchBridgeAgent, _chainId);
-    }
+    function addEcosystemToken(address _ecoTokenGlobalAddress) external onlyOwner {
+        if (isGlobalAddress[_ecoTokenGlobalAddress]) revert AlreadyAddedEcosystemToken();
+        if (
+            getUnderlyingTokenFromLocal[_ecoTokenGlobalAddress][localChainId] != address(0)
+                || getLocalTokenFromUnder[_ecoTokenGlobalAddress][localChainId] != address(0)
+        ) revert AlreadyAddedEcosystemToken();
 
-    /**
-     * @notice Function to initialize root environment ecosystem token addresses
-     * @param hermesGlobalAddress hermes global address
-     * @param maiaGlobalAddress maia global address
-     */
-    function initializeEcosystemTokenAddresses(address hermesGlobalAddress, address maiaGlobalAddress)
-        external
-        onlyOwner
-    {
-        getGlobalTokenFromLocal[hermesGlobalAddress][localChainId] = hermesGlobalAddress;
-        getLocalTokenFromGlobal[hermesGlobalAddress][localChainId] = hermesGlobalAddress;
-
-        getGlobalTokenFromLocal[maiaGlobalAddress][localChainId] = maiaGlobalAddress;
-        getLocalTokenFromGlobal[maiaGlobalAddress][localChainId] = maiaGlobalAddress;
-    }
-
-    /// @inheritdoc IRootPort
-    function addEcosystemTokenToChain(address ecoTokenGlobalAddress, address ecoTokenLocalAddress, uint256 toChainId)
-        external
-        onlyOwner
-    {
-        getGlobalTokenFromLocal[ecoTokenLocalAddress][toChainId] = ecoTokenGlobalAddress;
-        getLocalTokenFromGlobal[ecoTokenGlobalAddress][toChainId] = ecoTokenLocalAddress;
+        isGlobalAddress[_ecoTokenGlobalAddress] = true;
+        getGlobalTokenFromLocal[_ecoTokenGlobalAddress][localChainId] = _ecoTokenGlobalAddress;
+        getLocalTokenFromGlobal[_ecoTokenGlobalAddress][localChainId] = _ecoTokenGlobalAddress;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -519,8 +493,8 @@ contract RootPort is Ownable, IRootPort {
     }
 
     /// @notice Modifier that verifies msg sender is the RootInterface Contract from Root Chain.
-    modifier requiresCoreBridgeAgent() {
-        if (!(msg.sender == coreRootRouterAddress)) revert UnrecognizedCoreBridgeAgent();
+    modifier requiresCoreRootRouter() {
+        if (!(msg.sender == coreRootRouterAddress)) revert UnrecognizedCoreRootRouter();
         _;
     }
 

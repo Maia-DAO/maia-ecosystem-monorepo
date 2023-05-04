@@ -317,27 +317,10 @@ interface IRootPort {
     function setGasPoolInfo(uint24 _chainId, GasPoolInfo calldata _gasPoolInfo) external;
 
     /**
-     *    @notice Sets the gas pool info for a chain
-     * @param _branchBridgeAgent branch bridge agent address
-     * @param _chainId chainId of the chain to set the gas pool info for
-     */
-    function addChainToCore(address _branchBridgeAgent, uint24 _chainId) external;
-
-    /**
-     * @notice
-     * @param hermesGlobalAddress hermes global address
-     * @param maiaGlobalAddress maia global address
-     */
-    function initializeEcosystemTokenAddresses(address hermesGlobalAddress, address maiaGlobalAddress) external;
-
-    /**
      * @notice Adds an ecosystem hToken to a branch chain
      * @param ecoTokenGlobalAddress ecosystem token global address
-     * @param ecoTokenLocalAddress ecosystem token local address
-     * @param toChainId chainId of the branch chain to add the ecosystem token to
      */
-    function addEcosystemTokenToChain(address ecoTokenGlobalAddress, address ecoTokenLocalAddress, uint256 toChainId)
-        external;
+    function addEcosystemToken(address ecoTokenGlobalAddress) external;
 
     /*///////////////////////////////////////////////////////////////
                             ERRORS  
@@ -348,9 +331,11 @@ interface IRootPort {
 
     error UnrecognizedToken();
 
+    error AlreadyAddedEcosystemToken();
+
     error AlreadyAddedBridgeAgent();
     error BridgeAgentNotAllowed();
-    error UnrecognizedCoreBridgeAgent();
+    error UnrecognizedCoreRootRouter();
     error UnrecognizedLocalBranchPort();
     error UnknowHTokenFactory();
 }
