@@ -195,7 +195,7 @@ contract CoreRootRouter is IRootRouter, Ownable {
     ) internal {
         // Verify if token already added
         if (
-            IPort(rootPortAddress).isLocalToken(_underlyingAddress, _fromChain)
+            IPort(rootPortAddress).isLocalToken(_localAddress, _fromChain)
                 || IPort(rootPortAddress).isUnderlyingToken(_underlyingAddress, _fromChain)
         ) revert TokenAlreadyAdded();
 
