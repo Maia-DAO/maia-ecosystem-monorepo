@@ -43,6 +43,8 @@ contract UlyssesFactory is Ownable, IUlyssesFactory {
 
     error InvalidPoolId();
 
+    error InvalidAsset();
+
     ///@notice next poolId
     uint256 public poolId = 1;
 
@@ -79,6 +81,7 @@ contract UlyssesFactory is Ownable, IUlyssesFactory {
      * @return _poolId id of the pool that was created.
      */
     function _createPool(ERC20 asset, address owner) private returns (uint256 _poolId) {
+        if (address(asset) == address(0)) revert InvalidAsset();
         _poolId = ++poolId;
         pools[_poolId] =
             UlyssesPoolDeployer.deployPool(_poolId, address(asset), "Ulysses Pool", "ULP", owner, address(this));
