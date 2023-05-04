@@ -161,7 +161,7 @@ contract BranchPort is Ownable, IBranchPort {
     }
 
     /// @inheritdoc IBranchPort
-    function replenishReserves(address _strategy, address _token, uint256 _amount) external {
+    function replenishReserves(address _strategy, address _token, uint256 _amount) external lock {
         if (!isStrategyToken[_token]) revert UnrecognizedStrategyToken();
         if (!isPortStrategy[_strategy][_token]) revert UnrecognizedPortStrategy();
 

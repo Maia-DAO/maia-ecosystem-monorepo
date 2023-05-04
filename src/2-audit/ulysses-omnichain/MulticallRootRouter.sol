@@ -162,6 +162,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
         external
         payable
         override
+        lock
         requiresAgent
         returns (bool, bytes memory)
     {
@@ -183,6 +184,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
         external
         payable
         override
+        lock
         requiresAgent
         returns (bool, bytes memory)
     {
@@ -242,6 +244,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
         external
         payable
         override
+        lock
         requiresAgent
         returns (bool, bytes memory)
     {
@@ -255,6 +258,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
         external
         payable
         requiresAgent
+        lock
         returns (bool, bytes memory)
     {
         revert();
@@ -269,6 +273,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
         external
         payable
         override
+        lock
         requiresAgent
         returns (bool, bytes memory)
     {
@@ -349,7 +354,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
         DepositParams calldata,
         address userAccount,
         uint24 fromChainId
-    ) external payable override requiresAgent returns (bool success, bytes memory result) {
+    ) external payable override requiresAgent lock returns (bool success, bytes memory result) {
         /// FUNC ID: 1 (multicallNoOutput)
         if (funcId == 0x01) {
             Call[] memory calls = abi.decode(RLPDecoder.decodeCallData(rlpEncodedData, MAX_LENGTH), (Call[]));
@@ -420,7 +425,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
         DepositMultipleParams calldata,
         address userAccount,
         uint24 fromChainId
-    ) external payable requiresAgent returns (bool success, bytes memory result) {
+    ) external payable requiresAgent lock returns (bool success, bytes memory result) {
         /// FUNC ID: 1 (multicallNoOutput)
         if (funcId == 0x01) {
             Call[] memory calls = abi.decode(RLPDecoder.decodeCallData(rlpEncodedData, MAX_LENGTH), (Call[]));
