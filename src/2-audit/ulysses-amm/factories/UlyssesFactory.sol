@@ -41,6 +41,8 @@ contract UlyssesFactory is Ownable, IUlyssesFactory {
 
     error ParameterLengthError();
 
+    error InvalidPoolId();
+
     ///@notice next poolId
     uint256 public poolId = 1;
 
@@ -138,7 +140,11 @@ contract UlyssesFactory is Ownable, IUlyssesFactory {
         uint256 length = poolIds.length;
         address[] memory destinations = new address[](length);
         for (uint256 i = 0; i < length;) {
-            destinations[i] = address(pools[poolIds[i]]);
+            address destination = address(pools[poolIds[i]]);
+
+            if (destination == address(0)) revert InvalidPoolId();
+
+            destinations[i] = destination;
 
             unchecked {
                 ++i;
