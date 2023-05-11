@@ -68,14 +68,6 @@ interface IBoostAggregator is IERC721Receiver {
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice deposit and stake tokenId
-     * @param tokenId tokenId of position
-     * @dev Requires that the user has approved this contract to transfer the NFT
-     *      User must be whitelisted
-     */
-    function depositAndStake(uint256 tokenId) external;
-
-    /**
      * @notice unstake, withdraw, and claim rewards to user of tokenId
      * @param tokenId tokenId of position
      */

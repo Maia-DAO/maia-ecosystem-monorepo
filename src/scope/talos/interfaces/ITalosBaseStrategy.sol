@@ -210,6 +210,29 @@ interface ITalosBaseStrategy is IERC721Receiver {
     /// @param fees1 Exact amount of fees claimed by the users in terms of token 1
     event RewardPaid(address indexed sender, uint256 fees0, uint256 fees1);
 
+
+    /// @notice Emitted when TalosV3 Optimizer is initialized
+    /// @param tokenId Token Id of the position
+    /// @param caller Address of the caller
+    /// @param owner Address of the owner
+    /// @param amount0 Amount of token 0 deposited to the position
+    /// @param amount1 Amount of token 1 deposited to the position
+    /// @param shares Amount of shares minted
+    event Initialize(
+        uint256 indexed tokenId, 
+        address indexed caller,
+        address indexed owner,
+        uint256 amount0,
+        uint256 amount1,
+        uint256 shares
+    );
+
+    /// @notice Emitted when TalosV3 Optimizer is deposited
+    /// @param caller Address of the caller
+    /// @param owner Address of the owner
+    /// @param amount0 Amount of token 0 deposited to the position
+    /// @param amount1 Amount of token 1 deposited to the position
+    /// @param shares Amount of shares minted
     event Deposit(
         address indexed caller,
         address indexed owner,
@@ -218,6 +241,13 @@ interface ITalosBaseStrategy is IERC721Receiver {
         uint256 shares
     );
 
+    /// @notice Emitted when TalosV3 Optimizer is redeemed
+    /// @param caller Address of the caller
+    /// @param receiver Address of the receiver
+    /// @param owner Address of the owner
+    /// @param amount0 Amount of token 0 deposited to the position
+    /// @param amount1 Amount of token 1 deposited to the position
+    /// @param shares Amount of shares minted
     event Redeem(
         address indexed caller,
         address indexed receiver,
@@ -228,11 +258,12 @@ interface ITalosBaseStrategy is IERC721Receiver {
     );
 
     /// @notice Emitted when TalosV3 Optimizer changes the position in the pool
+    /// @param tokenId Token Id of the position
     /// @param tickLower Lower price tick of the positon
     /// @param tickUpper Upper price tick of the position
     /// @param amount0 Amount of token 0 deposited to the position
     /// @param amount1 Amount of token 1 deposited to the position
-    event Rerange(int24 tickLower, int24 tickUpper, uint256 amount0, uint256 amount1);
+    event Rerange(uint256 indexed tokenId, int24 tickLower, int24 tickUpper, uint256 amount0, uint256 amount1);
 
     /// @notice Shows current Optimizer's balances
     /// @param totalAmount0 Current token0 Optimizer's balance

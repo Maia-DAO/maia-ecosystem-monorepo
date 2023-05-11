@@ -57,6 +57,22 @@ interface IPartnerManagerFactory {
     function removeVault(IBaseVault vault) external;
 
     /*//////////////////////////////////////////////////////////////
+                            EVENTS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Emitted when a new partner manager is added.
+    event AddedPartner(PartnerManager partnerManager, uint256 id);
+
+    /// @notice Emitted when a new vault is added.
+    event AddedVault(IBaseVault vault, uint256 id);
+
+    /// @notice Emitted when a partner manager is removed.
+    event RemovedPartner(PartnerManager indexed partnerManager);
+
+    /// @notice Emitted when a vault is removed.
+    event RemovedVault(IBaseVault indexed vault);
+
+    /*//////////////////////////////////////////////////////////////
                             ERRORS
     //////////////////////////////////////////////////////////////*/
 

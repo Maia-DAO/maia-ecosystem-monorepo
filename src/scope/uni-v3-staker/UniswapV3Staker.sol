@@ -46,8 +46,8 @@ contract UniswapV3Staker is IUniswapV3Staker, Multicallable {
     /// @inheritdoc IUniswapV3Staker
     mapping(uint256 => Deposit) public override deposits;
 
-    /// @inheritdoc IUniswapV3Staker
-    mapping(address => mapping(IUniswapV3Pool => uint256)) public userAttachements;
+    /// @notice stakes[user][pool] => tokenId of attached position of user per pool
+    mapping(address => mapping(IUniswapV3Pool => uint256)) private _userAttachements;
 
     /// @dev stakes[tokenId][incentiveHash] => Stake
     mapping(uint256 => mapping(bytes32 => Stake)) private _stakes;
@@ -68,6 +68,11 @@ contract UniswapV3Staker is IUniswapV3Staker, Multicallable {
         if (liquidity == type(uint96).max) {
             liquidity = stake.liquidityIfOverflow;
         }
+    }
+
+    /// @inheritdoc IUniswapV3Staker
+    function userAttachements(address user, IUniswapV3Pool pool) external view override returns (uint256) {
+        return hermesGaugeBoost.isUserGauge(user, address(gauges[pool])) ? _userAttachements[user][pool] : 0;
     }
 
     /// @inheritdoc IUniswapV3Staker
@@ -143,7 +148,7 @@ contract UniswapV3Staker is IUniswapV3Staker, Multicallable {
 
         hermes.safeTransferFrom(msg.sender, address(this), reward);
 
-        emit IncentiveCreated(pool, startTime, poolsMinimumWidth[pool], reward);
+        emit IncentiveCreated(pool, startTime, reward);
     }
 
     /// @inheritdoc IUniswapV3Staker
@@ -167,7 +172,7 @@ contract UniswapV3Staker is IUniswapV3Staker, Multicallable {
 
         hermes.safeTransferFrom(msg.sender, address(this), reward);
 
-        emit IncentiveCreated(key.pool, startTime, poolsMinimumWidth[key.pool], reward);
+        emit IncentiveCreated(key.pool, startTime, reward);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -304,7 +309,7 @@ contract UniswapV3Staker is IUniswapV3Staker, Multicallable {
             uint128 boostTotalSupply;
             address owner = deposit.owner;
             // If tokenId is attached to gauge
-            if (userAttachements[owner][key.pool] == tokenId) {
+            if (_userAttachements[owner][key.pool] == tokenId) {
                 // get boost amount and total supply
                 (boostAmount, boostTotalSupply) = hermesGaugeBoost.getUserGaugeBoost(
                     owner,
@@ -386,7 +391,6 @@ contract UniswapV3Staker is IUniswapV3Staker, Multicallable {
                         amount1Max: type(uint128).max
                     })
                 );
-                emit feesCollected(bribeAddress, amount0, amount1);
             }
         }
 
@@ -396,15 +400,21 @@ contract UniswapV3Staker is IUniswapV3Staker, Multicallable {
         {
             uint128 boostAmount;
             uint128 boostTotalSupply;
+
+            UniswapV3Gauge gauge = gauges[key.pool]; // saves another SLOAD if no tokenId is attached
+
             // If tokenId is attached to gauge
-            if (userAttachements[owner][key.pool] == tokenId) {
+            if (
+                hermesGaugeBoost.isUserGauge(owner, address(gauge))
+                    && _userAttachements[owner][key.pool] == tokenId
+            ) {
                 // get boost amount and total supply
                 (boostAmount, boostTotalSupply) = hermesGaugeBoost.getUserGaugeBoost(
                     owner,
-                    address(gauges[key.pool])
+                    address(gauge)
                 );
-                gauges[key.pool].detachUser(owner);
-                userAttachements[owner][key.pool] = 0;
+                gauge.detachUser(owner);
+                _userAttachements[owner][key.pool] = 0;
             }
 
             uint160 secondsPerLiquidityInsideInitialX128;
@@ -501,9 +511,11 @@ contract UniswapV3Staker is IUniswapV3Staker, Multicallable {
         address tokenOwner = deposits[tokenId].owner;
         if (tokenOwner == address(0)) revert TokenNotDeposited();
 
-        if (userAttachements[tokenOwner][pool] == 0) {
-            userAttachements[tokenOwner][pool] = tokenId;
-            gauges[pool].attachUser(tokenOwner);
+        UniswapV3Gauge gauge = gauges[pool]; // saves another SLOAD if no tokenId is attached
+
+        if (hermesGaugeBoost.isUserGauge(tokenOwner, address(gauge))) {
+            _userAttachements[tokenOwner][pool] = tokenId;
+            gauge.attachUser(tokenOwner);
         }
 
         deposits[tokenId].stakedTimestamp = uint40(block.timestamp);
@@ -541,8 +553,13 @@ contract UniswapV3Staker is IUniswapV3Staker, Multicallable {
         
         if (uniswapV3Gauge == address(0)) revert InvalidGauge();
         
-        gauges[uniswapV3Pool] = UniswapV3Gauge(uniswapV3Gauge);
-        gaugePool[uniswapV3Gauge] = uniswapV3Pool;
+
+        if (address(gauges[uniswapV3Pool]) != uniswapV3Gauge){ 
+            emit GaugeUpdated(uniswapV3Pool, uniswapV3Gauge);
+
+                gauges[uniswapV3Pool] = UniswapV3Gauge(uniswapV3Gauge);
+                gaugePool[uniswapV3Gauge] = uniswapV3Pool;
+        }
 
         updateBribeDepot(uniswapV3Pool);
         updatePoolMinimumWidth(uniswapV3Pool);
@@ -550,11 +567,21 @@ contract UniswapV3Staker is IUniswapV3Staker, Multicallable {
 
     /// @inheritdoc IUniswapV3Staker
     function updateBribeDepot(IUniswapV3Pool uniswapV3Pool) public {
-        bribeDepots[uniswapV3Pool] = address(gauges[uniswapV3Pool].multiRewardsDepot());
+        address newDepot = address(gauges[uniswapV3Pool].multiRewardsDepot());
+        if (newDepot != bribeDepots[uniswapV3Pool]){
+            bribeDepots[uniswapV3Pool] = newDepot;
+
+            emit BribeDepotUpdated(uniswapV3Pool, newDepot);
+        }
     }
 
     /// @inheritdoc IUniswapV3Staker
     function updatePoolMinimumWidth(IUniswapV3Pool uniswapV3Pool) public {
-        poolsMinimumWidth[uniswapV3Pool] = gauges[uniswapV3Pool].minimumWidth();
+        uint24 minimumWidth = gauges[uniswapV3Pool].minimumWidth();
+        if (minimumWidth != poolsMinimumWidth[uniswapV3Pool]){
+            poolsMinimumWidth[uniswapV3Pool] = minimumWidth;
+
+            emit PoolMinimumWidthUpdated(uniswapV3Pool, minimumWidth);
+        }
     }
 }

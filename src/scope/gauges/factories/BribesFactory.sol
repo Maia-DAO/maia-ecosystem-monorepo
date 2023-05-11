@@ -96,6 +96,8 @@ contract BribesFactory is Ownable, IBribesFactory {
         flywheel.setFlywheelRewards(
             address(new FlywheelBribeRewards(flywheel, rewardsCycleLength))
         );
+
+        emit BribeFlywheelCreated(bribeToken, flywheel);
     }
 
     /*//////////////////////////////////////////////////////////////

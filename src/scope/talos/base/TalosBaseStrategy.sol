@@ -164,7 +164,7 @@ abstract contract TalosBaseStrategy is Ownable, ERC20, ReentrancyGuard, ITalosBa
         _mint(receiver, shares);
         if (totalSupply > optimizer.maxTotalSupply()) revert ExceedingMaxTotalSupply();
 
-        emit Deposit(msg.sender, receiver, amount0, amount1, shares);
+        emit Initialize(tokenId, msg.sender, receiver, amount0, amount1, shares);
 
         afterDeposit(_tokenId);
         initialized = true;
@@ -202,9 +202,6 @@ abstract contract TalosBaseStrategy is Ownable, ERC20, ReentrancyGuard, ITalosBa
             uint256 amount1
         )
     {
-        // Check for rounding error since we round down in previewDeposit.
-        // require((shares = previewDeposit(amount0Desired, amount1Desired)) != 0, "ZERO_SHARES");
-
         uint256 _tokenId = tokenId;
 
         beforeDeposit(_tokenId, receiver);
@@ -275,9 +272,6 @@ abstract contract TalosBaseStrategy is Ownable, ERC20, ReentrancyGuard, ITalosBa
             if (allowed != type(uint256).max) allowance[_owner][msg.sender] = allowed - shares;
         }
 
-        // Check for rounding error since we round down in previewRedeem.
-        // require((assets = previewRedeem(shares)) != 0, "ZERO_ASSETS");
-
         if (shares == 0) revert RedeemingZeroShares();
         if (receiver == address(0)) revert ReceiverIsZeroAddress();
 
@@ -331,7 +325,7 @@ abstract contract TalosBaseStrategy is Ownable, ERC20, ReentrancyGuard, ITalosBa
         _withdrawAll(_tokenId);
 
         (uint256 amount0, uint256 amount1) = doRerange();
-        emit Rerange(tickLower, tickUpper, amount0, amount1);
+        emit Rerange(tokenId, tickLower, tickUpper, amount0, amount1);
 
         afterRerange(tokenId); // tokenId changed in doRerange
     }
@@ -344,7 +338,7 @@ abstract contract TalosBaseStrategy is Ownable, ERC20, ReentrancyGuard, ITalosBa
         _withdrawAll(_tokenId);
 
         (uint256 amount0, uint256 amount1) = doRebalance();
-        emit Rerange(tickLower, tickUpper, amount0, amount1);
+        emit Rerange(tokenId, tickLower, tickUpper, amount0, amount1);
 
         afterRerange(tokenId); // tokenId changed in doRerange
     }
@@ -360,11 +354,6 @@ abstract contract TalosBaseStrategy is Ownable, ERC20, ReentrancyGuard, ITalosBa
         uint256,
         bytes calldata
     ) external pure override returns (bytes4) {
-        // Getting position info here would nice but dangerous
-        // tokenId = _tokenId;
-        // (, , , , , , , liquidity, , , , ) =
-        //     nonfungiblePositionManager.positions(_tokenId);
-
         return this.onERC721Received.selector;
     }
 

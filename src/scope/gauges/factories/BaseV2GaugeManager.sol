@@ -117,13 +117,21 @@ contract BaseV2GaugeManager is Ownable, IBaseV2GaugeManager {
         gaugeFactoryIds[gaugeFactory] = gaugeFactories.length;
         gaugeFactories.push(gaugeFactory);
         activeGaugeFactories[gaugeFactory] = true;
+
+        emit AddedGaugeFactory(address(gaugeFactory));
     }
 
     /// @inheritdoc IBaseV2GaugeManager
     function removeGaugeFactory(BaseV2GaugeFactory gaugeFactory) external onlyOwner {
+        if (
+            !activeGaugeFactories[gaugeFactory] ||
+            gaugeFactories[gaugeFactoryIds[gaugeFactory]] != gaugeFactory
+        ) revert NotActiveGaugeFactory();
         delete gaugeFactories[gaugeFactoryIds[gaugeFactory]];
         delete gaugeFactoryIds[gaugeFactory];
         delete activeGaugeFactories[gaugeFactory];
+
+        emit RemovedGaugeFactory(address(gaugeFactory));
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -134,11 +142,15 @@ contract BaseV2GaugeManager is Ownable, IBaseV2GaugeManager {
     function changebHermesGaugeOwner(address newOwner) external onlyAdmin {
         bHermesGaugeWeight.transferOwnership(newOwner);
         bHermesGaugeBoost.transferOwnership(newOwner);
+
+        emit ChangedbHermesGaugeOwner(newOwner);
     }
 
     /// @inheritdoc IBaseV2GaugeManager
     function changeAdmin(address newAdmin) external onlyAdmin {
         admin = newAdmin;
+
+        emit ChangedAdmin(newAdmin);
     }
 
     /*//////////////////////////////////////////////////////////////

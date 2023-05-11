@@ -142,8 +142,12 @@ interface IUniswapV3Staker is IERC721Receiver {
             uint40 stakedTimestamp
         );
 
-    /// @notice stakes[user][pool] => tokenId of attached position of user per pool
-    function userAttachements(address, IUniswapV3Pool) external view returns (uint256);
+    /// @notice Returns tokenId of the attached position of user per pool
+    /// @dev Returns 0 if no position is attached
+    /// @param user The address of the user
+    /// @param pool The Uniswap V3 pool
+    /// @return tokenId The ID of the attached position
+    function userAttachements(address user, IUniswapV3Pool pool) external view returns (uint256);
 
     /// @notice Returns information about a staked liquidity NFT
     /// @param tokenId The ID of the staked token
@@ -269,12 +273,10 @@ interface IUniswapV3Staker is IERC721Receiver {
     /// @notice Event emitted when a liquidity mining incentive has been created
     /// @param pool The Uniswap V3 pool
     /// @param startTime The time when the incentive program begins
-    /// @param minWidth The minimum width of a staked position
     /// @param reward The amount of reward tokens to be distributed
     event IncentiveCreated(
         IUniswapV3Pool indexed pool,
         uint256 startTime,
-        uint24 minWidth,
         uint256 reward
     );
 
@@ -309,15 +311,19 @@ interface IUniswapV3Staker is IERC721Receiver {
     /// @param reward The amount of reward tokens claimed
     event RewardClaimed(address indexed to, uint256 reward);
 
-    /// @notice Event emitted when a Uniswap V3 LP token has fees collected
-    /// @param bribeAddress The address where collcted fees were sent to
-    /// @param amount0 The amount of token0 tokens claimed
-    /// @param amount1 The amount of token1 tokens claimed
-    event feesCollected(
-        address indexed bribeAddress,
-        uint256 indexed amount0,
-        uint256 indexed amount1
-    );
+    /// @notice Event emitted when updating the bribeDepot for a pool
+    /// @param uniswapV3Pool The Uniswap V3 pool
+    /// @param bribeDepot The bribeDepot for the pool
+    event BribeDepotUpdated(IUniswapV3Pool indexed uniswapV3Pool, address bribeDepot);
+
+    /// @notice Event emitted when updating the poolMinimumWidth for a pool
+    /// @param uniswapV3Pool The Uniswap V3 pool
+    /// @param poolMinimumWidth The poolMinimumWidth for the pool
+    event PoolMinimumWidthUpdated(IUniswapV3Pool indexed uniswapV3Pool, uint24 indexed poolMinimumWidth);
+
+
+    /// @notice Event emitted when updating the gauge address for a pool
+    event GaugeUpdated(IUniswapV3Pool indexed uniswapV3Pool, address indexed uniswapV3Gauge);
 
     /*//////////////////////////////////////////////////////////////
                             ERRORS

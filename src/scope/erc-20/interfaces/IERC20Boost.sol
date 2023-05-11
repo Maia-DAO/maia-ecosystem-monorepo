@@ -214,6 +214,18 @@ interface IERC20Boost {
     /// @notice emitted when removing a gauge from the live set.
     event RemoveGauge(address indexed gauge);
 
+    /// @notice emmitted when a user attaches boost to a gauge.
+    event Attach(address indexed user, address indexed gauge, uint256 boost);
+
+    /// @notice emmitted when a user detaches boost from a gauge.
+    event Detach(address indexed user, address indexed gauge);
+
+    /// @notice emmitted when a user updates their boost.
+    event UpdateUserBoost(address indexed user, uint256 updatedBoost);
+
+    /// @notice emmitted when a user decrements their gauge boost.
+    event DecrementUserGaugeBoost(address indexed user, address indexed gauge, uint256 UpdatedBoost);
+
     /*///////////////////////////////////////////////////////////////
                             ERRORS
     //////////////////////////////////////////////////////////////*/

@@ -40,6 +40,8 @@ contract UniswapV3Gauge is BaseV2Gauge, IUniswapV3Gauge {
         uniswapV3Staker = _uniswapV3Staker;
         minimumWidth = _minimumWidth;
 
+        emit NewMinimumWidth(_minimumWidth);
+
         rewardToken.safeApprove(_uniswapV3Staker, type(uint256).max);
     }
 
@@ -56,6 +58,8 @@ contract UniswapV3Gauge is BaseV2Gauge, IUniswapV3Gauge {
     /// @inheritdoc IUniswapV3Gauge
     function setMinimumWidth(uint24 _minimumWidth) external onlyOwner {
         minimumWidth = _minimumWidth;
+
+        emit NewMinimumWidth(_minimumWidth);
     }
 
     /*//////////////////////////////////////////////////////////////

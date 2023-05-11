@@ -59,6 +59,8 @@ contract PartnerManagerFactory is Ownable, IPartnerManagerFactory {
         uint256 id = partners.length;
         partners.push(newPartnerManager);
         partnerIds[newPartnerManager] == id;
+
+        emit AddedPartner(newPartnerManager, id);
     }
 
     /// @inheritdoc IPartnerManagerFactory
@@ -66,6 +68,8 @@ contract PartnerManagerFactory is Ownable, IPartnerManagerFactory {
         uint256 id = vaults.length;
         vaults.push(newVault);
         vaultIds[newVault] == id;
+
+        emit AddedVault(newVault, id);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -77,6 +81,8 @@ contract PartnerManagerFactory is Ownable, IPartnerManagerFactory {
         if (partners[partnerIds[partnerManager]] != partnerManager) revert InvalidPartnerManager();
         delete partners[partnerIds[partnerManager]];
         delete partnerIds[partnerManager];
+
+        emit RemovedPartner(partnerManager);
     }
 
     /// @inheritdoc IPartnerManagerFactory
@@ -84,5 +90,7 @@ contract PartnerManagerFactory is Ownable, IPartnerManagerFactory {
         if (vaults[vaultIds[vault]] != vault) revert InvalidVault();
         delete vaults[vaultIds[vault]];
         delete vaultIds[vault];
+
+        emit RemovedVault(vault);
     }
 }

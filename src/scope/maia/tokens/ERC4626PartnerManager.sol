@@ -209,6 +209,8 @@ abstract contract ERC4626PartnerManager is
 
         partnerVault = newPartnerVault;
         if (newPartnerVault != address(0)) IBaseVault(newPartnerVault).applyAll();
+
+        emit MigratePartnerVault(address(this), newPartnerVault);
     }
 
     /*//////////////////////////////////////////////////////////////

@@ -103,6 +103,22 @@ interface IBaseV2GaugeManager {
      */
     function changeAdmin(address newAdmin) external;
 
+    /*///////////////////////////////////////////////////////////////
+                            EVENTS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Emitted when a new gauge factory is added.
+    event AddedGaugeFactory(address gaugeFactory);
+
+    /// @notice Emitted when a gauge factory is removed.
+    event RemovedGaugeFactory(address gaugeFactory);
+
+    /// @notice Emitted when changing bHermes GaugeWeight and GaugeWeight owner.
+    event ChangedbHermesGaugeOwner(address newOwner);
+
+    /// @notice Emitted when changing admin.
+    event ChangedAdmin(address newAdmin);
+
     /*//////////////////////////////////////////////////////////////
                             ERRORS
     //////////////////////////////////////////////////////////////*/

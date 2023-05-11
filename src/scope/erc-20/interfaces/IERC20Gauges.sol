@@ -261,6 +261,21 @@ interface IERC20Gauges {
         uint32 cycleEnd
     );
 
+    /// @notice emitted when adding a new gauge to the live set.
+    event AddGauge(address indexed gauge);
+
+    /// @notice emitted when removing a gauge from the live set.
+    event RemoveGauge(address indexed gauge);
+
+    /// @notice emitted when updating the max number of gauges a user can delegate to.
+    event MaxGaugesUpdate(uint256 oldMaxGauges, uint256 newMaxGauges);
+
+    /// @notice emitted when changing a contract's approval to go over the max gauges.
+    event CanContractExceedMaxGaugesUpdate(
+        address indexed account,
+        bool canContractExceedMaxGauges
+    );
+
     /*///////////////////////////////////////////////////////////////
                             ERRORS
     //////////////////////////////////////////////////////////////*/
@@ -279,19 +294,4 @@ interface IERC20Gauges {
 
     /// @notice thrown when trying to increment or remove a non-live gauge, or add a live gauge.
     error InvalidGaugeError();
-
-    /// @notice emitted when adding a new gauge to the live set.
-    event AddGauge(address indexed gauge);
-
-    /// @notice emitted when removing a gauge from the live set.
-    event RemoveGauge(address indexed gauge);
-
-    /// @notice emitted when updating the max number of gauges a user can delegate to.
-    event MaxGaugesUpdate(uint256 oldMaxGauges, uint256 newMaxGauges);
-
-    /// @notice emitted when changing a contract's approval to go over the max gauges.
-    event CanContractExceedMaxGaugesUpdate(
-        address indexed account,
-        bool canContractExceedMaxGauges
-    );
 }

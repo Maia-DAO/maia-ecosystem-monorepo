@@ -78,10 +78,21 @@ contract BoostAggregator is Ownable, IERC721Receiver, IBoostAggregator {
     /// @inheritdoc IERC721Receiver
     function onERC721Received(
         address,
-        address,
-        uint256,
+        address from,
+        uint256 tokenId,
         bytes calldata
-    ) external pure override returns (bytes4) {
+    ) external override onlyWhitelisted returns (bytes4) {
+        // update tokenIdRewards prior to staking
+        tokenIdRewards[tokenId] = uniswapV3Staker.tokenIdRewards(tokenId);
+        // map tokenId to user
+        tokenIdToUser[tokenId] = from;
+        // stake NFT to Uniswap V3 Staker
+        nonfungiblePositionManager.safeTransferFrom(
+            address(this),
+            address(uniswapV3Staker),
+            tokenId
+        );
+
         return this.onERC721Received.selector;
     }
 
@@ -95,24 +106,8 @@ contract BoostAggregator is Ownable, IERC721Receiver, IBoostAggregator {
     }
 
     /*//////////////////////////////////////////////////////////////
-                            STAKE/UNSTAKE LOGIC
+                            UNSTAKE LOGIC
     //////////////////////////////////////////////////////////////*/
-
-    /// @inheritdoc IBoostAggregator
-    function depositAndStake(uint256 tokenId) external onlyWhitelisted {
-        // update tokenIdRewards prior to staking
-        tokenIdRewards[tokenId] = uniswapV3Staker.tokenIdRewards(tokenId);
-        // map tokenId to user
-        tokenIdToUser[tokenId] = msg.sender;
-        // transfer NFT to this contract
-        nonfungiblePositionManager.safeTransferFrom(msg.sender, address(this), tokenId);
-        // stake NFT to Uniswap V3 Staker
-        nonfungiblePositionManager.safeTransferFrom(
-            address(this),
-            address(uniswapV3Staker),
-            tokenId
-        );
-    }
 
     /// @inheritdoc IBoostAggregator
     function unstakeAndWithdraw(uint256 tokenId) external {

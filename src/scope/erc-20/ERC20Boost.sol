@@ -126,18 +126,25 @@ abstract contract ERC20Boost is ERC20, Ownable, IERC20Boost {
 
         uint128 userGaugeBoost = balanceOf[user].toUint128();
 
-        if (getUserBoost[user] < userGaugeBoost) getUserBoost[user] = userGaugeBoost;
+        if (getUserBoost[user] < userGaugeBoost) {
+            getUserBoost[user] = userGaugeBoost;
+            emit UpdateUserBoost(user, userGaugeBoost);
+        }
 
         getUserGaugeBoost[user][msg.sender] = GaugeState({
             userGaugeBoost: userGaugeBoost,
             totalGaugeBoost: totalSupply.toUint128()
         });
+
+        emit Attach(user, msg.sender, userGaugeBoost);
     }
 
     /// @inheritdoc IERC20Boost
     function detach(address user) external {
         require(_userGauges[user].remove(msg.sender));
         delete getUserGaugeBoost[user][msg.sender];
+
+        emit Detach(user, msg.sender);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -165,6 +172,8 @@ abstract contract ERC20Boost is ERC20, Ownable, IERC20Boost {
             }
         }
         getUserBoost[user] = userBoost;
+
+        emit UpdateUserBoost(user, userBoost);
     }
 
     /// @inheritdoc IERC20Boost
@@ -173,8 +182,12 @@ abstract contract ERC20Boost is ERC20, Ownable, IERC20Boost {
         if (boost >= gaugeState.userGaugeBoost) {
             _userGauges[msg.sender].remove(gauge);
             delete getUserGaugeBoost[msg.sender][gauge];
+
+            emit Detach(msg.sender, gauge);
         } else {
             gaugeState.userGaugeBoost -= boost.toUint128();
+
+            emit DecrementUserGaugeBoost(msg.sender, gauge, gaugeState.userGaugeBoost);
         }
     }
 
@@ -182,6 +195,8 @@ abstract contract ERC20Boost is ERC20, Ownable, IERC20Boost {
     function decrementGaugeAllBoost(address gauge) external {
         require(_userGauges[msg.sender].remove(gauge));
         delete getUserGaugeBoost[msg.sender][gauge];
+        
+        emit Detach(msg.sender, gauge);
     }
 
     /// @inheritdoc IERC20Boost
@@ -206,8 +221,12 @@ abstract contract ERC20Boost is ERC20, Ownable, IERC20Boost {
             if (_deprecatedGauges.contains(gauge) || boost >= gaugeState.userGaugeBoost) {
                 require(_userGauges[msg.sender].remove(gauge)); // Remove from set. Should never fail.
                 delete getUserGaugeBoost[msg.sender][gauge];
+
+                emit Detach(msg.sender, gauge);
             } else {
                 gaugeState.userGaugeBoost -= boost.toUint128();
+
+                emit DecrementUserGaugeBoost(msg.sender, gauge, gaugeState.userGaugeBoost);
             }
 
             unchecked {
@@ -229,12 +248,16 @@ abstract contract ERC20Boost is ERC20, Ownable, IERC20Boost {
             require(_userGauges[msg.sender].remove(gauge)); // Remove from set. Should never fail.
             delete getUserGaugeBoost[msg.sender][gauge];
 
+            emit Detach(msg.sender, gauge);
+
             unchecked {
                 i++;
             }
         }
 
         getUserBoost[msg.sender] = 0;
+
+        emit UpdateUserBoost(msg.sender, 0);
     }
 
     /*///////////////////////////////////////////////////////////////

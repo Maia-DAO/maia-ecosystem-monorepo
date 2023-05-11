@@ -73,6 +73,24 @@ interface IMultiRewardsDepot {
      */
     function removeAsset(address rewardsContract) external;
 
+    /*//////////////////////////////////////////////////////////////
+                                EVENTS
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Emitted when a new asset and rewards contract are added.
+     * @param rewardsContract address of the rewards contract.
+     * @param asset address of the asset to be distributed.
+     */
+    event AssetAdded(address indexed rewardsContract, address indexed asset);
+
+    /**
+     * @notice Emitted when an asset is removed from a rewards contract.
+     * @param rewardsContract address of the rewards contract.
+     * @param asset address of the asset to be distributed.
+     */
+    event AssetRemoved(address indexed rewardsContract, address indexed asset);
+
     /*///////////////////////////////////////////////////////////////
                                 ERRORS
     //////////////////////////////////////////////////////////////*/

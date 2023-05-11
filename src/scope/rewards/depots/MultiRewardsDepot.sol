@@ -54,11 +54,15 @@ contract MultiRewardsDepot is Ownable, RewardsDepot, IMultiRewardsDepot {
         _isAsset[asset] = true;
         _isRewardsContract[rewardsContract] = true;
         _assets[rewardsContract] = asset;
+
+        emit AssetAdded(rewardsContract, asset);
     }
 
     /// @inheritdoc IMultiRewardsDepot
     function removeAsset(address rewardsContract) external onlyOwner {
         if (!_isRewardsContract[rewardsContract]) revert ErrorRemovingAsset();
+
+        emit AssetRemoved(rewardsContract, _assets[rewardsContract]);
 
         delete _isAsset[_assets[rewardsContract]];
         delete _isRewardsContract[rewardsContract];

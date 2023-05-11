@@ -84,6 +84,13 @@ interface IERC4626PartnerManager {
      */
     event ClaimRewards(address indexed user, uint256 amount);
 
+    /**
+     *   @notice Emitted when a partner vault is migrated.
+     *   @param oldPartnerVault the old partner vault
+     *   @param newPartnerVault the new partner vault
+     */
+    event MigratePartnerVault(address indexed oldPartnerVault, address indexed newPartnerVault);
+
     /*///////////////////////////////////////////////////////////////
                                 ERRORS
     //////////////////////////////////////////////////////////////*/

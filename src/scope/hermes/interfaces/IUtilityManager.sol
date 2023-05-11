@@ -83,6 +83,22 @@ interface IUtilityManager {
     function claimGovernance(uint256 amount) external;
 
     /*///////////////////////////////////////////////////////////////
+                                EVENTS
+    //////////////////////////////////////////////////////////////*/
+    /// @notice Emitted when a user forfeits weight.
+    event ForfeitWeight(address indexed user, uint256 amount);
+    /// @notice Emitted when a user forfeits boost.
+    event ForfeitBoost(address indexed user, uint256 amount);
+    /// @notice Emitted when a user forfeits governance.
+    event ForfeitGovernance(address indexed user, uint256 amount);
+    /// @notice Emitted when a user claims weight.
+    event ClaimWeight(address indexed user, uint256 amount);
+    /// @notice Emitted when a user claims boost.
+    event ClaimBoost(address indexed user, uint256 amount);
+    /// @notice Emitted when a user claims governance.
+    event ClaimGovernance(address indexed user, uint256 amount);
+
+    /*///////////////////////////////////////////////////////////////
                                 ERRORS
     //////////////////////////////////////////////////////////////*/
 

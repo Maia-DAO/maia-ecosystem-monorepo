@@ -78,6 +78,8 @@ abstract contract UtilityManager is IUtilityManager {
         if (amount == 0) return;
         userClaimedWeight[msg.sender] -= amount;
         address(gaugeWeight).safeTransferFrom(msg.sender, address(this), amount);
+
+        emit ForfeitWeight(msg.sender, amount);
     }
 
     /// @inheritdoc IUtilityManager
@@ -85,6 +87,8 @@ abstract contract UtilityManager is IUtilityManager {
         if (amount == 0) return;
         userClaimedBoost[msg.sender] -= amount;
         address(gaugeBoost).safeTransferFrom(msg.sender, address(this), amount);
+
+        emit ForfeitBoost(msg.sender, amount);
     }
 
     /// @inheritdoc IUtilityManager
@@ -92,6 +96,8 @@ abstract contract UtilityManager is IUtilityManager {
         if (amount == 0) return;
         userClaimedGovernance[msg.sender] -= amount;
         address(governance).safeTransferFrom(msg.sender, address(this), amount);
+
+        emit ForfeitGovernance(msg.sender, amount);
     }
 
     /// @inheritdoc IUtilityManager
@@ -117,6 +123,8 @@ abstract contract UtilityManager is IUtilityManager {
         if (amount == 0) return;
         userClaimedWeight[msg.sender] += amount;
         address(gaugeWeight).safeTransfer(msg.sender, amount);
+
+        emit ClaimWeight(msg.sender, amount);
     }
 
     /// @inheritdoc IUtilityManager
@@ -124,6 +132,8 @@ abstract contract UtilityManager is IUtilityManager {
         if (amount == 0) return;
         userClaimedBoost[msg.sender] += amount;
         address(gaugeBoost).safeTransfer(msg.sender, amount);
+
+        emit ClaimBoost(msg.sender, amount);
     }
 
     /// @inheritdoc IUtilityManager
@@ -131,6 +141,8 @@ abstract contract UtilityManager is IUtilityManager {
         if (amount == 0) return;
         userClaimedGovernance[msg.sender] += amount;
         address(governance).safeTransfer(msg.sender, amount);
+
+        emit ClaimGovernance(msg.sender, amount);
     }
 
     /*///////////////////////////////////////////////////////////////

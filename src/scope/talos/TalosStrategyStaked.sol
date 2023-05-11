@@ -103,7 +103,6 @@ contract TalosStrategyStaked is TalosStrategySimpleRebalance, ITalosStrategyStak
     /// @notice Hook that is called after a position is deposited.
     /// @dev Responsible for staking the position in the UniswapV3Staker
     function afterDeposit(uint256 _tokenId) internal override {
-        if (!initialized) nonfungiblePositionManager.approve(address(boostAggregator), _tokenId);
         _stake(_tokenId);
     }
 
@@ -117,7 +116,6 @@ contract TalosStrategyStaked is TalosStrategySimpleRebalance, ITalosStrategyStak
     /// @notice Hook that is called after a position is reranged.
     /// @dev Responsible for staking the position in the UniswapV3Staker
     function afterRerange(uint256 _tokenId) internal override {
-        nonfungiblePositionManager.approve(address(boostAggregator), _tokenId);
         _stake(_tokenId);
     }
 
@@ -160,7 +158,7 @@ contract TalosStrategyStaked is TalosStrategySimpleRebalance, ITalosStrategyStak
         if (liquidity == 0) return; // can't stake when liquidity is zero
 
         // try catch in case this position is not authorized to stake or current incentive does not have rewards
-        try boostAggregator.depositAndStake(_tokenId) {
+        try nonfungiblePositionManager.safeTransferFrom(address(this), address(boostAggregator), _tokenId) {
             stakeFlag = true; // flag to store staking state to avoid failing to unstake when it is not staked
         } catch {}
     }
