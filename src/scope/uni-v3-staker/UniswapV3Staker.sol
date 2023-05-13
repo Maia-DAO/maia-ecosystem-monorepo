@@ -350,21 +350,35 @@ contract UniswapV3Staker is IUniswapV3Staker, Multicallable {
     }
 
     /*//////////////////////////////////////////////////////////////
+                            RE-STAKE TOKEN LOGIC
+    //////////////////////////////////////////////////////////////*/
+
+    function restakeToken(uint256 tokenId) external {
+        IncentiveKey storage incentiveId = stakedIncentiveKey[tokenId];
+        if (incentiveId.startTime != 0) _unstakeToken(incentiveId, tokenId, true);
+
+        (IUniswapV3Pool pool, int24 tickLower, int24 tickUpper, uint128 liquidity) = NFTPositionInfo
+            .getPositionInfo(factory, nonfungiblePositionManager, tokenId);
+
+        _stakeToken(tokenId, pool, tickLower, tickUpper, liquidity);
+    }
+
+    /*//////////////////////////////////////////////////////////////
                             UNSTAKE TOKEN LOGIC
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IUniswapV3Staker
     function unstakeToken(uint256 tokenId) external {
         IncentiveKey storage incentiveId = stakedIncentiveKey[tokenId];
-        if (incentiveId.startTime != 0) _unstakeToken(incentiveId, tokenId);
+        if (incentiveId.startTime != 0) _unstakeToken(incentiveId, tokenId, true);
     }
 
     /// @inheritdoc IUniswapV3Staker
     function unstakeToken(IncentiveKey memory key, uint256 tokenId) external {
-        _unstakeToken(key, tokenId);
+        _unstakeToken(key, tokenId, true);
     }
 
-    function _unstakeToken(IncentiveKey memory key, uint256 tokenId) private {
+    function _unstakeToken(IncentiveKey memory key, uint256 tokenId, bool isNotRestake) private {
         Deposit storage deposit = deposits[tokenId];
 
         (uint96 endTime, uint256 stakedDuration) = IncentiveTime.getEndAndDuration(
@@ -375,15 +389,15 @@ contract UniswapV3Staker is IUniswapV3Staker, Multicallable {
 
         address owner = deposit.owner;
 
-        // anyone can call unstakeToken if the block time is after the end time of the incentive
-        if (block.timestamp < endTime && owner != msg.sender) revert NotCalledByOwner();
+        // anyone can call restakeToken if the block time is after the end time of the incentive
+        if ((isNotRestake || block.timestamp < endTime) && owner != msg.sender) revert NotCalledByOwner();
 
         {
             // scope for bribeAddress, avoids stack too deep errors
             address bribeAddress = bribeDepots[key.pool];
 
             if (bribeAddress != address(0)) {
-                (uint256 amount0, uint256 amount1) = nonfungiblePositionManager.collect(
+                nonfungiblePositionManager.collect(
                     INonfungiblePositionManager.CollectParams({
                         tokenId: tokenId,
                         recipient: bribeAddress,
