@@ -4,10 +4,10 @@ pragma solidity ^0.8.0;
 import "../interfaces/IERC20hTokenRoot.sol";
 
 /**
-@title ERC20 hToken Contract for deployment in Root Chain of Hermes Omnichain Incentives System
-@author MaiaDAO
-@dev
-*/
+ * @title ERC20 hToken Contract for deployment in Root Chain of Hermes Omnichain Incentives System
+ * @author MaiaDAO
+ * @dev
+ */
 contract ERC20hTokenRoot is ERC20, IERC20hTokenRoot {
     using SafeTransferLib for address;
 
@@ -27,12 +27,12 @@ contract ERC20hTokenRoot is ERC20, IERC20hTokenRoot {
     mapping(uint256 => uint256) public underlyingPerChain;
 
     /**
-        @notice Constructor for the ERC20hTokenRoot Contract.
-        @param _localChainId Local Network Identifier.
-        @param _factoryAddress Address of the Factory Contract.
-        @param _rootPortAddress Address of the Root Port Contract.
-        @param _name Name of the Token.
-        @param _symbol Symbol of the Token.
+     * @notice Constructor for the ERC20hTokenRoot Contract.
+     *     @param _localChainId Local Network Identifier.
+     *     @param _factoryAddress Address of the Factory Contract.
+     *     @param _rootPortAddress Address of the Root Port Contract.
+     *     @param _name Name of the Token.
+     *     @param _symbol Symbol of the Token.
      */
     constructor(
         uint256 _localChainId,
@@ -72,26 +72,22 @@ contract ERC20hTokenRoot is ERC20, IERC20hTokenRoot {
     //////////////////////////////////////////////////////////////*/
 
     /**
-    @notice Mints new tokens and updates the total supply for the given chain.
-    @param to Address to mint tokens to.
-    @param amount Amount of tokens to mint.
-    @param chainId Chain Id of the chain to mint tokens to.
+     * @notice Mints new tokens and updates the total supply for the given chain.
+     * @param to Address to mint tokens to.
+     * @param amount Amount of tokens to mint.
+     * @param chainId Chain Id of the chain to mint tokens to.
      */
-    function mint(
-        address to,
-        uint256 amount,
-        uint256 chainId
-    ) external requiresPort returns (bool) {
+    function mint(address to, uint256 amount, uint256 chainId) external requiresPort returns (bool) {
         underlyingPerChain[chainId] += amount;
         _mint(to, amount);
         return true;
     }
 
     /**
-    @notice Burns new tokens and updates the total supply for the given chain.
-    @param from Address to burn tokens from.
-    @param value Amount of tokens to burn.
-    @param chainId Chain Id of the chain to burn tokens to.
+     * @notice Burns new tokens and updates the total supply for the given chain.
+     * @param from Address to burn tokens from.
+     * @param value Amount of tokens to burn.
+     * @param chainId Chain Id of the chain to burn tokens to.
      */
     function burn(address from, uint256 value, uint256 chainId) external requiresPort {
         underlyingPerChain[chainId] -= value;

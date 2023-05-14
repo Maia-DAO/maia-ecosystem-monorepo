@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
 import "./interfaces/IRootRouter.sol";
-import {ICoreBridgeAgent as IBridgeAgent} from "./interfaces/ICoreBridgeAgent.sol";
+import {IRootBridgeAgent as IBridgeAgent} from "./interfaces/IRootBridgeAgent.sol";
 import {IVirtualAccount, Call} from "./interfaces/IVirtualAccount.sol";
 
 import {IMulticall2 as IMulticall} from "./interfaces/IMulticall2.sol";
@@ -59,6 +59,8 @@ contract MulticallRootRouter is IRootRouter, Ownable {
     /// @notice Bridge Agent to maneg communcations and cross-chain assets.
     address payable public bridgeAgentAddress;
 
+    address public bridgeAgentExecutorAddress;
+
     uint256 public constant MIN_AMOUNT = 10 ** 6;
 
     constructor(uint256 _localChainId, address _localPortAddress, address _multicallAddress) {
@@ -75,6 +77,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
         require(_bridgeAgentAddress != address(0), "Bridge Agent Address cannot be 0");
 
         bridgeAgentAddress = payable(_bridgeAgentAddress);
+        bridgeAgentExecutorAddress = IBridgeAgent(_bridgeAgentAddress).bridgeAgentExecutorAddress();
         renounceOwnership();
     }
 
@@ -163,7 +166,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
         payable
         override
         lock
-        requiresAgent
+        requiresExecutor
         returns (bool, bytes memory)
     {
         revert();
@@ -185,7 +188,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
         payable
         override
         lock
-        requiresAgent
+        requiresExecutor
         returns (bool, bytes memory)
     {
         /// FUNC ID: 1 (multicallNoOutput)
@@ -245,7 +248,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
         payable
         override
         lock
-        requiresAgent
+        requiresExecutor
         returns (bool, bytes memory)
     {
         revert();
@@ -257,7 +260,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
     function anyExecuteDepositMultiple(bytes1, bytes calldata, DepositMultipleParams calldata, uint24)
         external
         payable
-        requiresAgent
+        requiresExecutor
         lock
         returns (bool, bytes memory)
     {
@@ -274,7 +277,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
         payable
         override
         lock
-        requiresAgent
+        requiresExecutor
         returns (bool, bytes memory)
     {
         /// FUNC ID: 1 (multicallNoOutput)
@@ -354,7 +357,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
         DepositParams calldata,
         address userAccount,
         uint24 fromChainId
-    ) external payable override requiresAgent lock returns (bool success, bytes memory result) {
+    ) external payable override requiresExecutor lock returns (bool success, bytes memory result) {
         /// FUNC ID: 1 (multicallNoOutput)
         if (funcId == 0x01) {
             Call[] memory calls = abi.decode(RLPDecoder.decodeCallData(rlpEncodedData, MAX_LENGTH), (Call[]));
@@ -425,7 +428,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
         DepositMultipleParams calldata,
         address userAccount,
         uint24 fromChainId
-    ) external payable requiresAgent lock returns (bool success, bytes memory result) {
+    ) external payable requiresExecutor lock returns (bool success, bytes memory result) {
         /// FUNC ID: 1 (multicallNoOutput)
         if (funcId == 0x01) {
             Call[] memory calls = abi.decode(RLPDecoder.decodeCallData(rlpEncodedData, MAX_LENGTH), (Call[]));
@@ -506,14 +509,13 @@ contract MulticallRootRouter is IRootRouter, Ownable {
         _unlocked = 1;
     }
 
-    /// @notice require msg sender == active branch interface
-    modifier requiresAgent() {
-        _requiresAgent();
+    modifier requiresExecutor() {
+        _requiresExecutor();
         _;
     }
 
     /// @notice reuse to reduce contract bytesize
-    function _requiresAgent() internal view {
-        require(msg.sender == bridgeAgentAddress, "Unauthorized Caller");
+    function _requiresExecutor() internal view {
+        require(msg.sender == bridgeAgentExecutorAddress, "Unauthorized Caller");
     }
 }

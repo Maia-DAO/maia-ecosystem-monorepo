@@ -123,11 +123,27 @@ contract ArbitrumCoreBranchRouter is CoreBranchRouter {
                 newBranchRouter, branchBridgeAgentFactory, rootBridgeAgent, rootBridgeAgentFactory, 0
             );
 
-            /// _receiveAddBridgeAgentFactory
+            /// _toggleBranchBridgeAgentFactory
         } else if (_data[0] == 0x03) {
-            (address newBridgeAgentFactoryAddress) = abi.decode(_data[1:], (address));
+            (address bridgeAgentFactoryAddress) = abi.decode(_data[1:], (address));
 
-            _receiveAddBridgeAgentFactory(newBridgeAgentFactoryAddress);
+            _toggleBranchBridgeAgentFactory(bridgeAgentFactoryAddress);
+
+            /// _removeBranchBridgeAgent
+        } else if (_data[0] == 0x04) {
+            (address branchBridgeAgent) = abi.decode(_data[1:], (address));
+            _removeBranchBridgeAgent(branchBridgeAgent);
+
+            /// _manageStrategyToken
+        } else if (_data[0] == 0x05) {
+            (address underlyingToken, uint256 minimumReservesRatio) = abi.decode(_data[1:], (address, uint256));
+            _manageStrategyToken(underlyingToken, minimumReservesRatio);
+
+            /// _managePortStrategy
+        } else if (_data[0] == 0x06) {
+            (address portStrategy, address underlyingToken, uint256 dailyManagementLimit, bool isUpdateDailyLimit) =
+                abi.decode(_data[1:], (address, address, uint256, bool));
+            _managePortStrategy(portStrategy, underlyingToken, dailyManagementLimit, isUpdateDailyLimit);
 
             /// Unrecognized Function Selector
         } else {

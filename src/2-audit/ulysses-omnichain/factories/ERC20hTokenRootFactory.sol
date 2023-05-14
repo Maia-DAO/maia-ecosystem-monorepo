@@ -45,9 +45,11 @@ contract ERC20hTokenRootFactory is Ownable, IERC20hTokenRootFactory {
     /*///////////////////////////////////////////////////////////////
                             hTOKEN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-    /// @notice Function to create a new hToken.
-    /// @param _name Name of the Token.
-    /// @param _symbol Symbol of the Token.
+    /**
+     * @notice Function to create a new hToken.
+     * @param _name Name of the Token.
+     * @param _symbol Symbol of the Token.
+     */
     function createToken(string memory _name, string memory _symbol)
         external
         requiresCoreRouter

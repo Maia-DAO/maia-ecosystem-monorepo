@@ -79,7 +79,7 @@ contract BranchBridgeAgentFactory is Ownable, IBranchBridgeAgentFactory {
         require(_coreRootBridgeAgent != address(0), "Core Root Bridge Agent cannot be 0");
 
         address newCoreBridgeAgent = address(
-            new BranchBridgeAgent(
+            DeployBranchBridgeAgent.deploy(
                 wrappedNativeToken,
                 rootChainId,
                 localChainId,
@@ -119,7 +119,7 @@ contract BranchBridgeAgentFactory is Ownable, IBranchBridgeAgentFactory {
         );
 
         newBridgeAgent = address(
-            new BranchBridgeAgent(
+            DeployBranchBridgeAgent.deploy(
                 wrappedNativeToken,
                 rootChainId,
                 localChainId,

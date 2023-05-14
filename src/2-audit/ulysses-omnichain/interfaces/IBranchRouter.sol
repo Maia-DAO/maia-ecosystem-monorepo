@@ -62,10 +62,11 @@ interface IBranchRouter {
     /**
      * @notice External function to retry a failed Settlement entry on the root chain.
      *     @param _settlementNonce Identifier for user settlement.
+     *     @param _gasToBoostSettlement Additional gas to boost settlement.
      *     @dev ACTION ID: 10
      *
      */
-    function retrySettlement(uint32 _settlementNonce) external payable;
+    function retrySettlement(uint32 _settlementNonce, uint128 _gasToBoostSettlement) external payable;
 
     /**
      * @notice External function to retry a failed Deposit entry on this branch chain.
@@ -126,22 +127,9 @@ interface IBranchRouter {
      */
     function anyFallback(bytes calldata data) external returns (bool success, bytes memory result);
 
-    // /**
-    //   @notice Internal function to calculate cost fo cross-chain message.
-    //   @param data bytes that will be sent through messaging layer.
-    //   @param toChain message destination chain Id.
-    // **/
-    // function computeAnyCallFees(bytes memory data, uint256 toChain) internal returns (uint256 fees) {
-    //     fees = IAnycallProxy(IAnycallProxy(localAnyCallAddress).config()).calcSrcFees("0", toChain, data.length);
-    // }
-
     /*///////////////////////////////////////////////////////////////
-                                MODIFIERS
+                             ERRORS
     //////////////////////////////////////////////////////////////*/
 
-    error InvalidChain();
-
-    error InsufficientGas();
-
-    error UnauthorizedCallerNotBridgeAgent();
+    error UnrecognizedBridgeAgentExecutor();
 }

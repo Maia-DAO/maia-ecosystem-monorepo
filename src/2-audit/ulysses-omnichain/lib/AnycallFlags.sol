@@ -8,6 +8,7 @@ library AnycallFlags {
     uint256 public constant FLAG_MERGE_CONFIG_FLAGS = 0x1;
     uint256 public constant FLAG_PAY_FEE_ON_DEST = 0x1 << 1;
     uint256 public constant FLAG_ALLOW_FALLBACK = 0x1 << 2;
+    uint256 public constant FLAG_ALLOW_FALLBACK_DST = 6;
 
     // exec flags used internally
     uint256 public constant FLAG_EXEC_START_VALUE = 0x1 << 16;

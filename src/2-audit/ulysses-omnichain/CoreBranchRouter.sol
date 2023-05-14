@@ -5,7 +5,7 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 
 import "./BaseBranchRouter.sol";
 import {IBranchPort as IPort} from "./interfaces/IBranchPort.sol";
-import {IERC20hTokenBranchFactory as IFactory} from "./interfaces/IERC20hTokenBranchFactory.sol";
+import {IERC20hTokenBranchFactory as ITokenFactory} from "./interfaces/IERC20hTokenBranchFactory.sol";
 import {IBranchBridgeAgentFactory as IBridgeAgentFactory} from "./interfaces/IBranchBridgeAgentFactory.sol";
 import {ERC20hTokenBranch as ERC20hToken} from "./token/ERC20hTokenBranch.sol";
 import {ICoreBranchRouter} from "./interfaces/ICoreBranchRouter.sol";
@@ -78,7 +78,7 @@ contract CoreBranchRouter is BaseBranchRouter {
         string memory symbol = ERC20(_underlyingAddress).symbol();
 
         //Create Token
-        ERC20hToken newToken = IFactory(hTokenFactoryAddress).createToken(name, symbol);
+        ERC20hToken newToken = ITokenFactory(hTokenFactoryAddress).createToken(name, symbol);
 
         //Encode Data
         bytes memory data = abi.encode(_underlyingAddress, newToken, name, symbol);
@@ -111,7 +111,7 @@ contract CoreBranchRouter is BaseBranchRouter {
         uint128 _rootExecutionGas
     ) internal {
         //Create Token
-        ERC20hToken newToken = IFactory(hTokenFactoryAddress).createToken(_name, _symbol);
+        ERC20hToken newToken = ITokenFactory(hTokenFactoryAddress).createToken(_name, _symbol);
 
         //Encode Data
         bytes memory data = abi.encode(_globalAddress, newToken);
@@ -167,12 +167,66 @@ contract CoreBranchRouter is BaseBranchRouter {
     }
 
     /**
-     * @notice Function to deploy/add a token already active in the global enviornment in the Root Chain. Must be called from another chain.
+     * @notice Function to add/deactivate a Branch Bridge Agent Factory.
      *  @param _newBridgeAgentFactoryAddress the address of the new local bridge agent factory.
      *
      */
-    function _receiveAddBridgeAgentFactory(address _newBridgeAgentFactoryAddress) internal {
-        IPort(localPortAddress).addBridgeAgentFactory(_newBridgeAgentFactoryAddress);
+    function _toggleBranchBridgeAgentFactory(address _newBridgeAgentFactoryAddress) internal {
+        if (!IPort(localPortAddress).isBridgeAgentFactory(_newBridgeAgentFactoryAddress)) {
+            IPort(localPortAddress).addBridgeAgentFactory(_newBridgeAgentFactoryAddress);
+        } else {
+            IPort(localPortAddress).toggleBridgeAgentFactory(_newBridgeAgentFactoryAddress);
+        }
+    }
+
+    /**
+     * @notice Function to remove an active Branch Bridge Agent from the system.
+     *  @param _branchBridgeAgent the address of the local Bridge Agent to be removed.
+     *
+     */
+    function _removeBranchBridgeAgent(address _branchBridgeAgent) internal {
+        if (!IPort(localPortAddress).isBridgeAgent(_branchBridgeAgent)) revert UnrecognizedBridgeAgent();
+        IPort(localPortAddress).toggleBridgeAgent(_branchBridgeAgent);
+    }
+
+    /**
+     * @notice Function to add / remove a token to be used by Port Strategies.
+     *  @param _underlyingToken the address of the underlying token.
+     *  @param _minimumReservesRatio the minimum reserves ratio the Port must have.
+     *
+     */
+    function _manageStrategyToken(address _underlyingToken, uint256 _minimumReservesRatio) internal {
+        if (!IPort(localPortAddress).isStrategyToken(_underlyingToken)) {
+            IPort(localPortAddress).addStrategyToken(_underlyingToken, _minimumReservesRatio);
+        } else {
+            IPort(localPortAddress).toggleStrategyToken(_underlyingToken);
+        }
+    }
+
+    /**
+     * @notice Function to deploy/add a token already active in the global enviornment in the Root Chain. Must be called from another chain.
+     *  @param _portStrategy the address of the port strategy.
+     *  @param _underlyingToken the address of the underlying token.
+     *  @param _dailyManagementLimit the daily management limit.
+     *  @param _isUpdateDailyLimit if the daily limit is being updated.
+     *
+     */
+    function _managePortStrategy(
+        address _portStrategy,
+        address _underlyingToken,
+        uint256 _dailyManagementLimit,
+        bool _isUpdateDailyLimit
+    ) internal {
+        if (!IPort(localPortAddress).isPortStrategy(_portStrategy, _underlyingToken)) {
+            //Add new Port Strategy if new.
+            IPort(localPortAddress).addPortStrategy(_portStrategy, _underlyingToken, _dailyManagementLimit);
+        } else if (_isUpdateDailyLimit) {
+            //Or Update daily limit.
+            IPort(localPortAddress).updatePortStrategy(_portStrategy, _underlyingToken, _dailyManagementLimit);
+        } else {
+            //Or Toggle Port Strategy.
+            IPort(localPortAddress).togglePortStrategy(_portStrategy, _underlyingToken);
+        }
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -187,7 +241,7 @@ contract CoreBranchRouter is BaseBranchRouter {
         external
         virtual
         override
-        requiresBridgeAgent
+        requiresAgentExecutor
         returns (bool success, bytes memory result)
     {
         /// _receiveAddGlobalToken
@@ -209,11 +263,28 @@ contract CoreBranchRouter is BaseBranchRouter {
             _receiveAddBridgeAgent(
                 newBranchRouter, branchBridgeAgentFactory, rootBridgeAgent, rootBridgeAgentFactory, remoteExecutionGas
             );
-            /// _receiveAddBridgeAgentFactory
-        } else if (_data[0] == 0x03) {
-            (address newBridgeAgentFactoryAddress) = abi.decode(_data[1:], (address));
 
-            _receiveAddBridgeAgentFactory(newBridgeAgentFactoryAddress);
+            /// _toggleBranchBridgeAgentFactory
+        } else if (_data[0] == 0x03) {
+            (address bridgeAgentFactoryAddress) = abi.decode(_data[1:], (address));
+            _toggleBranchBridgeAgentFactory(bridgeAgentFactoryAddress);
+
+            /// _removeBranchBridgeAgent
+        } else if (_data[0] == 0x04) {
+            (address branchBridgeAgent) = abi.decode(_data[1:], (address));
+            _removeBranchBridgeAgent(branchBridgeAgent);
+
+            /// _manageStrategyToken
+        } else if (_data[0] == 0x05) {
+            (address underlyingToken, uint256 minimumReservesRatio) = abi.decode(_data[1:], (address, uint256));
+            _manageStrategyToken(underlyingToken, minimumReservesRatio);
+
+            /// _managePortStrategy
+        } else if (_data[0] == 0x06) {
+            (address portStrategy, address underlyingToken, uint256 dailyManagementLimit, bool isUpdateDailyLimit) =
+                abi.decode(_data[1:], (address, address, uint256, bool));
+            _managePortStrategy(portStrategy, underlyingToken, dailyManagementLimit, isUpdateDailyLimit);
+
             /// Unrecognized Function Selector
         } else {
             return (false, "unknown selector");

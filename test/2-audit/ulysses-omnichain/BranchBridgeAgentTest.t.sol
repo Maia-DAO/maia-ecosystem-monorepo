@@ -2,7 +2,13 @@
 
 import {DSTestPlus} from "solmate/test/utils/DSTestPlus.sol";
 import {MockERC20} from "solmate/test/utils/mocks/MockERC20.sol";
-import {MockBranchBridgeAgent, WETH9, DepositParams, DepositMultipleParams} from "./mocks/MockBranchBridgeAgent.t.sol";
+import {stdError} from "forge-std/StdError.sol";
+import {Test} from "forge-std/Test.sol";
+import {WETH9 as WETH} from "./mocks/WETH9.sol";
+import {console2} from "forge-std/console2.sol";
+import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
+import {RLPDecoder} from "@rlp/RLPDecoder.sol";
+
 import {
     IBranchRouter,
     Deposit,
@@ -10,18 +16,15 @@ import {
     DepositMultipleInput,
     DepositInput
 } from "@omni/interfaces/IBranchRouter.sol";
+
+import {MockBranchBridgeAgent, WETH9, DepositParams, DepositMultipleParams} from "./mocks/MockBranchBridgeAgent.t.sol";
 import {BaseBranchRouter} from "@omni/BaseBranchRouter.sol";
 import {BranchPort} from "@omni/BranchPort.sol";
 import {ERC20hTokenBranch} from "@omni/token/ERC20hTokenBranch.sol";
-import {RLPDecoder} from "@rlp/RLPDecoder.sol";
 
-import {stdError} from "forge-std/StdError.sol";
+contract BranchBridgeAgentTest is Test {
+    using SafeCastLib for uint256;
 
-import {WETH9 as WETH} from "./mocks/WETH9.sol";
-
-import {console2} from "forge-std/console2.sol";
-
-contract BranchBridgeAgentTest is DSTestPlus {
     MockERC20 underlyingToken;
 
     MockERC20 rewardToken;
@@ -42,7 +45,7 @@ contract BranchBridgeAgentTest is DSTestPlus {
 
     address localAnyCallAddress = address(0xCAFE);
 
-    address localAnyCongfig = address(0xCAFF);
+    address payable localAnyCongfig = payable(address(new MockAnyConfig()));
 
     address localAnyCallExecutorAddress = address(0xABCD);
 
@@ -61,11 +64,9 @@ contract BranchBridgeAgentTest is DSTestPlus {
 
         testToken = new ERC20hTokenBranch("Hermes underlying token", "hUNDER", address(this));
 
-        hevm.mockCall(
-            localAnyCallAddress, abi.encodeWithSignature("executor()"), abi.encode(localAnyCallExecutorAddress)
-        );
+        vm.mockCall(localAnyCallAddress, abi.encodeWithSignature("executor()"), abi.encode(localAnyCallExecutorAddress));
 
-        hevm.mockCall(localAnyCallAddress, abi.encodeWithSignature("config()"), abi.encode(localAnyCongfig));
+        vm.mockCall(localAnyCallAddress, abi.encodeWithSignature("config()"), abi.encode(localAnyCongfig));
 
         bRouter = new BaseBranchRouter();
 
@@ -87,52 +88,48 @@ contract BranchBridgeAgentTest is DSTestPlus {
         BranchPort(localPortAddress).addBridgeAgent(address(bAgent));
     }
 
-    function testCallOut() public {
+    function testCallOutNoDeposit() public {
         //Get some gas.
-        hevm.deal(address(this), 1 ether);
+        vm.deal(address(this), 1 ether);
 
-        console2.logUint(1);
+        console2.log("Test CallOut Addresses:");
         console2.log(address(testToken), address(underlyingToken));
 
         //Call Deposit function
         IBranchRouter(bRouter).callOut{value: 1 ether}("testdata", 0.5 ether);
-
-        console2.log("done bA");
-
-        console2.log(address(this));
 
         //Test If Deposit was successful
         testCreateDepositSingle(uint32(1), address(this), address(0), address(0), 0, 0, 1 ether);
     }
 
-    function testCallOutNotEnoughGas() public {
+    function testCallOutNoDepositNotEnoughGas() public {
         //Get some gas.
-        hevm.deal(address(this), 1 ether);
+        vm.deal(address(this), 1 ether);
 
         console2.logUint(1);
         console2.log(address(testToken), address(underlyingToken));
 
-        hevm.expectRevert(abi.encodeWithSignature("InsufficientGas()"));
+        vm.expectRevert(abi.encodeWithSignature("InsufficientGas()"));
 
         //Call Deposit function
         IBranchRouter(bRouter).callOut{value: 200}("testdata", 0);
     }
 
-    function testFuzzCallOut(address _user, uint256 _amount, uint256 _toChain) public {
+    function testFuzzCallOutNoDeposit(address _user, uint256 _amount, uint256 _toChain) public {
         // Input restrictions
-        hevm.assume(_user > address(2) && _amount > 0 && _toChain > 0);
+        vm.assume(_user > address(2) && _amount > 0 && _toChain > 0);
 
         // Prank into user account
-        hevm.startPrank(_user);
+        vm.startPrank(_user);
 
         //Get some gas.
-        hevm.deal(_user, 1 ether);
+        vm.deal(_user, 1 ether);
 
         //Call Deposit function
         IBranchRouter(bRouter).callOut{value: 1 ether}("testdata", 0.5 ether);
 
         // Prank out of user account
-        hevm.stopPrank();
+        vm.stopPrank();
 
         // Test If Deposit was successful
         testCreateDepositSingle(uint32(1), _user, address(0), address(0), 0, 0, 1 ether);
@@ -140,7 +137,7 @@ contract BranchBridgeAgentTest is DSTestPlus {
 
     function testCallOutWithDeposit() public {
         //Get some gas.
-        hevm.deal(address(this), 1 ether);
+        vm.deal(address(this), 1 ether);
 
         //Mint Test tokens.
         underlyingToken.mint(address(this), 100 ether);
@@ -148,7 +145,7 @@ contract BranchBridgeAgentTest is DSTestPlus {
         //Approve spend by router
         underlyingToken.approve(localPortAddress, 100 ether);
 
-        console2.logUint(1);
+        console2.log("Test CallOut Addresses:");
         console2.log(address(testToken), address(underlyingToken));
 
         //Prepare deposit info
@@ -171,7 +168,7 @@ contract BranchBridgeAgentTest is DSTestPlus {
 
     function testCallOutInsufficientAmount() public {
         //Get some gas.
-        hevm.deal(address(this), 1 ether);
+        vm.deal(address(this), 1 ether);
 
         //Mint Test tokens.
         underlyingToken.mint(address(this), 90 ether);
@@ -179,7 +176,7 @@ contract BranchBridgeAgentTest is DSTestPlus {
         //Approve spend by router
         underlyingToken.approve(localPortAddress, 100 ether);
 
-        console2.logUint(1);
+        console2.log("Test CallOut Addresses:");
         console2.log(address(testToken), address(underlyingToken));
 
         //Prepare deposit info
@@ -191,7 +188,7 @@ contract BranchBridgeAgentTest is DSTestPlus {
             toChain: rootChainId
         });
 
-        hevm.expectRevert(abi.encodeWithSignature("TransferFromFailed()"));
+        vm.expectRevert(abi.encodeWithSignature("TransferFromFailed()"));
 
         //Call Deposit function
         IBranchRouter(bRouter).callOutAndBridge{value: 1 ether}(bytes("test"), depositInput, 0.5 ether);
@@ -199,7 +196,7 @@ contract BranchBridgeAgentTest is DSTestPlus {
 
     function testCallOutIncorrectAmount() public {
         //Get some gas.
-        hevm.deal(address(this), 1 ether);
+        vm.deal(address(this), 1 ether);
 
         //Mint Test tokens.
         underlyingToken.mint(address(this), 100 ether);
@@ -219,7 +216,7 @@ contract BranchBridgeAgentTest is DSTestPlus {
             toChain: rootChainId
         });
 
-        hevm.expectRevert(stdError.arithmeticError);
+        vm.expectRevert(stdError.arithmeticError);
 
         //Call Deposit function
         IBranchRouter(bRouter).callOutAndBridge{value: 1 ether}(bytes("test"), depositInput, 0.5 ether);
@@ -227,13 +224,13 @@ contract BranchBridgeAgentTest is DSTestPlus {
 
     function testFuzzCallOutWithDeposit(address _user, uint256 _amount, uint256 _deposit, uint256 _toChain) public {
         // Input restrictions
-        hevm.assume(_user != address(0) && _amount > 0 && _amount > _deposit && _toChain > 0);
+        vm.assume(_user != address(0) && _amount > 0 && _amount > _deposit && _toChain > 0);
 
         //Get some gas.
-        hevm.deal(_user, 1 ether);
+        vm.deal(_user, 1 ether);
 
         // Prank into Port
-        hevm.startPrank(localPortAddress);
+        vm.startPrank(localPortAddress);
 
         // Mint Test tokens.
         ERC20hTokenBranch fuzzToken = new ERC20hTokenBranch("fuzz token", "FUZZ", localPortAddress);
@@ -247,7 +244,7 @@ contract BranchBridgeAgentTest is DSTestPlus {
         );
         uunderToken.mint(_user, _deposit);
 
-        hevm.stopPrank();
+        vm.stopPrank();
 
         //Prepare deposit info
         DepositInput memory depositInput = DepositInput({
@@ -259,7 +256,7 @@ contract BranchBridgeAgentTest is DSTestPlus {
         });
 
         // Prank into user account
-        hevm.startPrank(_user);
+        vm.startPrank(_user);
 
         // Approve spend by router
         fuzzToken.approve(localPortAddress, _amount);
@@ -269,14 +266,14 @@ contract BranchBridgeAgentTest is DSTestPlus {
         IBranchRouter(bRouter).callOutAndBridge{value: 1 ether}(bytes("testdata"), depositInput, 0.5 ether);
 
         // Prank out of user account
-        hevm.stopPrank();
+        vm.stopPrank();
 
         // Test If Deposit was successful
         testCreateDepositSingle(uint32(1), _user, address(fuzzToken), address(uunderToken), _amount, _deposit, 1 ether);
     }
 
-    function testClearDeposit() public {
-        hevm.mockCall(
+    function testFallbackClearDepositRedeem() public {
+        vm.mockCall(
             localAnyCallExecutorAddress,
             abi.encodeWithSignature("context()"),
             abi.encode(rootBridgeAgentAddress, rootChainId, 22)
@@ -284,6 +281,8 @@ contract BranchBridgeAgentTest is DSTestPlus {
 
         // Create Test Deposit
         testCallOutWithDeposit();
+
+        vm.deal(localPortAddress, 1 ether);
 
         //Prepare deposit info
         DepositParams memory depositParams = DepositParams({
@@ -310,7 +309,7 @@ contract BranchBridgeAgentTest is DSTestPlus {
             depositParams.depositedGas / 2
         );
 
-        hevm.mockCall(
+        vm.mockCall(
             address(localAnyCongfig),
             abi.encodeWithSignature(
                 "calcSrcFees(address,uint256,uint256)", address(0), rootChainId, anyFallbackData.length
@@ -319,7 +318,7 @@ contract BranchBridgeAgentTest is DSTestPlus {
         );
 
         // Call 'anyFallback'
-        hevm.prank(localAnyCallExecutorAddress);
+        vm.prank(localAnyCallExecutorAddress);
         bAgent.anyFallback(anyFallbackData);
 
         //Call redeemDeposit
@@ -332,41 +331,24 @@ contract BranchBridgeAgentTest is DSTestPlus {
         require(underlyingToken.balanceOf(localPortAddress) == 0);
     }
 
-    function testFuzzClearDeposit(address _user, uint256 _amount, uint256 _deposit, uint24 _toChain) public {
-        hevm.mockCall(
+    function testFallbackClearDepositRedeemAlreadyRedeemed() public {
+        vm.mockCall(
             localAnyCallExecutorAddress,
             abi.encodeWithSignature("context()"),
             abi.encode(rootBridgeAgentAddress, rootChainId, 22)
         );
 
-        // Input restrictions
-        hevm.assume(_user != address(0) && _amount > 0 && _deposit <= _amount && _toChain > 0);
+        // Create Test Deposit
+        testCallOutWithDeposit();
 
-        hevm.startPrank(localPortAddress);
-
-        // Mint Test tokens.
-        ERC20hTokenBranch fuzzToken = new ERC20hTokenBranch(
-            "Hermes omni token",
-            "hUNDER",
-            localPortAddress
-        );
-        fuzzToken.mint(_user, _amount - _deposit);
-        MockERC20 underToken = new MockERC20("u token", "U", 18);
-        underToken.mint(_user, _deposit);
-
-        hevm.stopPrank();
-
-        // Perform deposit
-        makeTestCallWithDeposit(
-            _user, address(fuzzToken), address(underToken), _amount, _deposit, _toChain, uint128(0.5 ether)
-        );
+        vm.deal(localPortAddress, 1 ether);
 
         //Prepare deposit info
         DepositParams memory depositParams = DepositParams({
-            hToken: address(fuzzToken),
+            hToken: address(testToken),
             token: address(underlyingToken),
-            amount: _amount,
-            deposit: _deposit,
+            amount: 100 ether,
+            deposit: 100 ether,
             toChain: rootChainId,
             depositNonce: 1,
             depositedGas: 1 ether
@@ -386,7 +368,7 @@ contract BranchBridgeAgentTest is DSTestPlus {
             depositParams.depositedGas / 2
         );
 
-        hevm.mockCall(
+        vm.mockCall(
             address(localAnyCongfig),
             abi.encodeWithSignature(
                 "calcSrcFees(address,uint256,uint256)", address(0), rootChainId, anyFallbackData.length
@@ -395,7 +377,141 @@ contract BranchBridgeAgentTest is DSTestPlus {
         );
 
         // Call 'anyFallback'
-        hevm.prank(localAnyCallExecutorAddress);
+        vm.prank(localAnyCallExecutorAddress);
+        bAgent.anyFallback(anyFallbackData);
+
+        //Call redeemDeposit
+        bAgent.redeemDeposit(1);
+
+        // Check balances
+        require(testToken.balanceOf(address(this)) == 0);
+        require(underlyingToken.balanceOf(address(this)) == 100 ether);
+        require(testToken.balanceOf(localPortAddress) == 0);
+        require(underlyingToken.balanceOf(localPortAddress) == 0);
+
+        vm.expectRevert(abi.encodeWithSignature("DepositRedeemUnavailable()"));
+
+        //Call redeemDeposit
+        bAgent.redeemDeposit(1);
+    }
+
+    function testFallbackClearDepositRedeemDoubleAnycall() public {
+        vm.mockCall(
+            localAnyCallExecutorAddress,
+            abi.encodeWithSignature("context()"),
+            abi.encode(rootBridgeAgentAddress, rootChainId, 22)
+        );
+
+        // Create Test Deposit
+        testCallOutWithDeposit();
+
+        // vm.deal(localPortAddress, 1 ether);
+
+        //Prepare deposit info
+        DepositParams memory depositParams = DepositParams({
+            hToken: address(testToken),
+            token: address(underlyingToken),
+            amount: 100 ether,
+            deposit: 100 ether,
+            toChain: rootChainId,
+            depositNonce: 1,
+            depositedGas: 1 ether
+        });
+
+        // Encode AnyFallback message
+        bytes memory anyFallbackData = abi.encodePacked(
+            bytes1(0x02),
+            depositParams.depositNonce,
+            depositParams.hToken,
+            depositParams.token,
+            depositParams.amount,
+            depositParams.deposit,
+            depositParams.toChain,
+            bytes("testdata"),
+            depositParams.depositedGas,
+            depositParams.depositedGas / 2
+        );
+
+        // Call 'anyFallback'
+        vm.prank(localAnyCallExecutorAddress);
+        bAgent.anyFallback(anyFallbackData);
+
+        bAgent.redeemDeposit(1);
+
+        vm.startPrank(localAnyCallExecutorAddress);
+
+        vm.expectRevert();
+        bAgent.anyFallback(anyFallbackData);
+    }
+
+    function testFuzzFallbackClearDepositRedeem(address _user, uint256 _amount, uint256 _deposit, uint24 _toChain)
+        public
+    {
+        vm.mockCall(
+            localAnyCallExecutorAddress,
+            abi.encodeWithSignature("context()"),
+            abi.encode(rootBridgeAgentAddress, rootChainId, 22)
+        );
+
+        // Input restrictions
+        vm.assume(_user != address(0) && _amount > 0 && _deposit <= _amount && _toChain > 0);
+
+        vm.deal(localPortAddress, 1 ether);
+
+        vm.startPrank(localPortAddress);
+
+        // Mint Test tokens.
+        ERC20hTokenBranch fuzzToken = new ERC20hTokenBranch(
+            "Hermes omni token",
+            "hUNDER",
+            localPortAddress
+        );
+        fuzzToken.mint(_user, _amount - _deposit);
+        MockERC20 underToken = new MockERC20("u token", "U", 18);
+        underToken.mint(_user, _deposit);
+
+        vm.stopPrank();
+
+        // Perform deposit
+        makeTestCallWithDeposit(
+            _user, address(fuzzToken), address(underToken), _amount, _deposit, _toChain, uint128(0.5 ether)
+        );
+
+        //Prepare deposit info
+        DepositParams memory depositParams = DepositParams({
+            hToken: address(fuzzToken),
+            token: address(underlyingToken),
+            amount: _amount - _deposit,
+            deposit: _deposit,
+            toChain: rootChainId,
+            depositNonce: 1,
+            depositedGas: 1 ether
+        });
+
+        // Encode AnyFallback message
+        bytes memory anyFallbackData = abi.encodePacked(
+            bytes1(0x01),
+            depositParams.depositNonce,
+            depositParams.hToken,
+            depositParams.token,
+            depositParams.amount,
+            depositParams.deposit,
+            depositParams.toChain,
+            bytes("testdata"),
+            depositParams.depositedGas,
+            depositParams.depositedGas / 2
+        );
+
+        vm.mockCall(
+            address(localAnyCongfig),
+            abi.encodeWithSignature(
+                "calcSrcFees(address,uint256,uint256)", address(0), rootChainId, anyFallbackData.length
+            ),
+            abi.encode(0)
+        );
+
+        // Call 'anyFallback'
+        vm.prank(localAnyCallExecutorAddress);
         bAgent.anyFallback(anyFallbackData);
 
         //Call redeemDeposit
@@ -408,68 +524,192 @@ contract BranchBridgeAgentTest is DSTestPlus {
         require(underToken.balanceOf(localPortAddress) == 0);
     }
 
-    // function testFuzzClearDeposit(
-    //     address _user,
-    //     uint256 _amount,
-    //     uint256 _deposit,
-    //     uint24 _toChain
-    // ) public {
-    //     hevm.mockCall(
-    //         localAnyCallExecutorAddress,
-    //         abi.encodeWithSignature("context()"),
-    //         abi.encode(rootBridgeAgentAddress, _toChain, 22)
-    //     );
+    function testRetryDeposit() public {
+        vm.mockCall(
+            localAnyCallExecutorAddress,
+            abi.encodeWithSignature("context()"),
+            abi.encode(rootBridgeAgentAddress, rootChainId, 22)
+        );
 
-    //     // Input restrictions
-    //     hevm.assume(_user != address(0) && _amount > 0 && _deposit <= _amount && _toChain > 0);
+        // Create Test Deposit
+        testCallOutWithDeposit();
 
-    //     // Mint Test tokens.
-    //     ERC20hTokenBranch fuzzToken = new ERC20hTokenBranch(
-    //         "Hermes omni token",
-    //         "hUNDER",
-    //         localPortAddress
-    //     );
-    //     hevm.prank(localPortAddress);
-    //     fuzzToken.mint(_user, _amount - _deposit);
-    //     MockERC20 underToken = new MockERC20("u token", "U", 18);
-    //     underToken.mint(_user, _deposit);
+        vm.deal(localPortAddress, 1 ether);
 
-    //     // Perform deposit
-    //     makeTestCallWithDeposit(
-    //         _user,
-    //         address(fuzzToken),
-    //         address(underToken),
-    //         _amount,
-    //         _deposit,
-    //         _toChain,
-    //         uint128(0.5 ether)
-    //     );
+        //Prepare deposit info
+        DepositParams memory depositParams = DepositParams({
+            hToken: address(testToken),
+            token: address(underlyingToken),
+            amount: 100 ether,
+            deposit: 100 ether,
+            toChain: rootChainId,
+            depositNonce: 1,
+            depositedGas: 1 ether
+        });
 
-    //     // Encode Clear Token Execution Data
-    //     bytes memory clearDepositData = abi.encode(bytes1(uint8(1)), uint32(1));
+        // Encode AnyFallback message
+        bytes memory anyFallbackData = abi.encodePacked(
+            bytes1(0x02),
+            depositParams.depositNonce,
+            depositParams.hToken,
+            depositParams.token,
+            depositParams.amount,
+            depositParams.deposit,
+            depositParams.toChain,
+            bytes("testdata"),
+            depositParams.depositedGas,
+            depositParams.depositedGas / 2
+        );
 
-    //     // Call 'clearDeposit'
-    //     hevm.prank(localAnyCallExecutorAddress);
-    //     bAgent.anyExecute(clearDepositData);
+        vm.mockCall(
+            address(localAnyCongfig),
+            abi.encodeWithSignature(
+                "calcSrcFees(address,uint256,uint256)", address(0), rootChainId, anyFallbackData.length
+            ),
+            abi.encode(0)
+        );
 
-    //     // Check balances
-    //     require(fuzzToken.balanceOf(_user) == _amount - _deposit);
-    //     require(underToken.balanceOf(_user) == _deposit);
-    //     require(fuzzToken.balanceOf(localPortAddress) == 0);
-    //     require(underToken.balanceOf(localPortAddress) == 0);
-    // }
+        vm.deal(address(this), 1 ether);
 
-    function testFuzzClearToken(address _recipient, uint256 _amount, uint256 _deposit, uint24 _toChain) public {
-        hevm.mockCall(
+        //Call redeemDeposit
+        bAgent.retryDeposit{value: 0.5 ether}(true, 1, "", 0, localChainId.toUint24());
+
+        require(bAgent.getDepositEntry(1).depositedGas == 0.5 ether, "Gas should be updated");
+    }
+
+    function testRetryDepositFailNotOwner() public {
+        vm.mockCall(
+            localAnyCallExecutorAddress,
+            abi.encodeWithSignature("context()"),
+            abi.encode(rootBridgeAgentAddress, rootChainId, 22)
+        );
+
+        // Create Test Deposit
+        testCallOutWithDeposit();
+
+        vm.deal(localPortAddress, 1 ether);
+
+        vm.deal(localPortAddress, 1 ether);
+
+        //Prepare deposit info
+        DepositParams memory depositParams = DepositParams({
+            hToken: address(testToken),
+            token: address(underlyingToken),
+            amount: 100 ether,
+            deposit: 100 ether,
+            toChain: rootChainId,
+            depositNonce: 1,
+            depositedGas: 1 ether
+        });
+
+        // Encode AnyFallback message
+        bytes memory anyFallbackData = abi.encodePacked(
+            bytes1(0x02),
+            depositParams.depositNonce,
+            depositParams.hToken,
+            depositParams.token,
+            depositParams.amount,
+            depositParams.deposit,
+            depositParams.toChain,
+            bytes("testdata"),
+            depositParams.depositedGas,
+            depositParams.depositedGas / 2
+        );
+
+        vm.mockCall(
+            address(localAnyCongfig),
+            abi.encodeWithSignature(
+                "calcSrcFees(address,uint256,uint256)", address(0), rootChainId, anyFallbackData.length
+            ),
+            abi.encode(0)
+        );
+
+        // Call 'anyFallback'
+        // vm.prank(localAnyCallExecutorAddress);
+        // bAgent.anyFallback(anyFallbackData);
+
+        vm.deal(address(42), 1 ether);
+
+        vm.startPrank(address(42));
+
+        vm.expectRevert(abi.encodeWithSignature("NotDepositOwner()"));
+
+        //Call redeemDeposit
+        bAgent.retryDeposit{value: 0.5 ether}(true, 1, "", 0, localChainId.toUint24());
+    }
+
+    function testRetryDepositFailCanAlwaysRetry() public {
+        vm.mockCall(
+            localAnyCallExecutorAddress,
+            abi.encodeWithSignature("context()"),
+            abi.encode(rootBridgeAgentAddress, rootChainId, 22)
+        );
+
+        // Create Test Deposit
+        testCallOutWithDeposit();
+
+        vm.deal(localPortAddress, 1 ether);
+
+        vm.deal(localPortAddress, 1 ether);
+
+        //Prepare deposit info
+        DepositParams memory depositParams = DepositParams({
+            hToken: address(testToken),
+            token: address(underlyingToken),
+            amount: 100 ether,
+            deposit: 100 ether,
+            toChain: rootChainId,
+            depositNonce: 1,
+            depositedGas: 1 ether
+        });
+
+        // Encode AnyFallback message
+        bytes memory anyFallbackData = abi.encodePacked(
+            bytes1(0x02),
+            depositParams.depositNonce,
+            depositParams.hToken,
+            depositParams.token,
+            depositParams.amount,
+            depositParams.deposit,
+            depositParams.toChain,
+            bytes("testdata"),
+            depositParams.depositedGas,
+            depositParams.depositedGas / 2
+        );
+
+        vm.mockCall(
+            address(localAnyCongfig),
+            abi.encodeWithSignature(
+                "calcSrcFees(address,uint256,uint256)", address(0), rootChainId, anyFallbackData.length
+            ),
+            abi.encode(0)
+        );
+
+        // Call 'anyFallback'
+        vm.prank(localAnyCallExecutorAddress);
+        bAgent.anyFallback(anyFallbackData);
+
+        vm.deal(address(this), 1 ether);
+
+        //Call redeemDeposit
+        bAgent.retryDeposit{value: 0.5 ether}(true, 1, "", 0, localChainId.toUint24());
+    }
+
+    function testFuzzExecuteWithSettlement(address _recipient, uint256 _amount, uint256 _deposit, uint24 _toChain)
+        public
+    {
+        vm.mockCall(
             localAnyCallExecutorAddress,
             abi.encodeWithSignature("context()"),
             abi.encode(rootBridgeAgentAddress, _toChain, 22)
         );
 
         // Input restrictions
-        hevm.assume(_recipient > address(3) && _amount > 0 && _deposit <= _amount && _toChain > 0);
+        vm.assume(_recipient > address(3) && _amount > 0 && _deposit <= _amount && _toChain > 0);
 
-        hevm.startPrank(localPortAddress);
+        vm.deal(localPortAddress, 1 ether);
+
+        vm.startPrank(localPortAddress);
 
         // Mint Test tokens.
         ERC20hTokenBranch fuzzToken = new ERC20hTokenBranch(
@@ -482,9 +722,9 @@ contract BranchBridgeAgentTest is DSTestPlus {
         MockERC20 underToken = new MockERC20("u token", "U", 18);
         underToken.mint(_recipient, _deposit);
 
-        hevm.stopPrank();
+        vm.stopPrank();
 
-        console2.log("DAAAAAAAATAAAAAAAAAAA");
+        console2.log("testFuzzClearToken Data:");
         console2.log(_recipient);
         console2.log(address(fuzzToken));
         console2.log(address(underToken));
@@ -496,17 +736,6 @@ contract BranchBridgeAgentTest is DSTestPlus {
         makeTestCallWithDeposit(
             _recipient, address(fuzzToken), address(underToken), _amount, _deposit, _toChain, uint128(0.5 ether)
         );
-
-        // // Encode Clear Token Execution Data
-        // bytes memory clearTokenData = abi.encode(
-        //     bytes1(0x04),
-        //     _recipient,
-        //     address(fuzzToken),
-        //     address(underToken),
-        //     _amount,
-        //     _deposit,
-        //     uint32(1)
-        // );
 
         // Encode Settlement Data for Clear Token Execution
         bytes memory settlementData = abi.encodePacked(
@@ -521,17 +750,8 @@ contract BranchBridgeAgentTest is DSTestPlus {
             uint128(0.5 ether)
         );
 
-        // Mock anycall fees
-        hevm.mockCall(
-            address(localAnyCongfig),
-            abi.encodeWithSignature(
-                "calcSrcFees(address,uint256,uint256)", address(0), rootChainId, settlementData.length
-            ),
-            abi.encode(0.1 ether)
-        );
-
         // Call 'clearToken'
-        hevm.prank(localAnyCallExecutorAddress);
+        vm.prank(localAnyCallExecutorAddress);
         bAgent.anyExecute(settlementData);
 
         require(fuzzToken.balanceOf(_recipient) == _amount - _deposit);
@@ -545,7 +765,7 @@ contract BranchBridgeAgentTest is DSTestPlus {
     uint256[] public amounts;
     uint256[] public deposits;
 
-    function testFuzzClearTokens(
+    function testFuzzExecuteWithSettlementMultiple(
         address _recipient,
         uint256 _amount0,
         uint256 _amount1,
@@ -553,19 +773,19 @@ contract BranchBridgeAgentTest is DSTestPlus {
         uint256 _deposit1,
         uint24 _toChain
     ) public {
-        hevm.mockCall(
+        vm.mockCall(
             localAnyCallExecutorAddress,
             abi.encodeWithSignature("context()"),
             abi.encode(rootBridgeAgentAddress, _toChain, 22)
         );
 
         // Input restrictions
-        hevm.assume(
+        vm.assume(
             _recipient > address(3) && _amount0 > 0 && _deposit0 <= _amount0 && _amount1 > 0 && _deposit1 <= _amount1
                 && _toChain > 0
         );
 
-        hevm.startPrank(localPortAddress);
+        vm.startPrank(localPortAddress);
 
         // Mint Test tokens.
         ERC20hTokenBranch fuzzToken0 = new ERC20hTokenBranch(
@@ -585,7 +805,7 @@ contract BranchBridgeAgentTest is DSTestPlus {
         underToken0.mint(_recipient, _deposit0);
         underToken1.mint(_recipient, _deposit1);
 
-        console2.log("DATA");
+        console2.log("testFuzzExecuteWithSettlementMultiple DATA:");
         console2.log(_recipient);
         console2.log(address(fuzzToken0));
         console2.log(address(fuzzToken1));
@@ -597,7 +817,7 @@ contract BranchBridgeAgentTest is DSTestPlus {
         console2.log(_deposit1);
         console2.log(_toChain);
 
-        hevm.stopPrank();
+        vm.stopPrank();
 
         // Cast to Dynamic
         hTokens.push(address(fuzzToken0));
@@ -608,10 +828,6 @@ contract BranchBridgeAgentTest is DSTestPlus {
         amounts.push(_amount1);
         deposits.push(_deposit0);
         deposits.push(_deposit1);
-
-        console2.log("TOKENS");
-        console2.log(hTokens[0], tokens[0]);
-        console2.log(hTokens[1], tokens[1]);
 
         // Perform deposit
         makeTestCallWithDepositMultiple(_recipient, hTokens, tokens, amounts, deposits, _toChain, uint128(0.5 ether));
@@ -630,7 +846,7 @@ contract BranchBridgeAgentTest is DSTestPlus {
             uint128(0.5 ether)
         );
 
-        hevm.mockCall(
+        vm.mockCall(
             address(localAnyCongfig),
             abi.encodeWithSignature(
                 "calcSrcFees(address,uint256,uint256)", address(0), rootChainId, settlementData.length
@@ -639,7 +855,7 @@ contract BranchBridgeAgentTest is DSTestPlus {
         );
 
         // Call 'clearToken'
-        hevm.prank(localAnyCallExecutorAddress);
+        vm.prank(localAnyCallExecutorAddress);
         bAgent.anyExecute(settlementData);
 
         require(fuzzToken0.balanceOf(localPortAddress) == 0);
@@ -807,10 +1023,10 @@ contract BranchBridgeAgentTest is DSTestPlus {
             DepositInput({hToken: _hToken, token: _token, amount: _amount, deposit: _deposit, toChain: _toChain});
 
         // Prank into user account
-        hevm.startPrank(_user);
+        vm.startPrank(_user);
 
         //Get some gas.
-        hevm.deal(_user, 1 ether);
+        vm.deal(_user, 1 ether);
 
         // Approve spend by router
         ERC20hTokenBranch(_hToken).approve(localPortAddress, _amount - _deposit);
@@ -820,7 +1036,7 @@ contract BranchBridgeAgentTest is DSTestPlus {
         IBranchRouter(bRouter).callOutAndBridge{value: 1 ether}(bytes("testdata"), depositInput, _rootExecGas);
 
         // Prank out of user account
-        hevm.stopPrank();
+        vm.stopPrank();
 
         // Test If Deposit was successful
         testCreateDepositSingle(uint32(1), _user, address(_hToken), address(_token), _amount, _deposit, 1 ether);
@@ -845,10 +1061,10 @@ contract BranchBridgeAgentTest is DSTestPlus {
         });
 
         // Prank into user account
-        hevm.startPrank(_user);
+        vm.startPrank(_user);
 
         //Get some gas.
-        hevm.deal(_user, 1 ether);
+        vm.deal(_user, 1 ether);
 
         console2.log(_hTokens[0], _deposits[0]);
 
@@ -862,7 +1078,7 @@ contract BranchBridgeAgentTest is DSTestPlus {
         IBranchRouter(bRouter).callOutAndBridgeMultiple{value: 1 ether}(bytes("test"), depositInput, _rootExecGas);
 
         // Prank out of user account
-        hevm.stopPrank();
+        vm.stopPrank();
 
         // Test If Deposit was successful
         testCreateDeposit(uint32(1), _user, _hTokens, _tokens, _amounts, _deposits);
@@ -873,180 +1089,8 @@ contract BranchBridgeAgentTest is DSTestPlus {
             aEqualsB := eq(a, b)
         }
     }
+}
 
-    // function testFinalizeDeposit() public {
-    //     hevm.mockCall(
-    //         localAnyCallExecutorAddress,
-    //         abi.encodeWithSignature("context()"),
-    //         abi.encode(rootBridgeAgentAddress, rootChainId, 22)
-    //     );
-
-    //     // Create Test Deposit
-    //     testCallWithDeposit();
-
-    //     // Encode Finalize Deposit Execution Data
-    //     bytes memory finalizeDepositData = abi.encode(
-    //         bytes1(uint8(2)),
-    //         uint32(1),
-    //         address(testToken)
-    //     );
-
-    //     // Call 'finalizeDeposit'
-    //     hevm.prank(localAnyCallExecutorAddress);
-    //     bAgent.anyExecute(finalizeDepositData);
-
-    //     require(underlyingToken.balanceOf(address(this)) == 0);
-    //     require(testToken.balanceOf(address(this)) == 100 ether);
-    //     require(underlyingToken.balanceOf(localPortAddress) == 100 ether);
-    //     require(testToken.balanceOf(localPortAddress) == 0);
-    // }
-
-    // function testFuzzFinalizeDeposit(address _user, uint256 _amount, uint256 _toChain) public {
-    //     hevm.mockCall(
-    //         localAnyCallExecutorAddress,
-    //         abi.encodeWithSignature("context()"),
-    //         abi.encode(rootBridgeAgentAddress, _toChain, 22)
-    //     );
-
-    //     // Input restrictions
-    //     hevm.assume(_user != address(0) && _amount > 0 && _toChain > 0);
-
-    //     // Mint Test tokens.
-    //     MockERC20 underToken = new MockERC20("u token", "U", 18);
-    //     underToken.mint(_user, _amount);
-    //     ERC20hTokenBranch fuzzToken = new ERC20hTokenBranch(
-    //         "Hermes omni token",
-    //         "hUNDER",
-    //         localPortAddress
-    //     );
-
-    //     // Perform deposit
-    //     makeTestCallWithDeposit(
-    //         _user,
-    //         address(fuzzToken),
-    //         address(underToken),
-    //         _amount,
-    //         _amount,
-    //         _toChain
-    //     );
-
-    //     // Encode Finalize Deposit Execution Data
-    //     bytes memory finalizeDepositData = abi.encode(
-    //         bytes1(uint8(2)),
-    //         uint32(1),
-    //         address(fuzzToken)
-    //     );
-
-    //     // Call 'finalizeDeposit'
-    //     hevm.prank(localAnyCallExecutorAddress);
-    //     bAgent.anyExecute(finalizeDepositData);
-
-    //     require(underToken.balanceOf(_user) == 0);
-    //     require(fuzzToken.balanceOf(_user) == _amount);
-    //     require(underToken.balanceOf(localPortAddress) == _amount);
-    //     require(fuzzToken.balanceOf(localPortAddress) == 0);
-    // }
-
-    // function testFinalizeWithdraw() public {
-    //     hevm.mockCall(
-    //         localAnyCallExecutorAddress,
-    //         abi.encodeWithSignature("context()"),
-    //         abi.encode(rootBridgeAgentAddress, rootChainId, 22)
-    //     );
-
-    //     //Mint Test tokens.
-    //     hevm.prank(localPortAddress);
-    //     testToken.mint(address(this), 100 ether);
-    //     underlyingToken.mint(localPortAddress, 100 ether);
-
-    //     //Approve spend by router
-    //     testToken.approve(localPortAddress, 100 ether);
-
-    //     //Prepare deposit info
-    //     DepositInput memory depositInput = DepositInput({
-    //         hToken: address(testToken),
-    //         token: address(underlyingToken),
-    //         amount: 100 ether,
-    //         deposit: 0,
-    //         toChain: rootChainId
-    //     });
-
-    //     //Call Deposit function
-    //     IBranchRouter(bRouter).callOut(bytes1(uint8(1)), bytes("test"), depositInput);
-
-    //     //Test If Deposit was successful
-    //     testCreateDepositSingle(
-    //         uint32(1),
-    //         address(this),
-    //         address(testToken),
-    //         address(underlyingToken),
-    //         100 ether,
-    //         0
-    //     );
-
-    //     // Encode Finalize Withdraw Execution Data
-    //     bytes memory finalizeWithdrawData = abi.encode(
-    //         bytes1(uint8(3)),
-    //         uint32(1),
-    //         address(underlyingToken)
-    //     );
-
-    //     // Call 'finalizeDeposit'
-    //     hevm.prank(localAnyCallExecutorAddress);
-    //     bAgent.anyExecute(finalizeWithdrawData);
-
-    //     require(testToken.balanceOf(address(this)) == 0);
-    //     require(underlyingToken.balanceOf(address(this)) == 100 ether);
-    //     require(testToken.balanceOf(localPortAddress) == 0);
-    //     require(underlyingToken.balanceOf(localPortAddress) == 0);
-    // }
-
-    // function testFuzzFinalizeWithdraw(address _user, uint256 _amount, uint256 _toChain) public {
-    //     hevm.mockCall(
-    //         localAnyCallExecutorAddress,
-    //         abi.encodeWithSignature("context()"),
-    //         abi.encode(rootBridgeAgentAddress, _toChain, 22)
-    //     );
-
-    //     // Input restrictions
-    //     hevm.assume(_user != address(0) && _amount > 0 && _toChain > 0);
-
-    //     // Mint Test tokens.
-    //     ERC20hTokenBranch fuzzToken = new ERC20hTokenBranch(
-    //         "Hermes omni token",
-    //         "hUNDER",
-    //         localPortAddress
-    //     );
-    //     hevm.prank(localPortAddress);
-    //     fuzzToken.mint(_user, _amount);
-
-    //     MockERC20 underToken = new MockERC20("u token", "U", 18);
-    //     underToken.mint(localPortAddress, _amount);
-
-    //     // Perform deposit
-    //     makeTestCallWithDeposit(
-    //         _user,
-    //         address(fuzzToken),
-    //         address(underToken),
-    //         _amount,
-    //         0,
-    //         _toChain
-    //     );
-
-    //     // Encode Finalize Withdraw Execution Data
-    //     bytes memory finalizeWithdrawData = abi.encode(
-    //         bytes1(uint8(3)),
-    //         uint32(1),
-    //         address(underToken)
-    //     );
-
-    //     // Call 'finalizeDeposit'
-    //     hevm.prank(localAnyCallExecutorAddress);
-    //     bAgent.anyExecute(finalizeWithdrawData);
-
-    //     require(fuzzToken.balanceOf(_user) == 0);
-    //     require(underToken.balanceOf(_user) == _amount);
-    //     require(fuzzToken.balanceOf(localPortAddress) == 0);
-    //     require(underToken.balanceOf(localPortAddress) == 0);
-    // }
+contract MockAnyConfig {
+    function deposit(address account) external payable {}
 }

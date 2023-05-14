@@ -45,6 +45,8 @@ interface IRootPort {
                         VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    function isChainId(uint256 _chainId) external view returns (bool);
+
     function isBridgeAgentFactory(address _bridgeAgentFactory) external view returns (bool);
 
     function isGlobalAddress(address _globalAddress) external view returns (bool);
@@ -166,13 +168,12 @@ interface IRootPort {
     function bridgeToRootFromLocalBranch(address _from, address _hToken, uint256 _amount) external;
 
     /**
-     * @notice Bridges tokens from the root port to the local branch.
-     * @param _recipient recipient of bridged tokens.
+     * @notice Bridges hTokens from the root port to the local branch.
+     * @param _to recipient of the bridged tokens.
      * @param _hToken address of the hToken to bridge.
      * @param _amount amount of hTokens to bridge.
-     * @param _deposit amount of underlying tokens to deposit.
      */
-    function bridgeToLocalBranch(address _recipient, address _hToken, uint256 _amount, uint256 _deposit) external;
+    function bridgeToLocalBranchFromRoot(address _to, address _hToken, uint256 _amount) external;
 
     /**
      * @notice Mints new tokens to the recipient address
@@ -284,8 +285,8 @@ interface IRootPort {
      * @notice Adds a new chain to the root port lists of chains
      * @param _coreBranchBridgeAgentAddress address of the core branch bridge agent
      * @param _chainId chainId of the new chain
-     * @param _gasTokenName gas token name of the chain to add
-     * @param _gasTokenSymbol gas token symbol of the chain to add
+     * @param _wrappedGasTokenName gas token name of the chain to add
+     * @param _wrappedGasTokenSymbol gas token symbol of the chain to add
      * @param _fee fee of the chain to add
      * @param _priceImpactPercentage price impact percentage of the chain to add
      * @param _sqrtPriceX96 sqrt price of the chain to add
@@ -298,8 +299,8 @@ interface IRootPort {
     function addNewChain(
         address _coreBranchBridgeAgentAddress,
         uint24 _chainId,
-        string memory _gasTokenName,
-        string memory _gasTokenSymbol,
+        string memory _wrappedGasTokenName,
+        string memory _wrappedGasTokenSymbol,
         uint24 _fee,
         uint24 _priceImpactPercentage,
         uint160 _sqrtPriceX96,

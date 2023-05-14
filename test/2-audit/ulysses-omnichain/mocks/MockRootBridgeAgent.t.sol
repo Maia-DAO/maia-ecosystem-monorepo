@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
+
 import {console2} from "forge-std/console2.sol";
 
 import {
@@ -19,21 +20,6 @@ import {WETH9} from "@omni/interfaces/IWETH9.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
 
-/**
- * @title ERC20 hToken Contract for deployment in Branch Chains of Hermes Omnichain Incentives System
- * @author MaiaDAO
- * @dev Base Root Router for Anycall cross-chain messaging.
- *
- *   CROSS-CHAIN MESSAGING FUNCIDs
- *   -----------------------------
- *   FUNC ID      | FUNC NAME
- *   -------------|---------------
- *   1            | depositToPort
- *   2            | withdrawFromPort
- *   3            | bridgeTo
- *   4            | clearSettlement
- *
- */
 contract MockRootBridgeAgent is RootBridgeAgent {
     constructor(
         WETH9 _wrappedNativeToken,
@@ -56,10 +42,29 @@ contract MockRootBridgeAgent is RootBridgeAgent {
     {}
 
     /*///////////////////////////////////////////////////////////////
+                            ENCODING CONSTS
+    //////////////////////////////////////////////////////////////*/
+
+    /// AnyExec Consts
+
+    uint8 internal constant PARAMS_END_OFFSET = 9;
+
+    uint8 internal constant PARAMS_END_SIGNED_OFFSET = 29;
+
+    uint8 internal constant PARAMS_ENTRY_SIZE = 32;
+
+    uint8 internal constant PARAMS_TKN_SET_SIZE = 104;
+
+    uint8 internal constant PARAMS_TKN_SET_SIZE_MULTIPLE = 128;
+
+    /*///////////////////////////////////////////////////////////////
                 TOKEN MANAGEMENT INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    function bridgeInMultiple(address _recipient, bytes calldata _dParams, uint24 _fromChain) public returns (DepositMultipleParams memory) {
+    function bridgeInMultiple(address _recipient, bytes calldata _dParams, uint24 _fromChain)
+        public
+        returns (DepositMultipleParams memory)
+    {
         // Parse Parameters
         uint8 numOfAssets = uint8(bytes1(_dParams[0]));
         uint32 nonce = uint32(bytes4(_dParams[PARAMS_START:5]));
@@ -80,9 +85,10 @@ contract MockRootBridgeAgent is RootBridgeAgent {
                 uint160(
                     bytes20(
                         bytes32(
-                            _dParams[PARAMS_TKN_START +
-                                (PARAMS_ENTRY_SIZE * i) +
-                                12:PARAMS_TKN_START + (PARAMS_ENTRY_SIZE * (PARAMS_START + i))]
+                            _dParams[
+                                PARAMS_TKN_START + (PARAMS_ENTRY_SIZE * i) + 12:
+                                    PARAMS_TKN_START + (PARAMS_ENTRY_SIZE * (PARAMS_START + i))
+                            ]
                         )
                     )
                 )
@@ -93,19 +99,15 @@ contract MockRootBridgeAgent is RootBridgeAgent {
             console2.log("2");
             console2.log(PARAMS_TKN_START + PARAMS_ENTRY_SIZE * uint16(i + numOfAssets) + 12);
 
-            console2.log(
-                PARAMS_TKN_START + PARAMS_ENTRY_SIZE * uint16(PARAMS_START + i + numOfAssets)
-            );
+            console2.log(PARAMS_TKN_START + PARAMS_ENTRY_SIZE * uint16(PARAMS_START + i + numOfAssets));
 
             tokens[i] = address(
                 uint160(
                     bytes20(
-                        _dParams[PARAMS_TKN_START +
-                            PARAMS_ENTRY_SIZE *
-                            uint16(i + numOfAssets) +
-                            12:PARAMS_TKN_START +
-                            PARAMS_ENTRY_SIZE *
-                            uint16(PARAMS_START + i + numOfAssets)]
+                        _dParams[
+                            PARAMS_TKN_START + PARAMS_ENTRY_SIZE * uint16(i + numOfAssets) + 12:
+                                PARAMS_TKN_START + PARAMS_ENTRY_SIZE * uint16(PARAMS_START + i + numOfAssets)
+                        ]
                     )
                 )
             );
@@ -113,30 +115,20 @@ contract MockRootBridgeAgent is RootBridgeAgent {
             console2.log(tokens[i]);
             console2.log("3");
 
-            console2.log(
-                PARAMS_TKN_START +
-                    PARAMS_AMT_OFFSET *
-                    uint16(numOfAssets) +
-                    (PARAMS_ENTRY_SIZE * uint16(i))
-            );
+            console2.log(PARAMS_TKN_START + PARAMS_AMT_OFFSET * uint16(numOfAssets) + (PARAMS_ENTRY_SIZE * uint16(i)));
 
             console2.log(
-                PARAMS_TKN_START +
-                    PARAMS_AMT_OFFSET *
-                    uint16(numOfAssets) +
-                    (PARAMS_ENTRY_SIZE * uint16(PARAMS_START + i))
+                PARAMS_TKN_START + PARAMS_AMT_OFFSET * uint16(numOfAssets)
+                    + (PARAMS_ENTRY_SIZE * uint16(PARAMS_START + i))
             );
 
             amounts[i] = uint256(
                 bytes32(
-                    _dParams[PARAMS_TKN_START +
-                        PARAMS_AMT_OFFSET *
-                        uint16(numOfAssets) +
-                        (PARAMS_ENTRY_SIZE * uint16(i)):PARAMS_TKN_START +
-                        PARAMS_AMT_OFFSET *
-                        uint16(numOfAssets) +
-                        PARAMS_ENTRY_SIZE *
-                        uint16(PARAMS_START + i)]
+                    _dParams[
+                        PARAMS_TKN_START + PARAMS_AMT_OFFSET * uint16(numOfAssets) + (PARAMS_ENTRY_SIZE * uint16(i)):
+                            PARAMS_TKN_START + PARAMS_AMT_OFFSET * uint16(numOfAssets)
+                                + PARAMS_ENTRY_SIZE * uint16(PARAMS_START + i)
+                    ]
                 )
             );
 
@@ -144,30 +136,21 @@ contract MockRootBridgeAgent is RootBridgeAgent {
             console2.log("4");
 
             console2.log(
-                PARAMS_TKN_START +
-                    PARAMS_DEPOSIT_OFFSET *
-                    uint16(numOfAssets) +
-                    (PARAMS_ENTRY_SIZE * uint16(i))
+                PARAMS_TKN_START + PARAMS_DEPOSIT_OFFSET * uint16(numOfAssets) + (PARAMS_ENTRY_SIZE * uint16(i))
             );
 
             console2.log(
-                PARAMS_TKN_START +
-                    PARAMS_DEPOSIT_OFFSET *
-                    uint16(numOfAssets) +
-                    PARAMS_ENTRY_SIZE *
-                    uint16(PARAMS_START + i)
+                PARAMS_TKN_START + PARAMS_DEPOSIT_OFFSET * uint16(numOfAssets)
+                    + PARAMS_ENTRY_SIZE * uint16(PARAMS_START + i)
             );
 
             deposits[i] = uint256(
                 bytes32(
-                    _dParams[PARAMS_TKN_START +
-                        PARAMS_DEPOSIT_OFFSET *
-                        uint16(numOfAssets) +
-                        (PARAMS_ENTRY_SIZE * uint16(i)):PARAMS_TKN_START +
-                        PARAMS_DEPOSIT_OFFSET *
-                        uint16(numOfAssets) +
-                        PARAMS_ENTRY_SIZE *
-                        uint16(PARAMS_START + i)]
+                    _dParams[
+                        PARAMS_TKN_START + PARAMS_DEPOSIT_OFFSET * uint16(numOfAssets) + (PARAMS_ENTRY_SIZE * uint16(i)):
+                            PARAMS_TKN_START + PARAMS_DEPOSIT_OFFSET * uint16(numOfAssets)
+                                + PARAMS_ENTRY_SIZE * uint16(PARAMS_START + i)
+                    ]
                 )
             );
 
@@ -195,5 +178,4 @@ contract MockRootBridgeAgent is RootBridgeAgent {
             })
         );
     }
-    
 }

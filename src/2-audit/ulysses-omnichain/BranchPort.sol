@@ -195,23 +195,14 @@ contract BranchPort is Ownable, IBranchPort {
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IBranchPort
-    function withdraw(address _recipient, address _underlyingAddress, uint256 _amount)
+    function withdraw(address _recipient, address _underlyingAddress, uint256 _deposit)
         external
         virtual
         requiresBridgeAgent
     {
-        _withdraw(_recipient, _underlyingAddress, _amount);
-    }
-
-    /**
-     * @notice Internal function to withdraw underlying / native token amount into Port in exchange for Local hToken.
-     *   @param _recipient hToken receiver.
-     *   @param _underlyingAddress underlying / native token address.
-     *   @param _amount amount of tokens.
-     *
-     */
-    function _withdraw(address _recipient, address _underlyingAddress, uint256 _amount) internal virtual {
-        _underlyingAddress.safeTransfer(_recipient, _amount);
+        _underlyingAddress.safeTransfer(
+            _recipient, _denormalizeDecimals(_deposit, ERC20(_underlyingAddress).decimals())
+        );
     }
 
     /// @inheritdoc IBranchPort
@@ -251,7 +242,9 @@ contract BranchPort is Ownable, IBranchPort {
             ERC20hTokenBranch(_localAddress).burn(_amount - _deposit);
         }
         if (_deposit > 0) {
-            _underlyingAddress.safeTransferFrom(_depositor, address(this), _deposit);
+            _underlyingAddress.safeTransferFrom(
+                _depositor, address(this), _denormalizeDecimals(_deposit, ERC20(_underlyingAddress).decimals())
+            );
         }
     }
 
@@ -265,7 +258,11 @@ contract BranchPort is Ownable, IBranchPort {
     ) external virtual requiresBridgeAgent {
         for (uint256 i = 0; i < _localAddresses.length;) {
             if (_deposits[i] > 0) {
-                _underlyingAddresses[i].safeTransferFrom(_depositor, address(this), _deposits[i]);
+                _underlyingAddresses[i].safeTransferFrom(
+                    _depositor,
+                    address(this),
+                    _denormalizeDecimals(_deposits[i], ERC20(_underlyingAddresses[i]).decimals())
+                );
             }
             if (_amounts[i] - _deposits[i] > 0) {
                 _localAddresses[i].safeTransferFrom(_depositor, address(this), _amounts[i] - _deposits[i]);
@@ -293,7 +290,7 @@ contract BranchPort is Ownable, IBranchPort {
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IBranchPort
-    function setCoreRouter(address _newCoreRouter) external onlyOwner {
+    function setCoreRouter(address _newCoreRouter) external requiresCoreRouter {
         require(coreBranchRouterAddress != address(0), "CoreRouter address is zero");
         require(_newCoreRouter != address(0), "New CoreRouter address is zero");
         coreBranchRouterAddress = _newCoreRouter;
@@ -307,44 +304,65 @@ contract BranchPort is Ownable, IBranchPort {
     }
 
     /// @inheritdoc IBranchPort
-    function toggleBridgeAgentFactory(address _newBridgeAgentFactory) external onlyOwner {
+    function toggleBridgeAgentFactory(address _newBridgeAgentFactory) external requiresCoreRouter {
         isBridgeAgentFactory[_newBridgeAgentFactory] = !isBridgeAgentFactory[_newBridgeAgentFactory];
     }
 
     /// @inheritdoc IBranchPort
-    function toggleBridgeAgent(address _bridgeAgent) external requiresBridgeAgentFactory {
+    function toggleBridgeAgent(address _bridgeAgent) external requiresCoreRouter {
         isBridgeAgent[_bridgeAgent] = !isBridgeAgent[_bridgeAgent];
     }
 
-    function addStrategyToken(address _token, uint256 _minimumReservesRatio) external onlyOwner {
+    /// @inheritdoc IBranchPort
+    function addStrategyToken(address _token, uint256 _minimumReservesRatio) external requiresCoreRouter {
         if (_minimumReservesRatio >= DIVISIONER) revert InvalidMinimumReservesRatio();
         strategyTokens.push(_token);
         strategyTokensLenght++;
         getMinimumTokenReserveRatio[_token] = _minimumReservesRatio;
+        isStrategyToken[_token] = true;
     }
 
-    function toggleStrategyToken(address _token) external onlyOwner {
+    /// @inheritdoc IBranchPort
+    function toggleStrategyToken(address _token) external requiresCoreRouter {
         isStrategyToken[_token] = !isStrategyToken[_token];
     }
 
     /// @inheritdoc IBranchPort
-    function addPortStrategy(address _portStrategy, address _token, uint256 _dailyManagementLimit) external onlyOwner {
+    function addPortStrategy(address _portStrategy, address _token, uint256 _dailyManagementLimit)
+        external
+        requiresCoreRouter
+    {
+        if (!isStrategyToken[_token]) revert UnrecognizedStrategyToken();
         portStrategies.push(_portStrategy);
         portStrategiesLenght++;
         strategyDailyLimitAmount[_portStrategy][_token] = _dailyManagementLimit;
+        isPortStrategy[_portStrategy][_token] = true;
     }
 
     /// @inheritdoc IBranchPort
-    function togglePortStrategy(address _portStrategy, address _token) external onlyOwner {
+    function togglePortStrategy(address _portStrategy, address _token) external requiresCoreRouter {
         isPortStrategy[_portStrategy][_token] = !isPortStrategy[_portStrategy][_token];
     }
 
     /// @inheritdoc IBranchPort
     function updatePortStrategy(address _portStrategy, address _token, uint256 _dailyManagementLimit)
         external
-        onlyOwner
+        requiresCoreRouter
     {
         strategyDailyLimitAmount[_portStrategy][_token] = _dailyManagementLimit;
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                            HELPERS
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Internal function that denormalizes an input from 18 decimal places.
+     * @param _amount amount of tokens
+     * @param _decimals number of decimal places
+     */
+    function _denormalizeDecimals(uint256 _amount, uint8 _decimals) internal pure returns (uint256) {
+        return _decimals == 18 ? _amount : _amount * 1 ether / (10 ** _decimals);
     }
 
     /*///////////////////////////////////////////////////////////////

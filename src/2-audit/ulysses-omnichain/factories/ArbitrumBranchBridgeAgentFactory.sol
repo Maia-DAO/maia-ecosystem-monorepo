@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {BranchBridgeAgentFactory, IPort, WETH9} from "./BranchBridgeAgentFactory.sol";
-import {ArbitrumBranchBridgeAgent} from "../ArbitrumBranchBridgeAgent.sol";
+import {ArbitrumBranchBridgeAgent, DeployArbitrumBranchBridgeAgent} from "../ArbitrumBranchBridgeAgent.sol";
 
 /**
  * @title BridgeAgentFactory.
@@ -46,7 +46,7 @@ contract ArbitrumBranchBridgeAgentFactory is BranchBridgeAgentFactory {
 
     function initialize(address _coreRootBridgeAgent) external override onlyOwner {
         address newCoreBridgeAgent = address(
-            new ArbitrumBranchBridgeAgent(
+            DeployArbitrumBranchBridgeAgent.deploy(
                 wrappedNativeToken,
                 rootChainId,
                 _coreRootBridgeAgent,
@@ -83,7 +83,7 @@ contract ArbitrumBranchBridgeAgentFactory is BranchBridgeAgentFactory {
         );
 
         newBridgeAgent = address(
-            new ArbitrumBranchBridgeAgent(
+            DeployArbitrumBranchBridgeAgent.deploy(
                 wrappedNativeToken,
                 rootChainId,
                 _rootBridgeAgentAddress,

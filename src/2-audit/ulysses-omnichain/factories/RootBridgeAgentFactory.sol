@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "../interfaces/IRootBridgeAgentFactory.sol";
 
-import {RootBridgeAgent} from "../RootBridgeAgent.sol";
+import {DeployRootBridgeAgent, RootBridgeAgent} from "../RootBridgeAgent.sol";
 
 import {IRootPort} from "../interfaces/IRootPort.sol";
 
@@ -71,7 +71,7 @@ contract RootBridgeAgentFactory is IRootBridgeAgentFactory {
      */
     function createBridgeAgent(address _newRootRouterAddress) external returns (address newBridgeAgent) {
         newBridgeAgent = address(
-            new RootBridgeAgent(
+            DeployRootBridgeAgent.deploy(
                 wrappedNativeToken,
                 rootChainId,
                 daoAddress,
@@ -83,10 +83,5 @@ contract RootBridgeAgentFactory is IRootBridgeAgentFactory {
         );
 
         IRootPort(rootPortAddress).addBridgeAgent(msg.sender, newBridgeAgent);
-        // IRootPort(rootPortAddress).toggleBridgeAgent(newBridgeAgent);
     }
-
-    // function toggleBridgeAgent(address _bridgeAgentAddress) external onlyOwner {
-    //     IRootPort(rootPortAddress).toggleBridgeAgent(_bridgeAgentAddress);
-    // }
 }

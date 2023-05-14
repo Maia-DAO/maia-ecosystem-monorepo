@@ -41,77 +41,11 @@ interface IUniswapV3SwapCallback {
     function uniswapV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata _data) external;
 }
 
-contract MockPool is Test {
-    struct SwapCallbackData {
-        address tokenIn;
-    }
-
-    address wrappedNativeTokenAddress;
-    address globalGasToken;
-
-    constructor(address _wrappedNativeTokenAddress, address _globalGasToken) {
-        wrappedNativeTokenAddress = _wrappedNativeTokenAddress;
-        globalGasToken = _globalGasToken;
-    }
-
-    function swap(
-        address recipient,
-        bool zeroForOne,
-        int256 amountSpecified,
-        uint160 sqrtPriceLimitX96,
-        bytes calldata data
-    ) external returns (int256 amount0, int256 amount1) {
-        SwapCallbackData memory _data = abi.decode(data, (SwapCallbackData));
-
-        address tokenOut = (_data.tokenIn == wrappedNativeTokenAddress ? globalGasToken : wrappedNativeTokenAddress);
-
-        console2.log("swapp");
-        console2.log("tokenIn", _data.tokenIn);
-        console2.log("tokenOut", tokenOut);
-        console2.log("isWrappedGasToken");
-        console2.log(_data.tokenIn != wrappedNativeTokenAddress);
-
-        if (tokenOut == wrappedNativeTokenAddress) {
-            // hevm.deal(msg.sender)
-            deal(address(this), uint256(amountSpecified));
-            WETH(wrappedNativeTokenAddress).deposit{value: uint256(amountSpecified)}();
-            MockERC20(wrappedNativeTokenAddress).transfer(msg.sender, uint256(amountSpecified));
-        } else {
-            deal({token: tokenOut, to: msg.sender, give: uint256(amountSpecified)});
-            // hevm.startPrank(address(0xF62849F9A0B5Bf2913b396098F7c7019b51A820a));
-            // ERC20hTokenRoot(tokenOut).mint(msg.sender, uint256(-amountSpecified), 2040);
-            // hevm.stopPrank();
-        }
-        console2.log(MockERC20(tokenOut).balanceOf(msg.sender));
-        console2.log(amountSpecified);
-
-        if (zeroForOne) {
-            amount1 = amountSpecified;
-        } else {
-            amount0 = amountSpecified;
-        }
-
-        IUniswapV3SwapCallback(msg.sender).uniswapV3SwapCallback(amount0, amount1, data);
-    }
-
-    function slot0()
-        external
-        view
-        returns (
-            uint160 sqrtPriceX96,
-            int24 tick,
-            uint16 observationIndex,
-            uint16 observationCardinality,
-            uint16 observationCardinalityNext,
-            uint8 feeProtocol,
-            bool unlocked
-        )
-    {
-        return (100, 0, 0, 0, 0, 0, true);
-    }
-}
-
 contract ArbitrumBranchPortTest is DSTestPlus {
+    fallback() external payable {}
+
+    uint32 nonce;
+
     MockERC20 avaxNativeAssethToken;
 
     MockERC20 avaxNativeToken;
@@ -356,9 +290,9 @@ contract ArbitrumBranchPortTest is DSTestPlus {
 
         //Add new chains
 
-        avaxGlobalToken = 0x45C92C2Cd0dF7B2d705EF12CfF77Cb0Bc557Ed22;
+        avaxGlobalToken = 0x1FD5ad9D40e1154a91F1132C245f0480cf3deC89;
 
-        ftmGlobalToken = 0x9914ff9347266f1949C557B717936436402fc636;
+        ftmGlobalToken = 0x1418E54090a03eA9da72C00B0B4f707181DcA8dd;
 
         hevm.mockCall(
             nonFungiblePositionManagerAddress,
@@ -391,8 +325,8 @@ contract ArbitrumBranchPortTest is DSTestPlus {
             nonFungiblePositionManagerAddress,
             abi.encodeWithSignature(
                 "createAndInitializePoolIfNecessary(address,address,uint24,uint160)",
-                wrappedNativeToken,
                 ftmGlobalToken,
+                wrappedNativeToken,
                 uint24(100),
                 uint160(200)
             ),
@@ -414,6 +348,7 @@ contract ArbitrumBranchPortTest is DSTestPlus {
         );
 
         //Ensure there are gas tokens from each chain in the system.
+
         hevm.startPrank(address(rootPort));
         ERC20hTokenRoot(avaxGlobalToken).mint(address(rootPort), 1 ether, avaxChainId);
         ERC20hTokenRoot(ftmGlobalToken).mint(address(rootPort), 1 ether, ftmChainId);
@@ -610,9 +545,6 @@ contract ArbitrumBranchPortTest is DSTestPlus {
     address public newArbitrumAssetGlobalAddress;
 
     function testAddLocalTokenArbitrum() public {
-        //Set up
-        // testSetLocalToken();
-
         //Get some gas.
         hevm.deal(address(this), 1 ether);
 
@@ -644,12 +576,36 @@ contract ArbitrumBranchPortTest is DSTestPlus {
 
         console2.log("Balance Before: ", balanceBefore);
         console2.log("Balance After: ", address(coreBridgeAgent).balance);
-
-        // require (balanceBefore == MockERC20(wrappedNativeToken).balanceOf(address(coreBridgeAgent)), "Balance should not change");
     }
 
-    // ftmLocalWrappedNativeTokenAddress
-    // ftmUnderlyingWrappedNativeTokenAddress
+    // function testAddLocalTokenArbitrumFailedIsGlobal() public {
+    //     //Get some gas.
+    //     hevm.deal(address(this), 1 ether);
+
+    //     //Add new localToken
+    //     arbitrumCoreRouter.addLocalToken(ftmGlobalToken);
+
+    //     newArbitrumAssetGlobalAddress =
+    //         RootPort(rootPort).getLocalTokenFromUnder(address(arbitrumNativeToken), rootChainId);
+
+    //     console2.log("New: ", newArbitrumAssetGlobalAddress);
+
+    //     require(
+    //         RootPort(rootPort).getGlobalTokenFromLocal(address(newArbitrumAssetGlobalAddress), rootChainId)
+    //             == address(newArbitrumAssetGlobalAddress),
+    //         "Token should be added"
+    //     );
+    //     require(
+    //         RootPort(rootPort).getLocalTokenFromGlobal(newArbitrumAssetGlobalAddress, rootChainId)
+    //             == address(newArbitrumAssetGlobalAddress),
+    //         "Token should be added"
+    //     );
+    //     require(
+    //         RootPort(rootPort).getUnderlyingTokenFromLocal(address(newArbitrumAssetGlobalAddress), rootChainId)
+    //             == address(arbitrumNativeToken),
+    //         "Token should be added"
+    //     );
+    // }
 
     function testCallOutWithDeposit() public {
         //Set up
@@ -809,6 +765,9 @@ contract ArbitrumBranchPortTest is DSTestPlus {
             "newArbitrumAssetGlobalAddress Balance:", MockERC20(newArbitrumAssetGlobalAddress).balanceOf(_user)
         );
 
+        //Mock token decimals call
+        hevm.mockCall(address(arbitrumNativeToken), abi.encodeWithSignature("decimals()"), abi.encode(18));
+
         //Call Deposit function
         hevm.startPrank(_user);
         arbitrumNativeToken.approve(address(localPortAddress), _deposit);
@@ -829,7 +788,7 @@ contract ArbitrumBranchPortTest is DSTestPlus {
             0.5 ether
         );
 
-        console2.log("ROUND UP");
+        console2.log("Values");
         console2.log(_amount);
         console2.log(_deposit);
         console2.log(_amountOut);
@@ -846,7 +805,7 @@ contract ArbitrumBranchPortTest is DSTestPlus {
         );
 
         console2.log("RootPort Balance:", MockERC20(newArbitrumAssetGlobalAddress).balanceOf(address(rootPort)));
-        // console2.log("Expected:", 0); SINCE ORIGIN == DESTINATION == ARBITRUM
+        console2.log("Expected:0");
         require(MockERC20(newArbitrumAssetGlobalAddress).balanceOf(address(rootPort)) == 0, "RootPort tokens");
 
         console2.log("User Balance:", MockERC20(arbitrumNativeToken).balanceOf(_user));
@@ -861,7 +820,6 @@ contract ArbitrumBranchPortTest is DSTestPlus {
 
         console2.log("User Account Balance:", MockERC20(newArbitrumAssetGlobalAddress).balanceOf(userAccount));
         console2.log("Expected:", _amount - _amountOut);
-        console2.log("Expected:", _amount);
         require(
             MockERC20(newArbitrumAssetGlobalAddress).balanceOf(userAccount) == _amount - _amountOut,
             "User Account tokens"
@@ -990,7 +948,7 @@ contract ArbitrumBranchPortTest is DSTestPlus {
         );
 
         //Encode Data
-        bytes memory inputCalldata = abi.encodePacked(bytes1(0x00), _nonce, _data, _rootExecGas, _remoteExecGas);
+        bytes memory inputCalldata = abi.encodePacked(bytes1(0x00), nonce++, _data, _rootExecGas, _remoteExecGas);
 
         hevm.mockCall(
             address(localAnyCongfig),
@@ -1027,7 +985,7 @@ contract ArbitrumBranchPortTest is DSTestPlus {
         );
 
         //Encode Data
-        bytes memory inputCalldata = abi.encodePacked(bytes1(0x01), _nonce, _data, _rootExecGas, _remoteExecGas);
+        bytes memory inputCalldata = abi.encodePacked(bytes1(0x01), nonce++, _data, _rootExecGas, _remoteExecGas);
 
         console2.log("HERES SUPERE IMPORTANTNDSTRE AJLAFJSFJKAJKS");
         console2.log(_remoteExecGas);
@@ -1072,7 +1030,7 @@ contract ArbitrumBranchPortTest is DSTestPlus {
         );
 
         //Encode Data
-        bytes memory inputCalldata = abi.encodePacked(bytes1(0x04), _user, _nonce, _data, _rootExecGas, _remoteExecGas);
+        bytes memory inputCalldata = abi.encodePacked(bytes1(0x04), _user, nonce++, _data, _rootExecGas, _remoteExecGas);
 
         hevm.mockCall(
             address(localAnyCongfig),
@@ -1285,84 +1243,79 @@ contract ArbitrumBranchPortTest is DSTestPlus {
         );
     }
 
-    // function makeTestCallWithDeposit(
-    //     address _user,
-    //     address _hToken,
-    //     address _token,
-    //     uint256 _amount,
-    //     uint256 _deposit,
-    //     uint24 _toChain,
-    //     uint128 _rootExecGas
-    // ) private {
-    //     //Prepare deposit info
-    //     DepositInput memory depositInput =
-    //         DepositInput({hToken: _hToken, token: _token, amount: _amount, deposit: _deposit, toChain: _toChain});
-
-    //     // Prank into user account
-    //     hevm.startPrank(_user);
-
-    //     //Get some gas.
-    //     hevm.deal(_user, 1 ether);
-
-    //     // Approve spend by router
-    //     ERC20hTokenBranch(_hToken).approve(localPortAddress, _amount - _deposit);
-    //     MockERC20(_token).approve(localPortAddress, _deposit);
-
-    //     //Call Deposit function
-    //     IBranchRouter(bRouter).callOutAndBridge{value: 1 ether}(bytes("testdata"), depositInput, _rootExecGas);
-
-    //     // Prank out of user account
-    //     hevm.stopPrank();
-
-    //     // Test If Deposit was successful
-    //     testCreateDepositSingle(uint32(1), _user, address(_hToken), address(_token), _amount, _deposit, 1 ether);
-    // }
-
-    // function makeTestCallWithDepositMultiple(
-    //     address _user,
-    //     address[] memory _hTokens,
-    //     address[] memory _tokens,
-    //     uint256[] memory _amounts,
-    //     uint256[] memory _deposits,
-    //     uint24 _toChain,
-    //     uint128 _rootExecGas
-    // ) private {
-    //     //Prepare deposit info
-    //     DepositMultipleInput memory depositInput = DepositMultipleInput({
-    //         hTokens: _hTokens,
-    //         tokens: _tokens,
-    //         amounts: _amounts,
-    //         deposits: _deposits,
-    //         toChain: _toChain
-    //     });
-
-    //     // Prank into user account
-    //     hevm.startPrank(_user);
-
-    //     //Get some gas.
-    //     hevm.deal(_user, 1 ether);
-
-    //     console2.log(_hTokens[0], _deposits[0]);
-
-    //     // Approve spend by router
-    //     MockERC20(_hTokens[0]).approve(localPortAddress, _amounts[0] - _deposits[0]);
-    //     MockERC20(_tokens[0]).approve(localPortAddress, _deposits[0]);
-    //     MockERC20(_hTokens[1]).approve(localPortAddress, _amounts[1] - _deposits[1]);
-    //     MockERC20(_tokens[1]).approve(localPortAddress, _deposits[1]);
-
-    //     //Call Deposit function
-    //     IBranchRouter(bRouter).callOutAndBridgeMultiple{value: 1 ether}(bytes("test"), depositInput, _rootExecGas);
-
-    //     // Prank out of user account
-    //     hevm.stopPrank();
-
-    //     // Test If Deposit was successful
-    //     testCreateDeposit(uint32(1), _user, _hTokens, _tokens, _amounts, _deposits);
-    // }
-
     function compareDynamicArrays(bytes memory a, bytes memory b) public pure returns (bool aEqualsB) {
         assembly {
             aEqualsB := eq(a, b)
         }
+    }
+}
+
+contract MockPool is Test {
+    struct SwapCallbackData {
+        address tokenIn;
+    }
+
+    address wrappedNativeTokenAddress;
+    address globalGasToken;
+
+    constructor(address _wrappedNativeTokenAddress, address _globalGasToken) {
+        wrappedNativeTokenAddress = _wrappedNativeTokenAddress;
+        globalGasToken = _globalGasToken;
+    }
+
+    function swap(
+        address recipient,
+        bool zeroForOne,
+        int256 amountSpecified,
+        uint160 sqrtPriceLimitX96,
+        bytes calldata data
+    ) external returns (int256 amount0, int256 amount1) {
+        SwapCallbackData memory _data = abi.decode(data, (SwapCallbackData));
+
+        address tokenOut = (_data.tokenIn == wrappedNativeTokenAddress ? globalGasToken : wrappedNativeTokenAddress);
+
+        console2.log("swapp");
+        console2.log("tokenIn", _data.tokenIn);
+        console2.log("tokenOut", tokenOut);
+        console2.log("isWrappedGasToken");
+        console2.log(_data.tokenIn != wrappedNativeTokenAddress);
+
+        if (tokenOut == wrappedNativeTokenAddress) {
+            // hevm.deal(msg.sender)
+            deal(address(this), uint256(amountSpecified));
+            WETH(wrappedNativeTokenAddress).deposit{value: uint256(amountSpecified)}();
+            MockERC20(wrappedNativeTokenAddress).transfer(msg.sender, uint256(amountSpecified));
+        } else {
+            deal({token: tokenOut, to: msg.sender, give: uint256(amountSpecified)});
+            // hevm.startPrank(address(0xF62849F9A0B5Bf2913b396098F7c7019b51A820a));
+            // ERC20hTokenRoot(tokenOut).mint(msg.sender, uint256(-amountSpecified), 2040);
+            // hevm.stopPrank();
+        }
+        console2.log(MockERC20(tokenOut).balanceOf(msg.sender));
+        console2.log(amountSpecified);
+
+        if (zeroForOne) {
+            amount1 = amountSpecified;
+        } else {
+            amount0 = amountSpecified;
+        }
+
+        IUniswapV3SwapCallback(msg.sender).uniswapV3SwapCallback(amount0, amount1, data);
+    }
+
+    function slot0()
+        external
+        view
+        returns (
+            uint160 sqrtPriceX96,
+            int24 tick,
+            uint16 observationIndex,
+            uint16 observationCardinality,
+            uint16 observationCardinalityNext,
+            uint8 feeProtocol,
+            bool unlocked
+        )
+    {
+        return (100, 0, 0, 0, 0, 0, true);
     }
 }

@@ -35,20 +35,20 @@ contract ArbitrumBranchPort is BranchPort, IArbBranchPort {
     //////////////////////////////////////////////////////////////*/
 
     ///@inheritdoc IArbBranchPort
-    function depositToPort(address _depositor, address _recipient, address _underlyingAddress, uint256 _amount)
+    function depositToPort(address _depositor, address _recipient, address _underlyingAddress, uint256 _deposit)
         external
         requiresBridgeAgent
     {
         address globalToken = IRootPort(rootPortAddress).getLocalTokenFromUnder(_underlyingAddress, localChainId);
         if (globalToken == address(0)) revert UnknownUnderlyingToken();
 
-        _underlyingAddress.safeTransferFrom(_depositor, address(this), _amount);
+        _underlyingAddress.safeTransferFrom(_depositor, address(this), _deposit);
 
-        IRootPort(rootPortAddress).mintToLocalBranch(_recipient, globalToken, _amount);
+        IRootPort(rootPortAddress).mintToLocalBranch(_recipient, globalToken, _deposit);
     }
 
     ///@inheritdoc IArbBranchPort
-    function withdrawFromPort(address _depositor, address _recipient, address _globalAddress, uint256 _amount)
+    function withdrawFromPort(address _depositor, address _recipient, address _globalAddress, uint256 _deposit)
         external
         requiresBridgeAgent
     {
@@ -60,29 +60,20 @@ contract ArbitrumBranchPort is BranchPort, IArbBranchPort {
 
         if (underlyingAddress == address(0)) revert UnknownUnderlyingToken();
 
-        IRootPort(rootPortAddress).burnFromLocalBranch(_depositor, _globalAddress, _amount);
+        IRootPort(rootPortAddress).burnFromLocalBranch(_depositor, _globalAddress, _deposit);
 
-        _withdraw(_recipient, underlyingAddress, _amount);
+        underlyingAddress.safeTransfer(_recipient, _denormalizeDecimals(_deposit, ERC20(underlyingAddress).decimals()));
     }
 
     /// @inheritdoc IBranchPort
-    function withdraw(address _recipient, address _underlyingAddress, uint256 _amount)
+    function withdraw(address _recipient, address _underlyingAddress, uint256 _deposit)
         external
         override(IBranchPort, BranchPort)
         requiresBridgeAgent
     {
-        _withdraw(_recipient, _underlyingAddress, _amount);
-    }
-
-    /**
-     * @notice Internal function to withdraw underlying / native token amount into Port in exchange for Local hToken.
-     *   @param _recipient hToken receiver.
-     *   @param _underlyingAddress underlying / native token address.
-     *   @param _amount amount of tokens.
-     *
-     */
-    function _withdraw(address _recipient, address _underlyingAddress, uint256 _amount) internal override(BranchPort) {
-        _underlyingAddress.safeTransfer(_recipient, _amount);
+        _underlyingAddress.safeTransfer(
+            _recipient, _denormalizeDecimals(_deposit, ERC20(_underlyingAddress).decimals())
+        );
     }
 
     /// @inheritdoc IBranchPort
@@ -91,7 +82,7 @@ contract ArbitrumBranchPort is BranchPort, IArbBranchPort {
         override(IBranchPort, BranchPort)
         requiresBridgeAgent
     {
-        IRootPort(rootPortAddress).mintToLocalBranch(_recipient, _localAddress, _amount);
+        IRootPort(rootPortAddress).bridgeToLocalBranchFromRoot(_recipient, _localAddress, _amount);
     }
 
     /// @inheritdoc IBranchPort
@@ -101,7 +92,7 @@ contract ArbitrumBranchPort is BranchPort, IArbBranchPort {
         requiresBridgeAgent
     {
         for (uint256 i = 0; i < _localAddresses.length;) {
-            IRootPort(rootPortAddress).mintToLocalBranch(_recipient, _localAddresses[i], _amounts[i]);
+            IRootPort(rootPortAddress).bridgeToLocalBranchFromRoot(_recipient, _localAddresses[i], _amounts[i]);
 
             unchecked {
                 ++i;
@@ -118,7 +109,9 @@ contract ArbitrumBranchPort is BranchPort, IArbBranchPort {
         uint256 _deposit
     ) external override(IBranchPort, BranchPort) requiresBridgeAgent {
         if (_deposit > 0) {
-            _underlyingAddress.safeTransferFrom(_depositor, address(this), _deposit);
+            _underlyingAddress.safeTransferFrom(
+                _depositor, address(this), _denormalizeDecimals(_deposit, ERC20(_underlyingAddress).decimals())
+            );
         }
         if (_amount - _deposit > 0) {
             IRootPort(rootPortAddress).bridgeToRootFromLocalBranch(_depositor, _localAddress, _amount - _deposit);
@@ -135,7 +128,11 @@ contract ArbitrumBranchPort is BranchPort, IArbBranchPort {
     ) external override(IBranchPort, BranchPort) requiresBridgeAgent {
         for (uint256 i = 0; i < _localAddresses.length;) {
             if (_deposits[i] > 0) {
-                _underlyingAddresses[i].safeTransferFrom(_depositor, address(this), _deposits[i]);
+                _underlyingAddresses[i].safeTransferFrom(
+                    _depositor,
+                    address(this),
+                    _denormalizeDecimals(_deposits[i], ERC20(_underlyingAddresses[i]).decimals())
+                );
             }
             if (_amounts[i] - _deposits[i] > 0) {
                 IRootPort(rootPortAddress).bridgeToRootFromLocalBranch(

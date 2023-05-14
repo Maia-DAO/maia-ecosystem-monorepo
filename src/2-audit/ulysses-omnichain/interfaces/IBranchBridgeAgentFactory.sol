@@ -13,7 +13,7 @@ import {IBranchPort as IPort} from "../interfaces/IBranchPort.sol";
 
 import {CoreBranchRouter} from "../CoreBranchRouter.sol";
 
-import {BranchBridgeAgent} from "../BranchBridgeAgent.sol";
+import {BranchBridgeAgent, DeployBranchBridgeAgent} from "../BranchBridgeAgent.sol";
 
 /**
  * @title IBridgeAgentFactory.

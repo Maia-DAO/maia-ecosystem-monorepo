@@ -24,10 +24,10 @@ contract RootPort is Ownable, IRootPort {
     /// @notice The address of local branch port responsible for handling local transactions.
     address public localBranchPortAddress;
 
-    /// @notice The address of the core router in charge of adding new tokens to the system.
+    /// @notice The address of the core root router in charge of adding new tokens.
     address public coreRootRouterAddress;
 
-    /// @notice The address of the core router in charge of adding new tokens to the system.
+    /// @notice The address of the core bridge agent in charge of adding new chains.
     address public coreRootBridgeAgentAddress;
 
     /*///////////////////////////////////////////////////////////////
@@ -38,12 +38,15 @@ contract RootPort is Ownable, IRootPort {
     mapping(address => VirtualAccount) public getUserAccount;
 
     /// @notice Holds the mapping from Virtual account to router address => bool.
-    /// @notice Stores whether a router is approved to spend a virtual account.
+    /// @notice Stores whether a router is approved to spend from a virtual account.
     mapping(VirtualAccount => mapping(address => bool)) public isRouterApproved;
 
     /*///////////////////////////////////////////////////////////////
                         BRIDGE AGENTS
     //////////////////////////////////////////////////////////////*/
+
+    /// @notice Mapping from chainId to boolean. True if chain is active.
+    mapping(uint256 => bool) public isChainId;
 
     /// @notice Mapping from address to isBridgeAgent (bool).
     mapping(address => bool) public isBridgeAgent;
@@ -61,13 +64,13 @@ contract RootPort is Ownable, IRootPort {
                     BRIDGE AGENT FACTORIES
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Mapping from Underlying Address to isUnderlying (bool).
+    /// @notice Mapping from bridgeAgentFactory to boolean. True if bridgeAgentFactory is active.
     mapping(address => bool) public isBridgeAgentFactory;
 
-    /// @notice Bridge Agents deployed in root chain.
+    /// @notice Bridge Agent Factories deployed in root chain.
     address[] public bridgeAgentFactories;
 
-    /// @notice Number of Bridge Agents deployed in current chain.
+    /// @notice Number of Bridge Agent Factories deployed in current chain.
     uint256 public bridgeAgentFactoriesLenght;
 
     /*///////////////////////////////////////////////////////////////
@@ -109,6 +112,8 @@ contract RootPort is Ownable, IRootPort {
 
         localChainId = _localChainId;
         wrappedNativeTokenAddress = _wrappedNativeToken;
+
+        isChainId[_localChainId] = true;
 
         _initializeOwner(msg.sender);
         _setup = true;
@@ -264,6 +269,18 @@ contract RootPort is Ownable, IRootPort {
     /*///////////////////////////////////////////////////////////////
                         hTOKEN ACCOUNTING FUNCTIONS
     //////////////////////////////////////////////////////////////*/
+
+    /// @inheritdoc IRootPort
+    function bridgeToRoot(address _recipient, address _hToken, uint256 _amount, uint256 _deposit, uint24 _fromChainId)
+        external
+        requiresBridgeAgent
+    {
+        if (!isGlobalAddress[_hToken]) revert UnrecognizedToken();
+
+        if (_amount - _deposit > 0) _hToken.safeTransfer(_recipient, _amount - _deposit);
+        if (_deposit > 0) mint(_recipient, _hToken, _deposit, _fromChainId);
+    }
+
     /**
      * @notice Mints new hTokens to the recipient.
      * @param _to recipient of the newly minted hTokens.
@@ -283,17 +300,6 @@ contract RootPort is Ownable, IRootPort {
     }
 
     /// @inheritdoc IRootPort
-    function bridgeToRoot(address _recipient, address _hToken, uint256 _amount, uint256 _deposit, uint24 _fromChainId)
-        external
-        requiresBridgeAgent
-    {
-        if (!isGlobalAddress[_hToken]) revert UnrecognizedToken();
-
-        if (_amount - _deposit > 0) _hToken.safeTransfer(_recipient, _amount - _deposit);
-        if (_deposit > 0) mint(_recipient, _hToken, _deposit, _fromChainId);
-    }
-
-    /// @inheritdoc IRootPort
     function bridgeToRootFromLocalBranch(address _from, address _hToken, uint256 _amount)
         external
         requiresLocalBranchPort
@@ -303,22 +309,18 @@ contract RootPort is Ownable, IRootPort {
         _hToken.safeTransferFrom(_from, address(this), _amount);
     }
 
-    /// @inheritdoc IRootPort
-    function bridgeToLocalBranch(address _recipient, address _hToken, uint256 _amount, uint256 _deposit)
+    function bridgeToLocalBranchFromRoot(address _to, address _hToken, uint256 _amount)
         external
         requiresLocalBranchPort
     {
         if (!isGlobalAddress[_hToken]) revert UnrecognizedToken();
 
-        if (_amount - _deposit > 0) _hToken.safeTransfer(_recipient, _amount - _deposit);
-        if (_deposit > 0) mint(_recipient, _hToken, _amount - _deposit, localChainId);
+        _hToken.safeTransfer(_to, _amount);
     }
 
     /// @inheritdoc IRootPort
-    function mintToLocalBranch(address _recipient, address _hToken, uint256 _amount) external requiresLocalBranchPort {
-        if (!isGlobalAddress[_hToken]) revert UnrecognizedToken();
-
-        _hToken.safeTransfer(_recipient, _amount);
+    function mintToLocalBranch(address _to, address _hToken, uint256 _amount) external requiresLocalBranchPort {
+        mint(_to, _hToken, _amount, localChainId);
     }
 
     /// @inheritdoc IRootPort
@@ -409,8 +411,8 @@ contract RootPort is Ownable, IRootPort {
     function addNewChain(
         address _coreBranchBridgeAgentAddress,
         uint24 _chainId,
-        string memory _gasTokenName,
-        string memory _gasTokenSymbol,
+        string memory _wrappedGasTokenName,
+        string memory _wrappedGasTokenSymbol,
         uint24 _fee,
         uint24 _priceImpactPercentage,
         uint160 _sqrtPriceX96,
@@ -419,23 +421,21 @@ contract RootPort is Ownable, IRootPort {
         address _newUnderlyingBranchWrappedNativeTokenAddress,
         address _hTokenFactoryAddress
     ) external onlyOwner {
+        //Check if valid factory
         if (ICoreRootRouter(coreRootRouterAddress).hTokenFactoryAddress() != _hTokenFactoryAddress) {
             revert UnknowHTokenFactory();
         }
-        {
-            IBridgeAgent(ICoreRootRouter(coreRootRouterAddress).bridgeAgentAddress()).syncBranchBridgeAgent(
-                _coreBranchBridgeAgentAddress, _chainId
-            );
-            getWrappedNativeToken[_chainId] = _newUnderlyingBranchWrappedNativeTokenAddress;
-        }
 
-        address newGasPoolAddress;
+        IBridgeAgent(ICoreRootRouter(coreRootRouterAddress).bridgeAgentAddress()).syncBranchBridgeAgent(
+            _coreBranchBridgeAgentAddress, _chainId
+        );
 
-        bool zeroForOneOnInflow;
+        address newGlobalToken = address(
+            IERC20hTokenRootFactory(_hTokenFactoryAddress).createToken(_wrappedGasTokenName, _wrappedGasTokenSymbol)
+        );
 
-        address newGlobalToken =
-            address(IERC20hTokenRootFactory(_hTokenFactoryAddress).createToken(_gasTokenName, _gasTokenSymbol));
-
+        getWrappedNativeToken[_chainId] = _newUnderlyingBranchWrappedNativeTokenAddress;
+        isChainId[_chainId] = true;
         isGlobalAddress[newGlobalToken] = true;
         getGlobalTokenFromLocal[_newLocalBranchWrappedNativeTokenAddress][_chainId] = newGlobalToken;
         getLocalTokenFromGlobal[newGlobalToken][_chainId] = _newLocalBranchWrappedNativeTokenAddress;
@@ -444,19 +444,24 @@ contract RootPort is Ownable, IRootPort {
         getUnderlyingTokenFromLocal[_newLocalBranchWrappedNativeTokenAddress][_chainId] =
             _newUnderlyingBranchWrappedNativeTokenAddress;
 
-        {
-            if (newGlobalToken < wrappedNativeTokenAddress) {
-                zeroForOneOnInflow = true;
-                newGasPoolAddress = INonfungiblePositionManager(_nonFungiblePositionManagerAddress)
-                    .createAndInitializePoolIfNecessary(newGlobalToken, wrappedNativeTokenAddress, _fee, _sqrtPriceX96);
-            } else {
-                zeroForOneOnInflow = false;
-                newGasPoolAddress = INonfungiblePositionManager(_nonFungiblePositionManagerAddress)
-                    .createAndInitializePoolIfNecessary(wrappedNativeTokenAddress, newGlobalToken, _fee, _sqrtPriceX96);
-            }
+        //Avoid stack too deep
+        uint24 chainId = _chainId;
+
+        address newGasPoolAddress;
+
+        bool zeroForOneOnInflow;
+
+        if (newGlobalToken < wrappedNativeTokenAddress) {
+            zeroForOneOnInflow = true;
+            newGasPoolAddress = INonfungiblePositionManager(_nonFungiblePositionManagerAddress)
+                .createAndInitializePoolIfNecessary(newGlobalToken, wrappedNativeTokenAddress, _fee, _sqrtPriceX96);
+        } else {
+            zeroForOneOnInflow = false;
+            newGasPoolAddress = INonfungiblePositionManager(_nonFungiblePositionManagerAddress)
+                .createAndInitializePoolIfNecessary(wrappedNativeTokenAddress, newGlobalToken, _fee, _sqrtPriceX96);
         }
 
-        getGasPoolInfo[_chainId] = GasPoolInfo({
+        getGasPoolInfo[chainId] = GasPoolInfo({
             zeroForOneOnInflow: zeroForOneOnInflow,
             priceImpactPercentage: _priceImpactPercentage,
             gasTokenGlobalAddress: newGlobalToken,
@@ -486,25 +491,25 @@ contract RootPort is Ownable, IRootPort {
                                 MODIFIERS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Modifier that verifies msg sender is the RootInterface Contract from Root Chain.
+    /// @notice Modifier that verifies msg sender is the BridgeAgentFactory Contract from Root Chain.
     modifier requiresBridgeAgentFactory() {
         if (!isBridgeAgentFactory[msg.sender]) revert UnrecognizedBridgeAgentFactory();
         _;
     }
 
-    /// @notice Modifier that verifies msg sender is the RootInterface Contract from Root Chain.
+    /// @notice Modifier that verifies msg sender is the BridgeAgent Contract from Root Chain.
     modifier requiresBridgeAgent() {
         if (!isBridgeAgent[msg.sender]) revert UnrecognizedBridgeAgent();
         _;
     }
 
-    /// @notice Modifier that verifies msg sender is the RootInterface Contract from Root Chain.
+    /// @notice Modifier that verifies msg sender is the CoreRootRouter Contract from Root Chain.
     modifier requiresCoreRootRouter() {
         if (!(msg.sender == coreRootRouterAddress)) revert UnrecognizedCoreRootRouter();
         _;
     }
 
-    /// @notice Modifier that verifies msg sender is the RootInterface Contract from Root Chain.
+    /// @notice Modifier that verifies msg sender is the LocalBranchPort Contract from Root Chain.
     modifier requiresLocalBranchPort() {
         if (!(msg.sender == localBranchPortAddress)) revert UnrecognizedLocalBranchPort();
         _;

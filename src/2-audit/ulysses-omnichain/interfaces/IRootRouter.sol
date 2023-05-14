@@ -58,10 +58,12 @@ interface IRootRouter {
      *   @param fromChainId chain where the request originated from.
      *
      */
-    function anyExecuteDepositSingle(bytes1 funcId, bytes memory encodedData, DepositParams memory dParams, uint24 fromChainId)
-        external
-        payable
-        returns (bool success, bytes memory result);
+    function anyExecuteDepositSingle(
+        bytes1 funcId,
+        bytes memory encodedData,
+        DepositParams memory dParams,
+        uint24 fromChainId
+    ) external payable returns (bool success, bytes memory result);
 
     /**
      *   @notice Function responsible of executing a crosschain request which contains cross-chain deposit information for multiple assets attached.
@@ -127,6 +129,12 @@ interface IRootRouter {
      * @param data calldata
      */
     function anyFallback(bytes calldata data) external returns (bool success, bytes memory result);
+
+    /*///////////////////////////////////////////////////////////////
+                             ERRORS
+    //////////////////////////////////////////////////////////////*/
+
+    error UnrecognizedBridgeAgentExecutor();
 
     /*///////////////////////////////////////////////////////////////
                              EVENTS

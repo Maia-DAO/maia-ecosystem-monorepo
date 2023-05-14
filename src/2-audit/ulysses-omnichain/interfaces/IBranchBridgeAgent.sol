@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import {Ownable} from "solady/auth/Ownable.sol";
 import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {WETH9} from "../interfaces/IWETH9.sol";
 
-import {AnycallFlags} from "../lib/AnycallFlags.sol";
 import {ERC20hTokenBranch as ERC20hToken} from "../token/ERC20hTokenBranch.sol";
 import {IBranchRouter as IRouter} from "../interfaces/IBranchRouter.sol";
 import {IBranchPort as IPort} from "../interfaces/IBranchPort.sol";
 
 import {IApp} from "./IApp.sol";
+import {AnycallFlags} from "../lib/AnycallFlags.sol";
 import {IAnycallProxy} from "./IAnycallProxy.sol";
 import {IAnycallConfig} from "./IAnycallConfig.sol";
 import {IAnycallExecutor} from "./IAnycallExecutor.sol";
@@ -24,7 +26,6 @@ struct UserFeeInfo {
 
 enum DepositStatus {
     Success,
-    Pending,
     Failed
 }
 
@@ -99,19 +100,31 @@ struct SettlementMultipleParams {
 }
 
 /**
- * @title ERC20 hToken Contract for deployment in Branch Chains of Hermes Omnichain Incentives System
+ * @title IBranchBridgeAgent
  * @author MaiaDAO
- * @dev Base Branch Interface for Anycall cross-chain messaging.
+ * @dev Base Branch Bridge Agent Interface for Native Asset Bridgeing + Anycall cross-chain messaging.
  *
  *   -----------------------------
  *   ACTION FLAG  | ACTION NAME
  *   -------------+---------------
- *   0x00         | execute message w/o asset deposit
- *   0x01         | execute message w/ single asset deposit
- *   0x02         | execute message w/ multiple asset deposit
+ *   0x00         | execute message w/o asset settlement
+ *   0x01         | execute message w/ single asset settlement
+ *   0x02         | execute message w/ multiple asset settlement
  *
  */
 interface IBranchBridgeAgent is IApp {
+    /**
+     * @notice External function to return the Branch Bridge Agent Executor Address.
+     */
+    function bridgeAgentExecutorAddress() external view returns (address);
+
+    /**
+     * @dev External function that returns a given deposit entry.
+     *     @param _depositNonce Identifier for user deposit.
+     *
+     */
+    function getDepositEntry(uint32 _depositNonce) external view returns (Deposit memory);
+
     /*///////////////////////////////////////////////////////////////
                         EXTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -120,7 +133,7 @@ interface IBranchBridgeAgent is IApp {
      * @notice Function to perform a call to the Root Omnichain Router without token deposit.
      *   @param params RLP enconded parameters to execute on the root chain.
      *   @param remoteExecutionGas gas allocated for remote branch execution.
-     *   @dev ACTION ID: 1 (Call without deposit)
+     *   @dev DEPOSIT ID: 1 (Call without deposit)
      *
      */
     function callOut(bytes calldata params, uint128 remoteExecutionGas) external payable;
@@ -130,7 +143,7 @@ interface IBranchBridgeAgent is IApp {
      *   @param params RLP enconded parameters to execute on the root chain.
      *   @param dParams additional token deposit parameters.
      *   @param remoteExecutionGas gas allocated for remote branch execution.
-     *   @dev ACTION ID: 2 (Call with single deposit)
+     *   @dev DEPOSIT ID: 2 (Call with single deposit)
      *
      */
     function callOutAndBridge(bytes calldata params, DepositInput memory dParams, uint128 remoteExecutionGas)
@@ -142,7 +155,7 @@ interface IBranchBridgeAgent is IApp {
      *   @param params RLP enconded parameters to execute on the root chain.
      *   @param dParams additional token deposit parameters.
      *   @param remoteExecutionGas gas allocated for remote branch execution.
-     *   @dev ACTION ID: 3 (Call with multiple deposit)
+     *   @dev DEPOSIT ID: 3 (Call with multiple deposit)
      *
      */
     function callOutAndBridgeMultiple(
@@ -155,7 +168,7 @@ interface IBranchBridgeAgent is IApp {
      * @notice Function to perform a call to the Root Omnichain Router without token deposit with msg.sender information.
      *   @param params RLP enconded parameters to execute on the root chain.
      *   @param remoteExecutionGas gas allocated for remote branch execution.
-     *   @dev ACTION ID: 4 (Call without deposit and verified sender)
+     *   @dev DEPOSIT ID: 4 (Call without deposit and verified sender)
      *
      */
     function callOutSigned(bytes calldata params, uint128 remoteExecutionGas) external payable;
@@ -165,7 +178,7 @@ interface IBranchBridgeAgent is IApp {
      *   @param params RLP enconded parameters to execute on the root chain.
      *   @param dParams additional token deposit parameters.
      *   @param remoteExecutionGas gas allocated for remote branch execution.
-     *   @dev ACTION ID: 5 (Call with single deposit and verified sender)
+     *   @dev DEPOSIT ID: 5 (Call with single deposit and verified sender)
      *
      */
     function callOutSignedAndBridge(bytes calldata params, DepositInput memory dParams, uint128 remoteExecutionGas)
@@ -177,7 +190,7 @@ interface IBranchBridgeAgent is IApp {
      *   @param params RLP enconded parameters to execute on the root chain.
      *   @param dParams additional token deposit parameters.
      *   @param remoteExecutionGas gas allocated for remote branch execution.
-     *   @dev ACTION ID: 6 (Call with multiple deposit and verified sender)
+     *   @dev DEPOSIT ID: 6 (Call with multiple deposit and verified sender)
      *
      */
     function callOutSignedAndBridgeMultiple(
@@ -187,12 +200,37 @@ interface IBranchBridgeAgent is IApp {
     ) external payable;
 
     /**
+     * @notice Function to perform a call to the Root Omnichain Environment retrying a failed deposit that hasn't been executed yet.
+     *     @param _isSigned Flag to indicate if the deposit was signed.
+     *     @param _depositNonce Identifier for user deposit.
+     *     @param _params parameters to execute on the root chain.
+     *     @param _remoteExecutionGas gas allocated for remote branch execution.
+     *     @param _toChain Destination chain for interaction.
+     */
+    function retryDeposit(
+        bool _isSigned,
+        uint32 _depositNonce,
+        bytes calldata _params,
+        uint128 _remoteExecutionGas,
+        uint24 _toChain
+    ) external payable;
+
+    /**
      * @notice External function to retry a failed Settlement entry on the root chain.
      *     @param _settlementNonce Identifier for user settlement.
-     *     @dev ACTION ID: 10
+     *     @param _gasToBoostSettlement Amount of gas to boost settlement.
+     *     @dev DEPOSIT ID: 7
      *
      */
-    function retrySettlement(uint32 _settlementNonce) external payable;
+    function retrySettlement(uint32 _settlementNonce, uint128 _gasToBoostSettlement) external payable;
+
+    /**
+     * @notice External function to request tokens back to branch chain after a failed omnichain environment interaction.
+     *     @param _depositNonce Identifier for user deposit to retrieve.
+     *     @dev DEPOSIT ID: 8
+     *
+     */
+    function retrieveDeposit(uint32 _depositNonce) external payable;
 
     /**
      * @notice External function to retry a failed Deposit entry on this branch chain.
@@ -201,24 +239,18 @@ interface IBranchBridgeAgent is IApp {
      */
     function redeemDeposit(uint32 _depositNonce) external;
 
-    /**
-     * @dev External function that returns a given deposit entry.
-     *     @param _depositNonce Identifier for user deposit.
-     *
-     */
-    function getDepositEntry(uint32 _depositNonce) external view returns (Deposit memory);
-
     /*///////////////////////////////////////////////////////////////
                         BRANCH ROUTER FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Internal function performs call to AnycallProxy Contract for cross-chain messaging. 0x00 flag allows for identifying system emitted request/responses.
+     * @notice Internal function performs call to AnycallProxy Contract for cross-chain messaging.
      *   @param params calldata for omnichain execution.
      *   @param depositor address of user depositing assets.
      *   @param gasToBridgeOut gas allocated for the cross-chain call.
      *   @param remoteExecutionGas gas allocated for omnichain execution.
-     *   @dev ACTION ID: 0 (System Call / Response)
+     *   @dev DEPOSIT ID: 0 (System Call / Response)
+     *   @dev 0x00 flag allows for identifying system emitted request/responses.
      *
      */
     function performSystemCallOut(
@@ -229,13 +261,13 @@ interface IBranchBridgeAgent is IApp {
     ) external payable;
 
     /**
-     * @notice Internal function performs call to AnycallProxy Contract for cross-chain messaging. 0x00 flag allows for identifying system emitted request/responses.
+     * @notice Internal function performs call to AnycallProxy Contract for cross-chain messaging.
      *   @param depositor address of user depositing assets.
      *   @param params calldata for omnichain execution.
      *   @param depositor address of user depositing assets.
      *   @param gasToBridgeOut gas allocated for the cross-chain call.
      *   @param remoteExecutionGas gas allocated for omnichain execution.
-     *   @dev ACTION ID: 1 (Call without Deposit)
+     *   @dev DEPOSIT ID: 1 (Call without Deposit)
      *
      */
     function performCallOut(address depositor, bytes memory params, uint128 gasToBridgeOut, uint128 remoteExecutionGas)
@@ -249,7 +281,7 @@ interface IBranchBridgeAgent is IApp {
      *   @param dParams additional token deposit parameters.
      *   @param gasToBridgeOut gas allocated for the cross-chain call.
      *   @param remoteExecutionGas gas allocated for omnichain execution.
-     *   @dev ACTION ID: 2 (Call with single asset Deposit)
+     *   @dev DEPOSIT ID: 2 (Call with single asset Deposit)
      *
      */
     function performCallOutAndBridge(
@@ -267,7 +299,7 @@ interface IBranchBridgeAgent is IApp {
      *   @param dParams additional token deposit parameters.
      *   @param gasToBridgeOut gas allocated for the cross-chain call.
      *   @param remoteExecutionGas gas allocated for omnichain execution.
-     *   @dev ACTION ID: 3 (Call with multiple deposit)
+     *   @dev DEPOSIT ID: 3 (Call with multiple deposit)
      *
      */
     function performCallOutAndBridgeMultiple(
@@ -279,30 +311,41 @@ interface IBranchBridgeAgent is IApp {
     ) external payable;
 
     /*///////////////////////////////////////////////////////////////
+                        ANYCALL FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Function to force revert when a remote action does not have enough gas or is being retried after having been previously executed.
+     */
+    function forceRevert() external;
+
+    /**
+     * @notice Function to deposit gas for use by the Branch Bridge Agent.
+     */
+    function depositGasAnycallConfig() external payable;
+
+    /*///////////////////////////////////////////////////////////////
                         EVENTS
     //////////////////////////////////////////////////////////////*/
 
     event LogCallin(bytes1 selector, bytes data, uint256 fromChainId);
-
     event LogCallout(bytes1 selector, bytes data, uint256, uint256 toChainId);
-
     event LogCalloutFail(bytes1 selector, bytes data, uint256 toChainId);
-
-    event RouterFallbackFailed(bytes data);
 
     /*///////////////////////////////////////////////////////////////
                                 ERRORS
     //////////////////////////////////////////////////////////////*/
 
+    error AnycallUnauthorizedCaller();
+    error AlreadyExecutedTransaction();
+
     error InvalidInput();
-
     error InvalidChain();
-
     error InsufficientGas();
 
+    error NotDepositOwner();
     error DepositRedeemUnavailable();
 
-    error AnycallUnauthorizedCaller();
-
-    error UnauthorizedCallerNotRouter();
+    error UnrecognizedCallerNotRouter();
+    error UnrecognizedBridgeAgentExecutor();
 }

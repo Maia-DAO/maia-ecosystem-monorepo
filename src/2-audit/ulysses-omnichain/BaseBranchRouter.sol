@@ -8,9 +8,13 @@ import {IBranchBridgeAgent as IBridgeAgent} from "./interfaces/IBranchBridgeAgen
  * @author MaiaDAO
  * @dev Base Branch Interface for Anycall cross-chain messaging.
  */
+
 contract BaseBranchRouter is IBranchRouter, Ownable {
     /// @notice Address for local Branch Bridge Agent who processes requests and ineracts with local port.
     address public localBridgeAgentAddress;
+
+    /// @notice Local Bridge Agent Executor Address.
+    address public bridgeAgentExecutorAddress;
 
     constructor() {
         _initializeOwner(msg.sender);
@@ -19,6 +23,7 @@ contract BaseBranchRouter is IBranchRouter, Ownable {
     function initialize(address _localBridgeAgentAddress) external onlyOwner {
         require(_localBridgeAgentAddress != address(0), "Bridge Agent address cannot be 0");
         localBridgeAgentAddress = _localBridgeAgentAddress;
+        bridgeAgentExecutorAddress = IBridgeAgent(localBridgeAgentAddress).bridgeAgentExecutorAddress();
         renounceOwnership();
     }
 
@@ -65,8 +70,8 @@ contract BaseBranchRouter is IBranchRouter, Ownable {
     }
 
     /// @inheritdoc IBranchRouter
-    function retrySettlement(uint32 _settlementNonce) external payable lock {
-        IBridgeAgent(localBridgeAgentAddress).retrySettlement{value: msg.value}(_settlementNonce);
+    function retrySettlement(uint32 _settlementNonce, uint128 _gasToBoostSettlement) external payable lock {
+        IBridgeAgent(localBridgeAgentAddress).retrySettlement{value: msg.value}(_settlementNonce, _gasToBoostSettlement);
     }
 
     /// @inheritdoc IBranchRouter
@@ -81,48 +86,40 @@ contract BaseBranchRouter is IBranchRouter, Ownable {
     function anyExecuteNoSettlement(bytes calldata)
         external
         virtual
-        requiresBridgeAgent
+        requiresAgentExecutor
         returns (bool success, bytes memory result)
     {
-        /// NO FUNCS
         /// Unrecognized Function Selector
-
         return (false, "unknown selector");
     }
 
     function anyExecuteSettlement(bytes calldata, SettlementParams memory)
         external
         virtual
-        requiresBridgeAgent
+        requiresAgentExecutor
         returns (bool success, bytes memory result)
     {
-        /// NO FUNCS
         /// Unrecognized Function Selector
-
         return (false, "unknown selector");
     }
 
     function anyExecuteSettlementMultiple(bytes calldata, SettlementMultipleParams memory)
         external
         virtual
-        requiresBridgeAgent
+        requiresAgentExecutor
         returns (bool success, bytes memory result)
     {
-        /// NO FUNCS
         /// Unrecognized Function Selector
-
         return (false, "unknown selector");
     }
 
     function anyFallback(bytes calldata)
         external
         virtual
-        requiresBridgeAgent
+        requiresAgentExecutor
         returns (bool success, bytes memory result)
     {
-        /// NO FUNCS
         /// Unrecognized Function Selector
-
         return (false, "unknown selector");
     }
 
@@ -130,9 +127,9 @@ contract BaseBranchRouter is IBranchRouter, Ownable {
                                 MODIFIERS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Modifier that verifies msg sender is this router's local Bridge Agent.
-    modifier requiresBridgeAgent() {
-        if (msg.sender != localBridgeAgentAddress) revert UnauthorizedCallerNotBridgeAgent();
+    /// @notice Modifier that verifies msg sender is an active bridgeAgent.
+    modifier requiresAgentExecutor() {
+        if (msg.sender != bridgeAgentExecutorAddress) revert UnrecognizedBridgeAgentExecutor();
         _;
     }
 

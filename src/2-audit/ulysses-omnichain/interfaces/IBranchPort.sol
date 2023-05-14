@@ -14,6 +14,10 @@ interface IBranchPort {
 
     function isBridgeAgent(address _bridgeAgent) external view returns (bool);
 
+    function isStrategyToken(address _token) external view returns (bool);
+
+    function isPortStrategy(address _strategy, address _token) external view returns (bool);
+
     function isBridgeAgentFactory(address _bridgeAgentFactory) external view returns (bool);
 
     /*///////////////////////////////////////////////////////////////

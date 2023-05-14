@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import {Ownable} from "solady/auth/Ownable.sol";
+
 import {IRootPort as IPort} from "../interfaces/IRootPort.sol";
 import {IRootRouter as IRouter} from "../interfaces/IRootRouter.sol";
 import {IBranchBridgeAgent} from "../interfaces/IBranchBridgeAgent.sol";
@@ -20,8 +22,6 @@ import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
-import {BytesLib} from "./BytesLib.sol";
-
 /**
  * Glossary:
  *  - ht = hToken
@@ -32,18 +32,18 @@ import {BytesLib} from "./BytesLib.sol";
  *  - b = bytes
  *  - n = number of assets
  *  ___________________________________________________________________________________________________________________________
- * |            Flag               |        Deposit Info        |             Token Info             |   DATA    |  Gas Info 	|
- * |           1 byte              |         4-25 bytes         |     3 + (105 or 128) * n bytes     |   ---	  |  32 bytes  	|
- * |                               |                            |          hT - t - A - D - C        |           |           	|
+ * |            Flag               |        Deposit Info        |             Token Info             |   DATA    |  Gas Info   |
+ * |           1 byte              |         4-25 bytes         |     3 + (105 or 128) * n bytes     |   ---	 |  32 bytes   |
+ * |                               |                            |          hT - t - A - D - C        |           |             |
  * |_______________________________|____________________________|____________________________________|___________|_____________|
- * | callOutSystem = 0x0   	    |                 4b(nonce)  |            -------------           |   ---	  |  dep + bOut |
- * | callOut = 0x1                	|                 4b(nonce)  |            -------------           |   ---	  |  dep + bOut |
- * | callOutSingle = 0x2           |                 4b(nonce)  |      20b + 20b + 32b + 32b + 3b    |   ---	  |  16b + 16b  |
- * | callOutMulti = 0x3            |         1b(n) + 4b(nonce)  |   	32b + 32b + 32b + 32b + 3b    |   ---	  |  16b + 16b  |
- * | callOutSigned = 0x4           |    20b(recip) + 4b(nonce)  |   	      -------------           |   ---     |  16b + 16b  |
- * | callOutSignedSingle = 0x5     |           20b + 4b(nonce)  |      20b + 20b + 32b + 32b + 3b 	  |   ---	  |  16b + 16b  |
- * | callOutSignedMultiple = 0x6   |   20b + 1b(n) + 4b(nonce)  |      32b + 32b + 32b + 32b + 3b 	  |   ---	  |  16b + 16b  |
- * |_______________________________|____________________________|___________________________________ |___________|_____________|
+ * | callOutSystem = 0x0   	       |                 4b(nonce)  |            -------------           |   ---	 |  dep + bOut |
+ * | callOut = 0x1                 |                 4b(nonce)  |            -------------           |   ---	 |  dep + bOut |
+ * | callOutSingle = 0x2           |                 4b(nonce)  |      20b + 20b + 32b + 32b + 3b    |   ---	 |  16b + 16b  |
+ * | callOutMulti = 0x3            |         1b(n) + 4b(nonce)  |   	32b + 32b + 32b + 32b + 3b   |   ---	 |  16b + 16b  |
+ * | callOutSigned = 0x4           |    20b(recip) + 4b(nonce)  |   	      -------------          |   ---     |  16b + 16b  |
+ * | callOutSignedSingle = 0x5     |           20b + 4b(nonce)  |      20b + 20b + 32b + 32b + 3b 	 |   ---	 |  16b + 16b  |
+ * | callOutSignedMultiple = 0x6   |   20b + 1b(n) + 4b(nonce)  |      32b + 32b + 32b + 32b + 3b 	 |   ---	 |  16b + 16b  |
+ * |_______________________________|____________________________|____________________________________|___________|_____________|
  */
 
 //Any data passed through by the caller via the IUniswapV3PoolActions#swap call
@@ -54,7 +54,6 @@ struct SwapCallbackData {
 struct UserFeeInfo {
     uint128 depositedGas; //Gas deposited by user
     uint128 gasToBridgeOut; //Gas to be sent to bridge
-    uint256 feesOwed; //Fees owed to user
 }
 
 struct GasPoolInfo {
@@ -66,13 +65,12 @@ struct GasPoolInfo {
 
 enum SettlementStatus {
     Success, //Settlement was successful
-    Pending, //Settlement is pending
     Failed //Settlement failed
 }
 
 struct Settlement {
     uint24 toChain; //Destination chain for interaction.
-    uint128 gasOwed; //Gas owed to user
+    uint128 gasToBridgeOut; //Gas owed to user
     address owner; //Owner of the settlement
     SettlementStatus status; //Status of the settlement
     address[] hTokens; //Input Local hTokens Addresses.
@@ -80,24 +78,6 @@ struct Settlement {
     uint256[] amounts; //Amount of Local hTokens deposited for interaction.
     uint256[] deposits; //Amount of native tokens deposited for interaction.
     bytes callData; //Call data for settlement
-}
-
-struct SettlementInput {
-    //Deposit Info
-    address hToken; //Input Local hTokens Address.
-    address token; //Input Native / underlying Token Address.
-    uint256 amount; //Amount of Local hTokens deposited for interaction.
-    uint256 deposit; //Amount of native tokens deposited for interaction.
-    uint24 toChain; //Destination chain for interaction.
-}
-
-struct SettlementMultipleInput {
-    //Deposit Info
-    address[] hTokens; //Input Local hTokens Address.
-    address[] tokens; //Input Native / underlying Token Address.
-    uint256[] amounts; //Amount of Local hTokens deposited for interaction.
-    uint256[] deposits; //Amount of native tokens deposited for interaction.
-    uint24 toChain; //Destination chain for interaction.
 }
 
 struct SettlementParams {
@@ -158,9 +138,15 @@ struct DepositMultipleParams {
  *
  */
 interface IRootBridgeAgent is IApp {
+    /*///////////////////////////////////////////////////////////////
+                            VIEW FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
     function initialGas() external view returns (uint256);
 
-    function userFeeInfo() external view returns (uint128, uint128, uint256);
+    function userFeeInfo() external view returns (uint128, uint128);
+
+    function bridgeAgentExecutorAddress() external view returns (address);
 
     function factoryAddress() external view returns (address);
 
@@ -169,20 +155,20 @@ interface IRootBridgeAgent is IApp {
     function isBranchBridgeAgentAllowed(uint256 _chainId) external view returns (bool);
 
     /*///////////////////////////////////////////////////////////////
-                        TOKEN BRIDGING FUNCTIONS
+                            REMOTE CALL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
     /**
      * @notice External function performs call to AnycallProxy Contract for cross-chain messaging.
-     * @param _recipient recipient address for any outstanding gas on the destination chain.
-     * @param _calldata Calldata for function call.
-     * @param _toChain Chain to bridge to.
-     * @dev Internal function performs call to AnycallProxy Contract for cross-chain messaging.
+     *   @param _recipient recipient address for any outstanding gas on the destination chain.
+     *   @param _calldata Calldata for function call.
+     *   @param _toChain Chain to bridge to.
+     *   @dev Internal function performs call to AnycallProxy Contract for cross-chain messaging.
      */
     function callOut(address _recipient, bytes memory _calldata, uint24 _toChain) external payable;
 
     /**
-     * @dev External function to move assets from root chain to branch omnichain envirsonment.
+     * @notice External function to move assets from root chain to branch omnichain envirsonment.
      *   @param _recipient recipient of bridged tokens.
      *   @param _data parameters for function call on branch chain.
      *   @param _globalAddress global token to be moved.
@@ -201,7 +187,7 @@ interface IRootBridgeAgent is IApp {
     ) external payable;
 
     /**
-     * @dev External function to move assets from branch chain to root omnichain environment.
+     * @notice External function to move assets from branch chain to root omnichain environment.
      *   @param _recipient recipient of bridged tokens.
      *   @param _data parameters for function call on branch chain.
      *   @param _globalAddresses global tokens to be moved.
@@ -221,67 +207,110 @@ interface IRootBridgeAgent is IApp {
     ) external payable;
 
     /*///////////////////////////////////////////////////////////////
+                        TOKEN MANAGEMENT FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Function to move assets from branch chain to root omnichain environment. Called in response to Bridge Agent Executor.
+     *   @param _dParams Cross-Chain Deposit of Multiple Tokens Params.
+     *   @param _fromChain chain to bridge from.
+     *
+     */
+    function bridgeIn(address _recipient, DepositParams memory _dParams, uint24 _fromChain) external;
+
+    /**
+     * @notice Function to move assets from branch chain to root omnichain environment. Called in response to Bridge Agent Executor.
+     *   @param _dParams Cross-Chain Deposit of Multiple Tokens Params.
+     *   @param _fromChain chain to bridge from.
+     *   @dev Since the input data is encodePacked we need to parse it:
+     *     1. First byte is the number of assets to be bridged in. Equals length of all arrays.
+     *     2. Next 4 bytes are the nonce of the deposit.
+     *     3. Last 32 bytes after the token related information are the chain to bridge to.
+     *     4. Token related information starts at index PARAMS_TKN_START is encoded as follows:
+     *         1. N * 32 bytes for the hToken address.
+     *         2. N * 32 bytes for the underlying token address.
+     *         3. N * 32 bytes for the amount of hTokens to be bridged in.
+     *         4. N * 32 bytes for the amount of underlying tokens to be bridged in.
+     *     5. Each of the 4 token related arrays are of length N and start at the following indexes:
+     *         1. PARAMS_TKN_START [hToken address has no offset from token information start].
+     *         2. PARAMS_TKN_START + (PARAMS_ADDRESS_SIZE * N)
+     *         3. PARAMS_TKN_START + (PARAMS_AMT_OFFSET * N)
+     *         4. PARAMS_TKN_START + (PARAMS_DEPOSIT_OFFSET * N)
+     *
+     */
+    function bridgeInMultiple(address _recipient, DepositMultipleParams memory _dParams, uint24 _fromChain) external;
+
+    /*///////////////////////////////////////////////////////////////
                         SETTLEMENT FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @dev Function that returns the current settlement nonce.
-     *     @return nonce bridge agent's current settlement nonce
+     * @notice Function that returns the current settlement nonce.
+     *   @return nonce bridge agent's current settlement nonce
      *
      */
     function settlementNonce() external view returns (uint32 nonce);
 
     /**
-     * @dev Function to retry a user's Settlement balance.
-     *     @param _settlementNonce Identifier for token settlement.
-     *     @param _remoteExecutionGas Identifier for token settlement.
+     * @notice Function that allows redemption of failed Settlement's global tokens.
+     *   @param _depositNonce Identifier for token deposit.
      *
      */
-    function clearSettlement(uint32 _settlementNonce, uint128 _remoteExecutionGas) external payable;
+    function redeemSettlement(uint32 _depositNonce) external;
 
     /**
-     * @dev External function that returns a given settlement entry.
-     *     @param _settlementNonce Identifier for token settlement.
+     * @notice Function to retry a user's Settlement balance.
+     *   @param _settlementNonce Identifier for token settlement.
+     *   @param _remoteExecutionGas Identifier for token settlement.
+     *
+     */
+    function retrySettlement(uint32 _settlementNonce, uint128 _remoteExecutionGas) external payable;
+
+    /**
+     * @notice External function that returns a given settlement entry.
+     *   @param _settlementNonce Identifier for token settlement.
      *
      */
     function getSettlementEntry(uint32 _settlementNonce) external view returns (Settlement memory);
 
     /**
-     * @dev External function that
-     *
+     * @notice Updates the address of the branch bridge agent
+     *   @param _newBranchBridgeAgent address of the new branch bridge agent
+     *   @param _branchChainId chainId of the branch chain
      */
     function syncBranchBridgeAgent(address _newBranchBridgeAgent, uint24 _branchChainId) external;
 
     /*///////////////////////////////////////////////////////////////
-                    GAS SWAP INTERNAL FUNCTIONS
+                            GAS SWAP FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
     /**
      * @notice Checks if a pool is eligible to call uniswapV3SwapCallback
-     * @param amount0 amount of token0 to swap
-     * @param amount1 amount of token1 to swap
-     * @param _data abi encoded data
+     *   @param amount0 amount of token0 to swap
+     *   @param amount1 amount of token1 to swap
+     *   @param _data abi encoded data
      */
     function uniswapV3SwapCallback(int256 amount0, int256 amount1, bytes calldata _data) external;
 
     /*///////////////////////////////////////////////////////////////
-                        ANYCALL FUNCTIONS
+                            ANYCALL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Function responsible of executing a crosschain request when one is received.
-     *   @param data data received from messaging layer.
-     *
-     *
+     * @notice Function to force revert when a remote action does not have enough gas or is being retried after having been previously executed.
      */
-    function anyExecute(bytes calldata data) external returns (bool success, bytes memory result);
+    function forceRevert() external;
 
     /**
-     * @notice Function to responsible of calling clearDeposit() if a cross-chain call fails/reverts.
-     *       @param data data from reverted func.
-     *
+     * @notice Function to deposit gas for use by the Branch Bridge Agent.
      */
-    function anyFallback(bytes calldata data) external returns (bool success, bytes memory result);
+    function depositGasAnycallConfig() external payable;
+
+    /**
+     * @notice Function to collect excess gas fees.
+     *   @dev only callable by the DAO.
+     */
+    function sweep() external;
 
     /*///////////////////////////////////////////////////////////////
                             ADMIN FUNCTIONS
@@ -289,7 +318,7 @@ interface IRootBridgeAgent is IApp {
 
     /**
      * @notice Adds a new branch bridge agent to a given branch chainId
-     * @param _branchChainId chainId of the branch chain
+     *   @param _branchChainId chainId of the branch chain
      */
     function approveBranchBridgeAgent(uint256 _branchChainId) external;
 
@@ -301,23 +330,27 @@ interface IRootBridgeAgent is IApp {
     event LogCallout(bytes1 selector, bytes data, uint256, uint24 toChainId);
     event LogCalloutFail(bytes1 selector, bytes data, uint24 toChainId);
 
-    event RouterFallbackFailed(bytes data);
-
     /*///////////////////////////////////////////////////////////////
                             ERRORS
     //////////////////////////////////////////////////////////////*/
 
+    error GasErrorOrRepeatedTx();
+
+    error NotDao();
     error AnycallUnauthorizedCaller();
-    error UnauthorizedCaller();
 
     error AlreadyAddedBridgeAgent();
-
+    error UnrecognizedExecutor();
     error UnrecognizedPort();
     error UnrecognizedBridgeAgentManager();
+    error UnrecognizedCallerNotRouter();
+
     error UnrecognizedUnderlyingAddress();
     error UnrecognizedLocalAddress();
     error UnrecognizedGlobalAddress();
     error UnrecognizedAddressInDestination();
+
+    error SettlementRedeemUnavailable();
 
     error InsufficientBalanceForSettlement();
     error InsufficientGasForFees();

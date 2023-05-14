@@ -40,6 +40,7 @@ contract ERC20hTokenBranchFactory is Ownable, IERC20hTokenBranchFactory {
             ERC20(_wrappedNativeTokenAddress).symbol(),
             localPortAddress
         );
+
         hTokens.push(newToken);
         hTokensLenght++;
 
@@ -51,9 +52,11 @@ contract ERC20hTokenBranchFactory is Ownable, IERC20hTokenBranchFactory {
     /*///////////////////////////////////////////////////////////////
                             hTOKEN FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-    /// @notice Function to create a new hToken.
-    /// @param _name Name of the Token.
-    /// @param _symbol Symbol of the Token.
+    /**
+     * @notice Function to create a new hToken.
+     * @param _name Name of the Token.
+     * @param _symbol Symbol of the Token.
+     */
     function createToken(string memory _name, string memory _symbol)
         external
         requiresCoreRouter
