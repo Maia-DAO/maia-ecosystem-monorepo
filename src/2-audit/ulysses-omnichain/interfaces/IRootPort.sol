@@ -169,10 +169,9 @@ interface IRootPort {
      * @notice Bridges tokens from the root port to the local branch.
      * @param _recipient recipient of bridged tokens.
      * @param _hToken address of the hToken to bridge.
-     * @param _amount amount of hTokens to bridge.
-     * @param _deposit amount of underlying tokens to deposit.
+     * @param _amount amount of hTokens to clear.
      */
-    function bridgeToLocalBranch(address _recipient, address _hToken, uint256 _amount, uint256 _deposit) external;
+    function bridgeToLocalBranch(address _recipient, address _hToken, uint256 _amount) external;
 
     /**
      * @notice Mints new tokens to the recipient address

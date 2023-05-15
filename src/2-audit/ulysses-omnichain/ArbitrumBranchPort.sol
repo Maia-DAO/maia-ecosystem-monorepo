@@ -91,7 +91,7 @@ contract ArbitrumBranchPort is BranchPort, IArbBranchPort {
         override(IBranchPort, BranchPort)
         requiresBridgeAgent
     {
-        IRootPort(rootPortAddress).mintToLocalBranch(_recipient, _localAddress, _amount);
+        IRootPort(rootPortAddress).bridgeToLocalBranch(_recipient, _localAddress, _amount);
     }
 
     /// @inheritdoc IBranchPort
@@ -101,7 +101,7 @@ contract ArbitrumBranchPort is BranchPort, IArbBranchPort {
         requiresBridgeAgent
     {
         for (uint256 i = 0; i < _localAddresses.length;) {
-            IRootPort(rootPortAddress).mintToLocalBranch(_recipient, _localAddresses[i], _amounts[i]);
+            IRootPort(rootPortAddress).bridgeToLocalBranch(_recipient, _localAddresses[i], _amounts[i]);
 
             unchecked {
                 ++i;

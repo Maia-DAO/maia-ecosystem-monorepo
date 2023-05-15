@@ -304,14 +304,13 @@ contract RootPort is Ownable, IRootPort {
     }
 
     /// @inheritdoc IRootPort
-    function bridgeToLocalBranch(address _recipient, address _hToken, uint256 _amount, uint256 _deposit)
+    function bridgeToLocalBranch(address _recipient, address _hToken, uint256 _amount)
         external
         requiresLocalBranchPort
     {
         if (!isGlobalAddress[_hToken]) revert UnrecognizedToken();
 
-        if (_amount - _deposit > 0) _hToken.safeTransfer(_recipient, _amount - _deposit);
-        if (_deposit > 0) mint(_recipient, _hToken, _amount - _deposit, localChainId);
+        _hToken.safeTransfer(_recipient, _amount);
     }
 
     /// @inheritdoc IRootPort
