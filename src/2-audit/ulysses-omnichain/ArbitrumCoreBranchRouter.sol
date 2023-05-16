@@ -109,6 +109,7 @@ contract ArbitrumCoreBranchRouter is CoreBranchRouter {
     function anyExecuteNoSettlement(bytes calldata _data)
         external
         override
+        requiresBridgeAgent
         returns (bool success, bytes memory result)
     {
         if (_data[0] == 0x02) {
