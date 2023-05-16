@@ -214,6 +214,10 @@ contract CoreRootRouter is IRootRouter, Ownable {
      *
      */
     function _setLocalToken(address _globalAddress, address _localAddress, uint24 _toChain) internal {
+        // Verify if token already added
+        if (IPort(rootPortAddress).isLocalToken(_localAddress, _toChain)) revert TokenAlreadyAdded();
+
+        // Set global token's new branch chain address
         IPort(rootPortAddress).setLocalAddress(_globalAddress, _localAddress, _toChain);
     }
 
