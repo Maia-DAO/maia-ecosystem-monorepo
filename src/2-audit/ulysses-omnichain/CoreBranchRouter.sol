@@ -52,7 +52,7 @@ contract CoreBranchRouter is BaseBranchRouter {
      */
     function addGlobalToken(
         address _globalAddress,
-        uint256 _toChain,
+        uint24 _toChain,
         uint128 _remoteExecutionGas,
         uint128 _rootExecutionGas
     ) external payable {
