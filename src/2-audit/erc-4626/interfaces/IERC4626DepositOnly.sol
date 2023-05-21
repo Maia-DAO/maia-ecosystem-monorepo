@@ -1,4 +1,4 @@
-/// SPX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 interface IERC4626DepositOnly {
@@ -27,6 +27,12 @@ interface IERC4626DepositOnly {
      * @param assets The amount of assets to deposit.
      */
     function convertToShares(uint256 assets) external view returns (uint256);
+
+    /**
+     * @notice  Calculates the amount of assets that would be received for a given amount of shares.
+     * @param shares The amount of shares to redeem.
+     */
+    function convertToAssets(uint256 shares) external view returns (uint256);
 
     /**
      * @notice Previews the amount of shares that would be received for a given amount of assets.

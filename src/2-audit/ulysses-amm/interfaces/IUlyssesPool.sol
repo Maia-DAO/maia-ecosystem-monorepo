@@ -219,4 +219,17 @@ interface IUlyssesPool {
 
     /// @notice Thrown when subtraction underflows
     error Underflow();
+
+    /*//////////////////////////////////////////////////////////////
+                                 EVENTS
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+        * @notice Emitted when a user swaps from this Ulysses LP's underlying to the destination Ulysses LP's underlying
+        * @param caller The caller of the swap
+        * @param poolId The ID of the destination Ulysses LP
+        * @param assets The amount of underlying deposited in this Ulysses LP
+        */
+    event Swap(address indexed caller, uint256 indexed poolId, uint256 assets);
+
 }

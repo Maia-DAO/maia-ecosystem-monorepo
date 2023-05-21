@@ -71,6 +71,13 @@ abstract contract ERC4626DepositOnly is ERC20, IERC4626DepositOnly {
         return supply == 0 ? assets : assets.mulDiv(supply, totalAssets());
     }
 
+    /// TODO: @inheritdoc IERC4626DepositOnly
+    function convertToAssets(uint256 shares) public view virtual returns (uint256) {
+        uint256 supply = totalSupply; // Saves an extra SLOAD if totalSupply is non-zero.
+
+        return supply == 0 ? shares : shares.mulDiv(totalAssets(), supply);
+    }
+
     /// @inheritdoc IERC4626DepositOnly
     function previewDeposit(uint256 assets) public view virtual returns (uint256) {
         return convertToShares(assets);

@@ -1136,6 +1136,8 @@ contract UlyssesPool is UlyssesERC4626, Ownable, IUlyssesPool {
             output := sub(assets, baseFee)
         }
 
+        emit Swap(msg.sender, poolId, assets);
+
         // Update bandwidths, swap assets to destination, and return output
         output = bandwidthStateList[index].destination.swapFromPool(ulyssesSwap(output), msg.sender);
     }
