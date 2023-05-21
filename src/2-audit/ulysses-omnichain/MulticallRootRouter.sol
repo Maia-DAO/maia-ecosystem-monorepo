@@ -169,8 +169,6 @@ contract MulticallRootRouter is IRootRouter, Ownable {
         external
         payable
         override
-        lock
-        requiresExecutor
         returns (bool, bytes memory)
     {
         revert();
