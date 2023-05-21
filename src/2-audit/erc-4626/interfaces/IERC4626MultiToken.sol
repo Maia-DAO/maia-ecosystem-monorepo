@@ -13,7 +13,7 @@ interface IERC4626MultiToken {
      * @param assetsAmounts The amount of assets to deposit.
      * @param receiver The address to receive the shares.
      */
-    function deposit(uint256[] memory assetsAmounts, address receiver) external returns (uint256 shares);
+    function deposit(uint256[] calldata assetsAmounts, address receiver) external returns (uint256 shares);
 
     /**
      * @notice Mint shares from the Vault.
@@ -28,7 +28,7 @@ interface IERC4626MultiToken {
      * @param receiver The address to receive the assets.
      * @param owner The address of the owner of the shares.
      */
-    function withdraw(uint256[] memory assetsAmounts, address receiver, address owner)
+    function withdraw(uint256[] calldata assetsAmounts, address receiver, address owner)
         external
         returns (uint256 shares);
 
@@ -45,7 +45,7 @@ interface IERC4626MultiToken {
      * @notice Calculates the amount of shares that would be received for a given amount of assets.
      *  @param assetsAmounts The amount of assets to deposit.
      */
-    function convertToShares(uint256[] memory assetsAmounts) external view returns (uint256 shares);
+    function convertToShares(uint256[] calldata assetsAmounts) external view returns (uint256 shares);
 
     /**
      * @notice Calculates the amount of assets that would be received for a given amount of shares.
@@ -57,7 +57,7 @@ interface IERC4626MultiToken {
      * @notice Previews the amount of shares that would be received for depositinga given amount of assets.
      *  @param assetsAmounts The amount of assets to deposit.
      */
-    function previewDeposit(uint256[] memory assetsAmounts) external view returns (uint256);
+    function previewDeposit(uint256[] calldata assetsAmounts) external view returns (uint256);
 
     /**
      * @notice Previews the amount of assets that would be received for minting a given amount of shares
@@ -69,7 +69,7 @@ interface IERC4626MultiToken {
      * @notice Previews the amount of shares that would be received for a given amount of assets.
      *  @param assetsAmounts The amount of assets to withdraw.
      */
-    function previewWithdraw(uint256[] memory assetsAmounts) external view returns (uint256 shares);
+    function previewWithdraw(uint256[] calldata assetsAmounts) external view returns (uint256 shares);
 
     /**
      * @notice Previews the amount of assets that would be received for redeeming a given amount of shares

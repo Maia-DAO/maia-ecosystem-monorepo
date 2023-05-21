@@ -46,7 +46,7 @@ interface IVirtualAccount {
      * @notice
      * @param callInput The call to make.
      */
-    function call(Call[] memory callInput) external returns (uint256 blockNumber, bytes[] memory);
+    function call(Call[] calldata callInput) external returns (uint256 blockNumber, bytes[] memory);
 
     /*///////////////////////////////////////////////////////////////
                                 ERRORS

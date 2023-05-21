@@ -35,10 +35,11 @@ contract VirtualAccount is IVirtualAccount {
     }
 
     /// @inheritdoc IVirtualAccount
-    function call(Call[] memory calls) external requiresApprovedCaller returns (uint256, bytes[] memory data) {
+    function call(Call[] calldata calls) external requiresApprovedCaller returns (uint256, bytes[] memory data) {
         for (uint256 i = 0; i < calls.length; i++) {
-            (bool success,) = calls[i].target.call(calls[i].callData);
+            (bool success, bytes memory returnData) = calls[i].target.call(calls[i].callData);
             if (!success) revert CallFailed();
+            data[i] = returnData;
         }
         return (block.number, data);
     }

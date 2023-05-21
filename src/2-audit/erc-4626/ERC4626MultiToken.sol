@@ -86,7 +86,7 @@ abstract contract ERC4626MultiToken is ERC20, ReentrancyGuard, IERC4626MultiToke
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IERC4626MultiToken
-    function deposit(uint256[] memory assetsAmounts, address receiver)
+    function deposit(uint256[] calldata assetsAmounts, address receiver)
         public
         virtual
         nonReentrant
@@ -125,7 +125,7 @@ abstract contract ERC4626MultiToken is ERC20, ReentrancyGuard, IERC4626MultiToke
     }
 
     /// @inheritdoc IERC4626MultiToken
-    function withdraw(uint256[] memory assetsAmounts, address receiver, address owner)
+    function withdraw(uint256[] calldata assetsAmounts, address receiver, address owner)
         public
         virtual
         nonReentrant
@@ -187,7 +187,7 @@ abstract contract ERC4626MultiToken is ERC20, ReentrancyGuard, IERC4626MultiToke
     function totalAssets() public view virtual returns (uint256);
 
     /// @inheritdoc IERC4626MultiToken
-    function convertToShares(uint256[] memory assetsAmounts) public view virtual returns (uint256 shares) {
+    function convertToShares(uint256[] calldata assetsAmounts) public view virtual returns (uint256 shares) {
         uint256 _totalWeights = totalWeights;
         uint256 length = assetsAmounts.length;
 
@@ -217,7 +217,7 @@ abstract contract ERC4626MultiToken is ERC20, ReentrancyGuard, IERC4626MultiToke
     }
 
     /// @inheritdoc IERC4626MultiToken
-    function previewDeposit(uint256[] memory assetsAmounts) public view virtual returns (uint256) {
+    function previewDeposit(uint256[] calldata assetsAmounts) public view virtual returns (uint256) {
         return convertToShares(assetsAmounts);
     }
 
@@ -235,7 +235,7 @@ abstract contract ERC4626MultiToken is ERC20, ReentrancyGuard, IERC4626MultiToke
     }
 
     /// @inheritdoc IERC4626MultiToken
-    function previewWithdraw(uint256[] memory assetsAmounts) public view virtual returns (uint256 shares) {
+    function previewWithdraw(uint256[] calldata assetsAmounts) public view virtual returns (uint256 shares) {
         uint256 _totalWeights = totalWeights;
         uint256 length = assetsAmounts.length;
 
