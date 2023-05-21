@@ -9,9 +9,9 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 import {ERC20hTokenRoot} from "../token/ERC20hTokenRoot.sol";
 
 /**
- * @title ERC20 hToken Contract for deployment in Root Chain of Hermes Omnichain Incentives System
+ * @title ERC20 hToken Contract for deployment of new hTokens in Root Chain of Hermes Omnichain Incentives System.
  * @author MaiaDAO
- * @dev
+ * @dev This contract is used to deploy new hTokens in the Root Chain of the Hermes Omnichain Incentives System.
  */
 interface IERC20hTokenRootFactory {
     /*///////////////////////////////////////////////////////////////

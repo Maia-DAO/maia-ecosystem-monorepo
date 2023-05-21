@@ -6,10 +6,11 @@ import {DeployRootBridgeAgentExecutor, RootBridgeAgentExecutor} from "./RootBrid
 
 library CheckParamsLib {
     /**
-     * @notice Function to check cross-chain params and verify deposits made on branch chain are valid. Local hToken must be recognized and address must match underlying if exists otherwise only local hToken is checked.
+     * @notice Function to check cross-chain deposit parameters and verify deposits made on branch chain are valid.
      * @param _localPortAddress Address of local Port.
      * @param _dParams Cross Chain swap parameters.
      * @param _fromChain Chain ID of the chain where the deposit was made.
+     * @dev Local hToken must be recognized and address must match underlying if exists otherwise only local hToken is checked.
      *
      */
     function checkParams(address _localPortAddress, DepositParams memory _dParams, uint24 _fromChain)
@@ -115,7 +116,7 @@ contract RootBridgeAgent is IRootBridgeAgent {
     /// @notice Address of DAO.
     address public immutable daoAddress;
 
-    /// @notice Local Root Router Address
+    /// @notice Local Core Root Router Address
     address public immutable localRouterAddress;
 
     /// @notice Address for Local Port Address where funds deposited from this chain are stored.
@@ -161,9 +162,8 @@ contract RootBridgeAgent is IRootBridgeAgent {
                         GAS MANAGEMENT STATE
     //////////////////////////////////////////////////////////////*/
 
-    uint256 internal constant MIN_FALLBACK_RESERVE = 150000;
-    uint256 internal constant MIN_EXECUTION_OVERHEAD = 250000;
-    uint256 internal constant MIN_FALLBACK_EXECUTION_OVERHEAD = 75000;
+    uint256 internal constant MIN_FALLBACK_RESERVE = 155_000; // 100_000 for anycall + 55_000 for fallback
+    uint256 internal constant MIN_EXECUTION_OVERHEAD = 255_000; // 2 * 100_000 for anycall + 30_000 Pre 1st Gas Checkpoint Execution + 25_000 Post last Gas Checkpoint Execution
 
     uint256 public initialGas;
     UserFeeInfo public userFeeInfo;
@@ -209,6 +209,7 @@ contract RootBridgeAgent is IRootBridgeAgent {
         bridgeAgentExecutorAddress = DeployRootBridgeAgentExecutor.deploy(address(this));
         localAnyCallExecutorAddress = _localAnyCallExecutorAddress;
         settlementNonce = 1;
+        accumulatedFees = 1; //Avoid paying 20k gas in first `payExecutionGas` making MIN_EXECUTION_OVERHEAD constant.
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -237,12 +238,16 @@ contract RootBridgeAgent is IRootBridgeAgent {
 
     /// @inheritdoc IRootBridgeAgent
     function redeemSettlement(uint32 _depositNonce) external lock {
+        //Get deposit owner.
+        address depositOwner = getSettlement[_depositNonce].owner;
+
         //Update Deposit
-        if (
-            getSettlement[_depositNonce].status != SettlementStatus.Failed
-                || getSettlement[_depositNonce].owner == address(0)
-        ) {
+        if (getSettlement[_depositNonce].status != SettlementStatus.Failed || depositOwner == address(0)) {
             revert SettlementRedeemUnavailable();
+        } else if (
+            msg.sender != depositOwner && msg.sender != address(IPort(localPortAddress).getUserAccount(depositOwner))
+        ) {
+            revert NotSettlementOwner();
         }
         _redeemSettlement(_depositNonce);
     }
@@ -263,6 +268,7 @@ contract RootBridgeAgent is IRootBridgeAgent {
 
     /// @inheritdoc IRootBridgeAgent
     function callOutAndBridge(
+        address _owner,
         address _recipient,
         bytes memory _data,
         address _globalAddress,
@@ -281,14 +287,34 @@ contract RootBridgeAgent is IRootBridgeAgent {
             revert InvalidInputParams();
         }
 
-        //Create Settlement Entry + Perform Call to destination Branch Chain.
-        _settleAndCall(
-            msg.sender, _recipient, _globalAddress, localAddress, underlyingAddress, _amount, _deposit, _toChain, _data
+        //Prepare data for call
+        bytes memory data = abi.encodePacked(
+            bytes1(0x01),
+            _recipient,
+            settlementNonce,
+            localAddress,
+            underlyingAddress,
+            _amount,
+            _deposit,
+            _data,
+            _manageGasOut(_toChain)
         );
+
+        //Update State to reflect bridgeOut
+        _updateStateOnBridgeOut(
+            msg.sender, _globalAddress, localAddress, underlyingAddress, _amount, _deposit, _toChain
+        );
+
+        //Create Settlement
+        _createSettlement(_owner, _recipient, localAddress, underlyingAddress, _amount, _deposit, data, _toChain);
+
+        //Perform Call to clear hToken balance on destination branch chain and perform call.
+        _performCall(data, _toChain);
     }
 
     /// @inheritdoc IRootBridgeAgent
     function callOutAndBridgeMultiple(
+        address _owner,
         address _recipient,
         bytes memory _data,
         address[] memory _globalAddresses,
@@ -329,7 +355,7 @@ contract RootBridgeAgent is IRootBridgeAgent {
         );
 
         //Create Settlement Balance
-        _createMultipleSettlement(_recipient, hTokens, tokens, _amounts, _deposits, data, _toChain);
+        _createMultipleSettlement(_owner, _recipient, hTokens, tokens, _amounts, _deposits, data, _toChain);
 
         //Perform Call to destination Branch Chain.
         _performCall(data, _toChain);
@@ -423,62 +449,14 @@ contract RootBridgeAgent is IRootBridgeAgent {
         }
     }
 
-    /**
-     * @notice Internal function to move one asset from root omnichain environment to branch chain and perform a call. hTokens are bridged out.
-     *   @param _depositor token depositor.
-     *   @param _recipient token recipient on destination chain (important for gas refunds).
-     *   @param _globalAddress Global / Root Environment hToken Address.
-     *   @param _localAddress Local Input hToken Address.
-     *   @param _underlyingAddress Native / Underlying Token Address.
-     *   @param _amount Amount of Local hTokens deposited for interaction.
-     *   @param _deposit Amount of native tokens deposited for interaction.
-     *   @param _toChain  Destination chain identificator.
-     *   @param _data data to be sent to cross-chain messaging layer for remote execution.
-     *
-     */
-    function _settleAndCall(
-        address _depositor,
-        address _recipient,
-        address _globalAddress,
-        address _localAddress,
-        address _underlyingAddress,
-        uint256 _amount,
-        uint256 _deposit,
-        uint24 _toChain,
-        bytes memory _data
-    ) internal {
-        //Prepare data for call
-        bytes memory data = abi.encodePacked(
-            bytes1(0x01),
-            _recipient,
-            settlementNonce,
-            _localAddress,
-            _underlyingAddress,
-            _amount,
-            _deposit,
-            _data,
-            _manageGasOut(_toChain)
-        );
-
-        //Update State to reflect bridgeOut
-        _updateStateOnBridgeOut(
-            _depositor, _globalAddress, _localAddress, _underlyingAddress, _amount, _deposit, _toChain
-        );
-
-        //Create Settlement
-        _createSettlement(_recipient, _localAddress, _underlyingAddress, _amount, _deposit, data, _toChain);
-
-        //Perform Call to clear hToken balance on destination branch chain and perform call.
-        _performCall(data, _toChain);
-    }
-
     /*///////////////////////////////////////////////////////////////
                 SETTLEMENT INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
     /**
      * @notice Function to store a Settlement instance. Settlement should be reopened if fallback occurs.
-     *    @param _user destination chain reciever address.
+     *    @param _owner settlement owner address.
+     *    @param _recipient destination chain reciever address.
      *    @param _hToken deposited global token address.
      *    @param _token deposited global token address.
      *    @param _amount amounts of total hTokens + Tokens output.
@@ -488,7 +466,8 @@ contract RootBridgeAgent is IRootBridgeAgent {
      *
      */
     function _createSettlement(
-        address _user,
+        address _owner,
+        address _recipient,
         address _hToken,
         address _token,
         uint256 _amount,
@@ -507,12 +486,13 @@ contract RootBridgeAgent is IRootBridgeAgent {
         deposits[0] = _deposit;
 
         //Call createSettlement
-        _createMultipleSettlement(_user, hTokens, tokens, amounts, deposits, _callData, _toChain);
+        _createMultipleSettlement(_owner, _recipient, hTokens, tokens, amounts, deposits, _callData, _toChain);
     }
 
     /**
-     * @notice Function to create a settlemment A.K.A. token output to user. Settlement should be reopened if fallback occurs.
-     *    @param _user destination chain reciever address.
+     * @notice Function to create a settlemment. Settlement should be reopened if fallback occurs.
+     *    @param _owner settlement owner address.
+     *    @param _recipient destination chain reciever address.
      *    @param _hTokens deposited global token addresses.
      *    @param _tokens deposited global token addresses.
      *    @param _amounts amounts of total hTokens + Tokens output.
@@ -523,7 +503,8 @@ contract RootBridgeAgent is IRootBridgeAgent {
      *
      */
     function _createMultipleSettlement(
-        address _user,
+        address _owner,
+        address _recipient,
         address[] memory _hTokens,
         address[] memory _tokens,
         uint256[] memory _amounts,
@@ -533,7 +514,8 @@ contract RootBridgeAgent is IRootBridgeAgent {
     ) internal {
         // Update State
         getSettlement[_getAndIncrementSettlementNonce()] = Settlement({
-            owner: _user,
+            owner: _owner,
+            recipient: _recipient,
             hTokens: _hTokens,
             tokens: _tokens,
             amounts: _amounts,
@@ -546,8 +528,8 @@ contract RootBridgeAgent is IRootBridgeAgent {
     }
 
     /**
-     * @notice Function to retry a user's Settlement balance topping up gas to bridge out of Root Bridge Agent's Omnichain Environment.
-     *     @param _settlementNonce Identifier for token settlement.
+     * @notice Function to retry a user's Settlement balance with a new amount of gas to bridge out of Root Bridge Agent's Omnichain Environment.
+     *    @param _settlementNonce Identifier for token settlement.
      *
      */
     function _retrySettlement(uint32 _settlementNonce) internal returns (bool) {
@@ -556,12 +538,6 @@ contract RootBridgeAgent is IRootBridgeAgent {
 
         //Check if Settlement hasn't been redeemed.
         if (settlement.owner == address(0)) return false;
-
-        //Update Settlement
-        getSettlement[_settlementNonce].status = SettlementStatus.Success;
-
-        //Update Gas To Bridge Out before caling `_manageGasOut` (topping up tx to retry settlement to branch chain)
-        userFeeInfo.gasToBridgeOut += settlement.gasToBridgeOut;
 
         //abi encodePacked
         bytes memory newGas = abi.encodePacked(_manageGasOut(settlement.toChain));
@@ -574,8 +550,16 @@ contract RootBridgeAgent is IRootBridgeAgent {
             }
         }
 
-        //Set Settlement
-        getSettlement[_settlementNonce].callData = settlement.callData;
+        Settlement storage settlementReference = getSettlement[_settlementNonce];
+
+        //Update Gas To Bridge Out
+        settlementReference.gasToBridgeOut = userFeeInfo.gasToBridgeOut;
+
+        //Set Settlement Calldata to send to Branch Chain
+        settlementReference.callData = settlement.callData;
+
+        //Update Settlement Staus
+        settlementReference.status = SettlementStatus.Success;
 
         //Retry call with additional gas
         _performCall(settlement.callData, settlement.toChain);
@@ -590,17 +574,16 @@ contract RootBridgeAgent is IRootBridgeAgent {
      *
      */
     function _redeemSettlement(uint32 _settlementNonce) internal {
+        // Get storage reference
+        Settlement storage settlement = getSettlement[_settlementNonce];
+
         //Clear Global hTokens To Recipient on Root Chain cancelling Settlement to Branch
-        for (uint256 i = 0; i < getSettlement[_settlementNonce].hTokens.length;) {
+        for (uint256 i = 0; i < settlement.hTokens.length;) {
             //Check if asset
-            if (getSettlement[_settlementNonce].hTokens[i] != address(0)) {
+            if (settlement.hTokens[i] != address(0)) {
                 //Move hTokens from Branch to Root + Mint Sufficient hTokens to match new port deposit
                 IPort(localPortAddress).bridgeToRoot(
-                    getSettlement[_settlementNonce].owner,
-                    getSettlement[_settlementNonce].hTokens[i],
-                    getSettlement[_settlementNonce].amounts[i],
-                    getSettlement[_settlementNonce].deposits[i],
-                    getSettlement[_settlementNonce].toChain
+                    msg.sender, settlement.hTokens[i], settlement.amounts[i], settlement.deposits[i], settlement.toChain
                 );
             }
 
@@ -609,7 +592,7 @@ contract RootBridgeAgent is IRootBridgeAgent {
             }
         }
 
-        //Update Settlement
+        // Delete Settlement
         delete getSettlement[_settlementNonce];
     }
 
@@ -771,14 +754,18 @@ contract RootBridgeAgent is IRootBridgeAgent {
 
     /// @notice Internal function performs call to AnycallProxy Contract for cross-chain messaging.
     function _performCall(bytes memory _calldata, uint256 _toChain) internal {
+        address callee = getBranchBridgeAgent[_toChain];
+
+        if (callee == address(0)) revert UnrecognizedBridgeAgent();
+
         if (_toChain != localChainId) {
             //Sends message to AnycallProxy
             IAnycallProxy(localAnyCallAddress).anyCall(
-                getBranchBridgeAgent[_toChain], _calldata, _toChain, AnycallFlags.FLAG_ALLOW_FALLBACK_DST, ""
+                callee, _calldata, _toChain, AnycallFlags.FLAG_ALLOW_FALLBACK_DST, ""
             );
         } else {
             //Execute locally
-            IBranchBridgeAgent(getBranchBridgeAgent[localChainId]).anyExecute(_calldata);
+            IBranchBridgeAgent(callee).anyExecute(_calldata);
         }
     }
 
@@ -823,8 +810,11 @@ contract RootBridgeAgent is IRootBridgeAgent {
      * @param _initialGas initial gas available for this transaction
      */
     function _payFallbackGas(uint32 _settlementNonce, uint256 _initialGas) internal virtual {
+        //Save gasleft
+        uint256 gasLeft = gasleft();
+
         //Get Branch Environment Execution Cost
-        uint256 minExecCost = tx.gasprice * (MIN_FALLBACK_EXECUTION_OVERHEAD + _initialGas - gasleft());
+        uint256 minExecCost = tx.gasprice * (MIN_FALLBACK_RESERVE + _initialGas - gasLeft);
 
         //Check if sufficient balance
         if (minExecCost > getSettlement[_settlementNonce].gasToBridgeOut) {
@@ -1223,12 +1213,11 @@ contract RootBridgeAgent is IRootBridgeAgent {
     function _forceRevert() internal {
         if (initialGas == 0) revert GasErrorOrRepeatedTx();
 
-        uint256 executionBudget =
-            IAnycallConfig(IAnycallProxy(localAnyCallAddress).config()).executionBudget(address(this));
+        IAnycallConfig anycallConfig = IAnycallConfig(IAnycallProxy(localAnyCallAddress).config());
+        uint256 executionBudget = anycallConfig.executionBudget(address(this));
+
         // Withdraw all execution gas budget from anycall for tx to revert with "no enough budget"
-        if (executionBudget > 0) {
-            try IAnycallConfig(IAnycallProxy(localAnyCallAddress).config()).withdraw(executionBudget) {} catch {}
-        }
+        if (executionBudget > 0) try anycallConfig.withdraw(executionBudget) {} catch {}
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -1249,8 +1238,8 @@ contract RootBridgeAgent is IRootBridgeAgent {
     /// @inheritdoc IRootBridgeAgent
     function sweep() external {
         if (msg.sender != daoAddress) revert NotDao();
-        uint256 _accumulatedFees = accumulatedFees;
-        accumulatedFees = 0;
+        uint256 _accumulatedFees = accumulatedFees - 1;
+        accumulatedFees = 1;
         SafeTransferLib.safeTransferETH(daoAddress, _accumulatedFees);
     }
 

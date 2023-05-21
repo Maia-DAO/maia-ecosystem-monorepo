@@ -18,7 +18,7 @@ import {BranchBridgeAgent, DeployBranchBridgeAgent} from "../BranchBridgeAgent.s
 /**
  * @title IBridgeAgentFactory.
  * @author MaiaDAO.
- * @notice This contract is used to interact with the Bridge Agent Factory which is in charge of deploying new Bridge Agents which are in charge of managing the deposit and withdrawal of assets between the branch chains and the omnichain environment.
+ * @notice This contract is used to interact with the Bridge Agent Factory responsible for deploying new Bridge Agents which are in charge of managing the deposit and withdrawal of assets between the branch chains and the omnichain environment.
  */
 interface IBranchBridgeAgentFactory {
     /*///////////////////////////////////////////////////////////////

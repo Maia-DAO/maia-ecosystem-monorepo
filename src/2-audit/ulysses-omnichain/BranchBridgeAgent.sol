@@ -119,11 +119,11 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
                         GAS MANAGEMENT STATE
     //////////////////////////////////////////////////////////////*/
 
-    uint128 public remoteCallDepositedGas;
+    uint256 public remoteCallDepositedGas;
 
-    uint256 internal constant MIN_FALLBACK_RESERVE = 150000;
-    uint256 internal constant MIN_EXECUTION_OVERHEAD = 250000;
-    uint256 internal constant MIN_FALLBACK_EXECUTION_OVERHEAD = 75000;
+    uint256 internal constant MIN_FALLBACK_RESERVE = 185_000; // 100_000 for anycall + 85_000 for fallback
+    uint256 internal constant MIN_EXECUTION_OVERHEAD = 260_000; // 2 * 100_000 for anycall + 30_000 Pre 1st Gas Checkpoint Execution + 25_000 Post last Gas Checkpoint Executions
+    uint256 internal constant TRANSFER_OVERHEAD = 24_000;
 
     constructor(
         WETH9 _wrappedNativeToken,
@@ -458,7 +458,7 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
             (remoteCallDepositedGas > 0 ? (_gasToBridgeOut, true) : (msg.value.toUint128(), false));
 
         //Wrap the gas allocated for omnichain execution.
-        if (isRemote) wrappedNativeToken.deposit{value: msg.value}();
+        if (!isRemote) wrappedNativeToken.deposit{value: msg.value}();
 
         //Check Fallback Gas
         _requiresFallbackGas(gasToBridgeOut);
@@ -540,15 +540,7 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
                 TOKEN MANAGEMENT EXTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /**
-     * @notice Function to request balance clearance from a Port to a given user.
-     *     @param _recipient token receiver.
-     *     @param _hToken  local hToken addresse to clear balance for.
-     *     @param _token  native / underlying token addresse to clear balance for.
-     *     @param _amount amounts of hToken to clear balance for.
-     *     @param _deposit amount of native / underlying tokens to clear balance for.
-     *
-     */
+    /// @inheritdoc IBranchBridgeAgent
     function clearToken(address _recipient, address _hToken, address _token, uint256 _amount, uint256 _deposit)
         external
         requiresAgentExecutor
@@ -556,11 +548,7 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
         _clearToken(_recipient, _hToken, _token, _amount, _deposit);
     }
 
-    /**
-     * @notice Function to request balance clearance from a Port to a given user.
-     *     @param _sParams encode packed multiple settlement info.
-     *
-     */
+    /// @inheritdoc IBranchBridgeAgent
     function clearTokens(bytes calldata _sParams, address _recipient)
         external
         requiresAgentExecutor
@@ -1021,8 +1009,14 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
         //Unwrap Gas
         wrappedNativeToken.withdraw(gasRemaining);
 
+        //Delete Remote Initiated Action State
+        delete(remoteCallDepositedGas);
+
+        ///Save gas left
+        uint256 gasLeft = gasleft();
+
         //Get Branch Environment Execution Cost
-        uint256 minExecCost = tx.gasprice * (MIN_EXECUTION_OVERHEAD + _initialGas - gasleft());
+        uint256 minExecCost = tx.gasprice * (MIN_EXECUTION_OVERHEAD + _initialGas - gasLeft);
 
         //Check if sufficient balance
         if (minExecCost > gasRemaining) {
@@ -1036,7 +1030,14 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
         //Transfer gas remaining to recipient
         SafeTransferLib.safeTransferETH(_recipient, gasRemaining - minExecCost);
 
-        delete(remoteCallDepositedGas);
+        //Save Gas
+        uint256 gasAfterTransfer = gasleft();
+
+        //Check if sufficient balance
+        if (gasLeft - gasAfterTransfer > TRANSFER_OVERHEAD) {
+            _forceRevert();
+            return;
+        }
     }
 
     /**
@@ -1045,8 +1046,11 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
      *   @param _initialGas gas used by Branch Bridge Agent.
      */
     function _payFallbackGas(uint32 _depositNonce, uint256 _initialGas) internal virtual {
+        //Save gas
+        uint256 gasLeft = gasleft();
+
         //Get Branch Environment Execution Cost
-        uint256 minExecCost = tx.gasprice * (MIN_FALLBACK_EXECUTION_OVERHEAD + _initialGas - gasleft());
+        uint256 minExecCost = tx.gasprice * (MIN_FALLBACK_RESERVE + _initialGas - gasLeft);
 
         //Check if sufficient balance
         if (minExecCost > getDeposit[_depositNonce].depositedGas) {
@@ -1215,8 +1219,10 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
     {
         //Get Initial Gas Checkpoint
         uint256 initialGas = gasleft();
+
         //Save Flag
         bytes1 flag = data[0];
+        
         //Save memory for Deposit Nonce
         uint32 _depositNonce;
 
@@ -1293,7 +1299,7 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
     }
 
     /// @inheritdoc IBranchBridgeAgent
-    function forceRevert() external virtual requiresAgentExecutor {
+    function forceRevert() external requiresAgentExecutor {
         _forceRevert();
     }
 
@@ -1302,13 +1308,13 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
      * @dev This function is used to revert the current transaction with a "no enough budget" message.
      */
     function _forceRevert() internal virtual {
-        uint256 executionBudget =
-            IAnycallConfig(IAnycallProxy(localAnyCallAddress).config()).executionBudget(address(this));
+        IAnycallConfig anycallConfig = IAnycallConfig(IAnycallProxy(localAnyCallAddress).config());
+        uint256 executionBudget = anycallConfig.executionBudget(address(this));
+
         // Withdraw all execution gas budget from anycall for tx to revert with "no enough budget"
-        if (executionBudget > 0) {
-            IAnycallConfig(IAnycallProxy(localAnyCallAddress).config()).withdraw(executionBudget);
-        }
+        if (executionBudget > 0) try anycallConfig.withdraw(executionBudget) {} catch {}
     }
+
 
     /*///////////////////////////////////////////////////////////////
                             HELPERS
@@ -1330,6 +1336,7 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
      */
     function _normalizeDecimalsMultiple(uint256[] memory _deposits, address[] memory _tokens)
         internal
+        view
         returns (uint256[] memory deposits)
     {
         for (uint256 i = 0; i < _deposits.length; i++) {

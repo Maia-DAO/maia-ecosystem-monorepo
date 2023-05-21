@@ -92,7 +92,15 @@ contract RootBridgeAgentExecutor is Ownable {
             IRouter(_router).anyExecute(bytes1(_data[5]), _data[6:_data.length - PARAMS_GAS_IN], _fromChainId);
     }
 
-    //DEPOSIT FLAG: 2 (Call with Deposit)
+    /**
+     * @notice Execute a remote request from a remote chain
+     * @param _router The router contract address
+     * @param _data The encoded request data
+     * @param _fromChainId The chain id of the chain that sent the request
+     * @return success Whether the request was successful
+     * @return result The result of the request
+     * @dev DEPOSIT FLAG: 2 (Call with Deposit)
+     */
     function executeWithDeposit(address _router, bytes calldata _data, uint24 _fromChainId)
         external
         onlyOwner
@@ -121,7 +129,15 @@ contract RootBridgeAgentExecutor is Ownable {
         }
     }
 
-    //DEPOSIT FLAG: 3 (Call with multiple asset Deposit)
+    /**
+     * @notice Execute a remote request from a remote chain
+     * @param _router The router contract address
+     * @param _data The encoded request data
+     * @param _fromChainId The chain id of the chain that sent the request
+     * @return success Whether the request was successful
+     * @return result The result of the request
+     * @dev DEPOSIT FLAG: 3 (Call with multiple asset Deposit)
+     */
     function executeWithDepositMultiple(address _router, bytes calldata _data, uint24 _fromChainId)
         external
         onlyOwner
@@ -159,7 +175,16 @@ contract RootBridgeAgentExecutor is Ownable {
         }
     }
 
-    //DEPOSIT FLAG: 4 (Call without Deposit + msg.sender)
+    /**
+     * @notice Execute a remote request from a remote chain
+     * @param _account The account that will execute the request
+     * @param _router The router contract address
+     * @param _data The encoded request data
+     * @param _fromChainId The chain id of the chain that sent the request
+     * @return success Whether the request was successful
+     * @return result The result of the request
+     * @dev DEPOSIT FLAG: 4 (Call without Deposit + msg.sender)
+     */
     function executeSignedNoDeposit(address _account, address _router, bytes calldata _data, uint24 _fromChainId)
         external
         onlyOwner
@@ -170,7 +195,16 @@ contract RootBridgeAgentExecutor is Ownable {
             IRouter(_router).anyExecuteSigned(_data[25], _data[26:_data.length - PARAMS_GAS_IN], _account, _fromChainId);
     }
 
-    //DEPOSIT FLAG: 5 (Call with Deposit + msg.sender)
+    /**
+     * @notice Execute a remote request from a remote chain with single asset deposit
+     * @param _account The account that will execute the request
+     * @param _router The router contract address
+     * @param _data The encoded request data
+     * @param _fromChainId The chain id of the chain that sent the request
+     * @return success Whether the request was successful
+     * @return result The result of the request
+     * @dev DEPOSIT FLAG: 5 (Call with Deposit + msg.sender)
+     */
     function executeSignedWithDeposit(address _account, address _router, bytes calldata _data, uint24 _fromChainId)
         external
         onlyOwner
@@ -199,7 +233,16 @@ contract RootBridgeAgentExecutor is Ownable {
         }
     }
 
-    //DEPOSIT FLAG: 6 (Call with multiple asset Deposit + msg.sender)
+    /**
+     * @notice Execute a remote request from a remote chain with multiple asset deposit
+     * @param _account The account that will execute the request
+     * @param _router The router contract address
+     * @param _data The encoded request data
+     * @param _fromChainId The chain id of the chain that sent the request
+     * @return success Whether the request was successful
+     * @return result The result of the request
+     * @dev DEPOSIT FLAG: 6 (Call with multiple asset Deposit + msg.sender)
+     */
     function executeSignedWithDepositMultiple(
         address _account,
         address _router,
@@ -242,6 +285,13 @@ contract RootBridgeAgentExecutor is Ownable {
         }
     }
 
+    /**
+     * @notice Retry a settlement request that has not yet been executed in destination chain.
+     * @param _settlementNonce The settlement nonce of the request to retry.
+     * @return success Whether the request was successful
+     * @return result The result of the request
+     * @dev DEPOSIT FLAG: 7 (Retry Settlement)
+     */
     function executeRetrySettlement(uint32 _settlementNonce)
         external
         onlyOwner
@@ -249,7 +299,7 @@ contract RootBridgeAgentExecutor is Ownable {
     {
         //Execute remote request
         RootBridgeAgent(payable(msg.sender)).retrySettlement(_settlementNonce, 0);
-        //Trigger retry success (no guarantees about settlement success)
+        //Trigger retry success (no guarantees about settlement success at this point)
         (success, result) = (true, "");
     }
 

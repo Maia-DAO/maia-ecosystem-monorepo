@@ -15,8 +15,6 @@ import {IRootBridgeAgent as IBridgeAgent} from "./IRootBridgeAgent.sol";
 
 import {IRootBridgeAgentFactory} from "./IRootBridgeAgentFactory.sol";
 
-import {ISwapRouter} from "../interfaces/ISwapRouter.sol";
-
 import {IERC20hTokenRootFactory} from "../interfaces/IERC20hTokenRootFactory.sol";
 
 import {INonfungiblePositionManager} from "../interfaces/INonfungiblePositionManager.sol";
@@ -26,14 +24,19 @@ interface ICoreRootRouter {
     function hTokenFactoryAddress() external view returns (address);
 }
 
+/// @notice Struct that contains the information of the Gas Pool for a swapping out of and into a given Branch Chain's Gas Token.
 struct GasPoolInfo {
-    //zeroForOne when swapping gas from branch chain into root chain gas
     bool zeroForOneOnInflow;
     uint24 priceImpactPercentage;
     address gasTokenGlobalAddress;
     address poolAddress;
 }
 
+/**
+ * @title IRootPort Interface.
+ * @ author MaiaDAO.
+ * @notice This interface is used to interact with the Root Port Contract of the Hermes Omnichain Incentives System.
+ */
 interface IRootPort {
     /*///////////////////////////////////////////////////////////////
                         BRIDGE AGENT FUNCTIONS
@@ -135,6 +138,8 @@ interface IRootPort {
             address poolAddress
         );
 
+    function getUserAccount(address _user) external view returns (VirtualAccount);
+
     /*///////////////////////////////////////////////////////////////
                         hTOKEN ACCOUTING FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -194,14 +199,6 @@ interface IRootPort {
     /*///////////////////////////////////////////////////////////////
                         hTOKEN MANAGEMENT FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice Setter function to a local hTokens's Underlying Address.
-     *   @param _localAddress new hToken address to update.
-     *   @param _underlyingAddress new underlying/native token address to set.
-     *
-     */
-    function setUnderlyingAddress(address _localAddress, address _underlyingAddress, uint24 _fromChain) external;
 
     /**
      * @notice Setter function to update a Global hToken's Local hToken Address.
@@ -276,13 +273,9 @@ interface IRootPort {
     function toggleBridgeAgentFactory(address _bridgeAgentFactory) external;
 
     /**
-     * @notice Setter for the local branch port address.
-     * @param _branchPort address of the local branch port.
-     */
-    function setLocalBranchPort(address _branchPort) external;
-
-    /**
      * @notice Adds a new chain to the root port lists of chains
+     * @param _pledger address of the addNewChain proposal initial liquidity pledger.
+     * @param _pledgedInitialAmount address of the core branch bridge agent
      * @param _coreBranchBridgeAgentAddress address of the core branch bridge agent
      * @param _chainId chainId of the new chain
      * @param _wrappedGasTokenName gas token name of the chain to add
@@ -290,13 +283,13 @@ interface IRootPort {
      * @param _fee fee of the chain to add
      * @param _priceImpactPercentage price impact percentage of the chain to add
      * @param _sqrtPriceX96 sqrt price of the chain to add
-     * @param _hTokenFactoryAddress address of the hToken factory
      * @param _nonFungiblePositionManagerAddress address of the NFT position manager
      * @param _newLocalBranchWrappedNativeTokenAddress address of the wrapped native token of the new branch
      * @param _newUnderlyingBranchWrappedNativeTokenAddress address of the underlying wrapped native token of the new branch
-     * @param _hTokenFactoryAddress address of the hToken factory
      */
     function addNewChain(
+        address _pledger,
+        uint256 _pledgedInitialAmount,
         address _coreBranchBridgeAgentAddress,
         uint24 _chainId,
         string memory _wrappedGasTokenName,
@@ -306,8 +299,7 @@ interface IRootPort {
         uint160 _sqrtPriceX96,
         address _nonFungiblePositionManagerAddress,
         address _newLocalBranchWrappedNativeTokenAddress,
-        address _newUnderlyingBranchWrappedNativeTokenAddress,
-        address _hTokenFactoryAddress
+        address _newUnderlyingBranchWrappedNativeTokenAddress
     ) external;
 
     /**
@@ -324,8 +316,30 @@ interface IRootPort {
     function addEcosystemToken(address ecoTokenGlobalAddress) external;
 
     /*///////////////////////////////////////////////////////////////
+                            EVENTS
+    //////////////////////////////////////////////////////////////*/
+
+    event BridgeAgentFactoryAdded(address indexed bridgeAgentFactory);
+    event BridgeAgentFactoryToggled(address indexed bridgeAgentFactory);
+
+    event BridgeAgentAdded(address indexed bridgeAgent, address manager);
+    event BridgeAgentToggled(address indexed bridgeAgent);
+    event BridgeAgentSynced(address indexed bridgeAgent, address indexed rootBridgeAgent, uint24 indexed fromChain);
+
+    event NewChainAdded(uint24 indexed chainId);
+    event GasPoolInfoSet(uint24 indexed chainId, GasPoolInfo gasPoolInfo);
+
+    event VirtualAccountCreated(address indexed user, address account);
+
+    event LocalTokenAdded(
+        address indexed underlyingAddress, address localAddress, address globalAddress, uint24 chainId
+    );
+    event GlobalTokenAdded(address indexed localAddress, address indexed globalAddress, uint24 chainId);
+    event EcosystemTokenAdded(address indexed ecoTokenGlobalAddress);
+
+    /*///////////////////////////////////////////////////////////////
                             ERRORS  
-        //////////////////////////////////////////////////////////////*/
+    //////////////////////////////////////////////////////////////*/
 
     error UnrecognizedBridgeAgentFactory();
     error UnrecognizedBridgeAgent();

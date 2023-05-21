@@ -83,6 +83,7 @@ contract BaseBranchRouter is IBranchRouter, Ownable {
                         ANYCALL EXTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /// @inheritdoc IBranchRouter
     function anyExecuteNoSettlement(bytes calldata)
         external
         virtual
@@ -93,6 +94,7 @@ contract BaseBranchRouter is IBranchRouter, Ownable {
         return (false, "unknown selector");
     }
 
+    /// @inheritdoc IBranchRouter
     function anyExecuteSettlement(bytes calldata, SettlementParams memory)
         external
         virtual
@@ -103,17 +105,8 @@ contract BaseBranchRouter is IBranchRouter, Ownable {
         return (false, "unknown selector");
     }
 
+    /// @inheritdoc IBranchRouter
     function anyExecuteSettlementMultiple(bytes calldata, SettlementMultipleParams memory)
-        external
-        virtual
-        requiresAgentExecutor
-        returns (bool success, bytes memory result)
-    {
-        /// Unrecognized Function Selector
-        return (false, "unknown selector");
-    }
-
-    function anyFallback(bytes calldata)
         external
         virtual
         requiresAgentExecutor

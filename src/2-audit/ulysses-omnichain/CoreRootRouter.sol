@@ -2,7 +2,8 @@
 pragma solidity ^0.8.0;
 
 import "./interfaces/IRootRouter.sol";
-import {ICoreBridgeAgent as IBridgeAgent} from "./interfaces/ICoreBridgeAgent.sol";
+import {IRootBridgeAgent as IBridgeAgent} from "./interfaces/IRootBridgeAgent.sol";
+
 import {IVirtualAccount, Call} from "./interfaces/IVirtualAccount.sol";
 import {IERC20hTokenRootFactory as IFactory} from "./interfaces/IERC20hTokenRootFactory.sol";
 
@@ -321,15 +322,11 @@ contract CoreRootRouter is IRootRouter, Ownable {
 
             _setLocalToken(globalAddress, localAddress, fromChainId);
 
-            emit LogCallin(_funcId, _encodedData, fromChainId);
-
             /// FUNC ID: 4 (_syncBranchBridgeAgent)
         } else if (_funcId == 0x04) {
             (address newBranchBridgeAgent, address rootBridgeAgent) = abi.decode(_encodedData, (address, address));
 
             _syncBranchBridgeAgent(newBranchBridgeAgent, rootBridgeAgent, fromChainId);
-
-            emit LogCallin(_funcId, _encodedData, fromChainId);
 
             /// Unrecognized Function Selector
         } else {
@@ -353,16 +350,12 @@ contract CoreRootRouter is IRootRouter, Ownable {
 
             _addGlobalToken(remoteExecutionGas, globalAddress, gasReceiver, toChain);
 
-            emit LogCallin(_funcId, _encodedData, _fromChainId);
-
             ///  FUNC ID: 2 (_addLocalToken)
         } else if (_funcId == 0x02) {
             (address underlyingAddress, address localAddress, string memory name, string memory symbol) =
                 abi.decode(_encodedData, (address, address, string, string));
 
             _addLocalToken(underlyingAddress, localAddress, name, symbol, _fromChainId);
-
-            emit LogCallin(_funcId, _encodedData, _fromChainId);
 
             /// Unrecognized Function Selector
         } else {
@@ -424,14 +417,9 @@ contract CoreRootRouter is IRootRouter, Ownable {
         revert();
     }
 
-    /// @inheritdoc IRootRouter
-    function anyFallback(bytes calldata) external pure returns (bool, bytes memory) {
-        return (true, "");
-    }
-
     /*///////////////////////////////////////////////////////////////
                             MODIFIERS
-    ////////////////////////////////////////////////////////////*/
+    ///////////////////////////////////////////////////////////////*/
 
     uint256 internal _unlocked = 1;
 
@@ -453,6 +441,10 @@ contract CoreRootRouter is IRootRouter, Ownable {
     function _requiresExecutor() internal view {
         if (msg.sender != bridgeAgentExecutorAddress) revert UnrecognizedBridgeAgentExecutor();
     }
+
+    /*///////////////////////////////////////////////////////////////
+                                ERROR
+    ///////////////////////////////////////////////////////////////*/
 
     error InvalidChainId();
 

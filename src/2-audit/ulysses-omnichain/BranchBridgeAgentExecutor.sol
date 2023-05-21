@@ -46,8 +46,13 @@ contract BranchBridgeAgentExecutor is Ownable {
     /*///////////////////////////////////////////////////////////////
                         EXECUTOR EXTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-
-    //SETTLEMENT FLAG: 0 (No settlement)
+    /**
+     * @notice Execute a transaction from root chain.
+     * @param _router address of the router to execute the calldata.
+     * @param _data encoded transaction data.
+     * @return success boolean and result bytes.
+     * @dev SETTLEMENT FLAG: 0 (No settlement)
+     */
     function executeNoSettlement(address _router, bytes calldata _data)
         external
         onlyOwner
@@ -57,7 +62,14 @@ contract BranchBridgeAgentExecutor is Ownable {
         (success, result) = IRouter(_router).anyExecuteNoSettlement(_data[25:_data.length - PARAMS_GAS_OUT]);
     }
 
-    //SETTLEMENT FLAG: 1 (Single Asset Settlement)
+    /**
+     * @notice Execute a transaction from root chain and settle a single asset.
+     * @param _recipient address of the recipient.
+     * @param _router address of the router to execute the calldata.
+     * @param _data encoded transaction data.
+     * @return success boolean and result bytes.
+     * @dev SETTLEMENT FLAG: 1 (Single Asset Settlement)
+     */
     function executeWithSettlement(address _recipient, address _router, bytes calldata _data)
         external
         onlyOwner
@@ -84,7 +96,14 @@ contract BranchBridgeAgentExecutor is Ownable {
         }
     }
 
-    //SETTLEMENT FLAG: 2 (Multiple Settlement)
+    /**
+     * @notice Execute a transaction from root chain and settle multiple assets.
+     * @param _recipient address of the recipient.
+     * @param _router address of the router to execute the calldata.
+     * @param _data encoded transaction data.
+     * @return success boolean and result bytes.
+     * @dev SETTLEMENT FLAG: 2 (Multiple Asset Settlement)
+     */
     function executeWithSettlementMultiple(address _recipient, address _router, bytes calldata _data)
         external
         onlyOwner

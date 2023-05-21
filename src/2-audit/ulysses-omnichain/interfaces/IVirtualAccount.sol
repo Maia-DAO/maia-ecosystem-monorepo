@@ -2,12 +2,9 @@
 
 pragma solidity ^0.8.0;
 
-
 import {ERC721} from "solmate/tokens/ERC721.sol";
 
 import {IRootPort} from "./IRootPort.sol";
-
-// import "./token/ERC20hTokenBranch.sol";
 
 struct Call {
     address target;
@@ -20,8 +17,9 @@ struct Result {
 }
 
 /**
- * @title VirtualAccount
- * @dev VirtualAccount is a contract that allows hApps to keep encapsulated user balance for accounting purposes.
+ * @title VirtualAccount Contract.
+ * @author MaiaDAO.
+ * @dev This contract that allows users to manage assets and perform interactions remotely. Provides hApps with encapsulated user balance for accounting purposes.
  */
 interface IVirtualAccount {
     /**
@@ -48,7 +46,7 @@ interface IVirtualAccount {
      * @notice
      * @param callInput The call to make.
      */
-    function call(Call[] memory callInput) external returns (uint256 blockNumber, bytes[] memory );
+    function call(Call[] memory callInput) external returns (uint256 blockNumber, bytes[] memory);
 
     /*///////////////////////////////////////////////////////////////
                                 ERRORS

@@ -103,6 +103,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
     ////////////////////////////////////////////////////////////*/
     /**
      *  @notice Function to call 'clearToken' on the Root Port.
+     *  @param owner settlement owner.
      *  @param recipient Address to receive the output hTokens.
      *  @param outputToken Address of the output hToken.
      *  @param amountOut Amount of output hTokens to send.
@@ -110,6 +111,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
      *  @param toChain Chain Id of the destination chain.
      */
     function _approveAndCallOut(
+        address owner,
         address recipient,
         address outputToken,
         uint256 amountOut,
@@ -121,12 +123,13 @@ contract MulticallRootRouter is IRootRouter, Ownable {
 
         //Move output hTokens from Root to Branch and call 'clearToken'.
         IBridgeAgent(bridgeAgentAddress).callOutAndBridge{value: msg.value}(
-            recipient, "", outputToken, amountOut, depositOut, toChain
+            owner, recipient, "", outputToken, amountOut, depositOut, toChain
         );
     }
 
     /**
-     *  @notice Function to approve token spend Bridge Agent.
+     *  @notice Function to approve token spend before Bridge Agent interaction to Bridge Out of omnichian environment.
+     *  @param owner settlement owner.
      *  @param recipient Address to receive the output tokens.
      *  @param outputTokens Addresses of the output hTokens.
      *  @param amountsOut Total amount of tokens to send.
@@ -134,6 +137,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
      *
      */
     function _approveMultipleAndCallOut(
+        address owner,
         address recipient,
         address[] memory outputTokens,
         uint256[] memory amountsOut,
@@ -151,7 +155,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
 
         //Move output hTokens from Root to Branch and call 'clearTokens'.
         IBridgeAgent(bridgeAgentAddress).callOutAndBridgeMultiple{value: msg.value}(
-            recipient, "", outputTokens, amountsOut, depositsOut, toChain
+            owner, recipient, "", outputTokens, amountsOut, depositsOut, toChain
         );
     }
 
@@ -174,16 +178,15 @@ contract MulticallRootRouter is IRootRouter, Ownable {
 
     /**
      *  @inheritdoc IRootRouter
-     *  @dev
-     *      0x01         |  multicallNoOutput
-     *      0x02         |  multicallSingleOutput
-     *      0x03         |  multicallMultipleOutput
-     *      0x04         |  multicallSignedNoOutput
-     *      0x05         |  multicallSignedSingleOutput
-     *      0x06         |  multicallSignedMultipleOutput
+     *  @dev FuncIDs
+     *
+     *  FUNC ID      | FUNC NAME
+     *  0x01         |  multicallNoOutput
+     *  0x02         |  multicallSingleOutput
+     *  0x03         |  multicallMultipleOutput
      *
      */
-    function anyExecute(bytes1 funcId, bytes calldata rlpEncodedData, uint24 fromChainId)
+    function anyExecute(bytes1 funcId, bytes calldata rlpEncodedData, uint24)
         external
         payable
         override
@@ -207,6 +210,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
             _multicall(callData);
 
             _approveAndCallOut(
+                address(0),
                 outputParams.recipient,
                 outputParams.outputToken,
                 outputParams.amountOut,
@@ -223,6 +227,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
             _multicall(callData);
 
             _approveMultipleAndCallOut(
+                address(0),
                 outputParams.recipient,
                 outputParams.outputTokens,
                 outputParams.amountsOut,
@@ -234,34 +239,26 @@ contract MulticallRootRouter is IRootRouter, Ownable {
             return (false, "FuncID not recognized!");
         }
 
-        emit LogCallin(funcId, rlpEncodedData, fromChainId);
         return (true, "");
     }
 
-    /**
-     *  @inheritdoc IRootRouter
-     *  @dev
-     *
-     */
+    ///@inheritdoc IRootRouter
     function anyExecuteDepositSingle(bytes1, bytes calldata, DepositParams calldata, uint24)
         external
         payable
         override
-        lock
         requiresExecutor
         returns (bool, bytes memory)
     {
         revert();
     }
 
-    /**
-     * @inheritdoc IRootRouter
-     */
+    ///@inheritdoc IRootRouter
+
     function anyExecuteDepositMultiple(bytes1, bytes calldata, DepositMultipleParams calldata, uint24)
         external
         payable
         requiresExecutor
-        lock
         returns (bool, bytes memory)
     {
         revert();
@@ -269,10 +266,15 @@ contract MulticallRootRouter is IRootRouter, Ownable {
 
     /**
      *  @inheritdoc IRootRouter
-     *  @dev
+     *  @dev FuncIDs
+     *
+     *  FUNC ID      | FUNC NAME
+     *  0x01         |  multicallNoOutput
+     *  0x02         |  multicallSingleOutput
+     *  0x03         |  multicallMultipleOutput
      *
      */
-    function anyExecuteSigned(bytes1 funcId, bytes calldata rlpEncodedData, address userAccount, uint24 fromChainId)
+    function anyExecuteSigned(bytes1 funcId, bytes calldata rlpEncodedData, address userAccount, uint24)
         external
         payable
         override
@@ -299,6 +301,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
             IVirtualAccount(userAccount).withdrawERC20(outputParams.outputToken, outputParams.amountOut);
 
             _approveAndCallOut(
+                IVirtualAccount(userAccount).userAddress(),
                 outputParams.recipient,
                 outputParams.outputToken,
                 outputParams.amountOut,
@@ -324,6 +327,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
             }
 
             _approveMultipleAndCallOut(
+                IVirtualAccount(userAccount).userAddress(),
                 outputParams.recipient,
                 outputParams.outputTokens,
                 outputParams.amountsOut,
@@ -335,20 +339,17 @@ contract MulticallRootRouter is IRootRouter, Ownable {
             return (false, "FuncID not recognized!");
         }
 
-        emit LogCallin(funcId, rlpEncodedData, fromChainId);
         return (true, "");
     }
 
     /**
      *  @inheritdoc IRootRouter
-     *  @dev
-     *    8           | mint
-     *    9           | increaseLiquidity
-     *   12           | deposit
-     *   14           | depositAndStake
-     *   15           | mintDepositAndStake
-     *   17           | unstakeAndWithdrawAndRemoveLiquidity
-     *   18           | unstakeAndRestakeToNewAggregator
+     *  @dev FuncIDs
+     *
+     *  FUNC ID      | FUNC NAME
+     *  0x01         |  multicallNoOutput
+     *  0x02         |  multicallSingleOutput
+     *  0x03         |  multicallMultipleOutput
      *
      */
     function anyExecuteSignedDepositSingle(
@@ -356,7 +357,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
         bytes calldata rlpEncodedData,
         DepositParams calldata,
         address userAccount,
-        uint24 fromChainId
+        uint24
     ) external payable override requiresExecutor lock returns (bool success, bytes memory result) {
         /// FUNC ID: 1 (multicallNoOutput)
         if (funcId == 0x01) {
@@ -377,6 +378,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
             IVirtualAccount(userAccount).withdrawERC20(outputParams.outputToken, outputParams.amountOut);
 
             _approveAndCallOut(
+                IVirtualAccount(userAccount).userAddress(),
                 outputParams.recipient,
                 outputParams.outputToken,
                 outputParams.amountOut,
@@ -402,6 +404,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
             }
 
             _approveMultipleAndCallOut(
+                IVirtualAccount(userAccount).userAddress(),
                 outputParams.recipient,
                 outputParams.outputTokens,
                 outputParams.amountsOut,
@@ -413,13 +416,17 @@ contract MulticallRootRouter is IRootRouter, Ownable {
             return (false, "FuncID not recognized!");
         }
 
-        emit LogCallin(funcId, rlpEncodedData, fromChainId);
         return (true, "");
     }
 
-    /**
+     /**
      *  @inheritdoc IRootRouter
-     *  @dev
+     *  @dev FuncIDs
+     *
+     *  FUNC ID      | FUNC NAME
+     *  0x01         |  multicallNoOutput
+     *  0x02         |  multicallSingleOutput
+     *  0x03         |  multicallMultipleOutput
      *
      */
     function anyExecuteSignedDepositMultiple(
@@ -427,7 +434,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
         bytes memory rlpEncodedData,
         DepositMultipleParams calldata,
         address userAccount,
-        uint24 fromChainId
+        uint24
     ) external payable requiresExecutor lock returns (bool success, bytes memory result) {
         /// FUNC ID: 1 (multicallNoOutput)
         if (funcId == 0x01) {
@@ -448,6 +455,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
             IVirtualAccount(userAccount).withdrawERC20(outputParams.outputToken, outputParams.amountOut);
 
             _approveAndCallOut(
+                IVirtualAccount(userAccount).userAddress(),
                 outputParams.recipient,
                 outputParams.outputToken,
                 outputParams.amountOut,
@@ -473,6 +481,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
             }
 
             _approveMultipleAndCallOut(
+                IVirtualAccount(userAccount).userAddress(),
                 outputParams.recipient,
                 outputParams.outputTokens,
                 outputParams.amountsOut,
@@ -484,14 +493,6 @@ contract MulticallRootRouter is IRootRouter, Ownable {
             return (false, "FuncID not recognized!");
         }
 
-        emit LogCallin(funcId, rlpEncodedData, fromChainId);
-        return (true, "");
-    }
-
-    /**
-     *  @inheritdoc IRootRouter
-     */
-    function anyFallback(bytes calldata) external pure returns (bool, bytes memory) {
         return (true, "");
     }
 

@@ -26,9 +26,6 @@ interface IRootRouter {
      *     @param encodedData data received from messaging layer.
      *     @param fromChainId chain where the request originated from.
      *
-     *      2            | _addLocalToken
-     *      3            | _setLocalToken
-     *
      */
     function anyExecuteResponse(bytes1 funcId, bytes memory encodedData, uint24 fromChainId)
         external
@@ -40,9 +37,6 @@ interface IRootRouter {
      *     @param funcId 1 byte Router function identifier.
      *     @param encodedData data received from messaging layer.
      *     @param fromChainId chain where the request originated from.
-     *
-     *      1            | _addGlobalToken
-     *      4            | _syncBranchBridgeAgent
      *
      */
     function anyExecute(bytes1 funcId, bytes memory encodedData, uint24 fromChainId)
@@ -124,23 +118,9 @@ interface IRootRouter {
         uint24 fromChainId
     ) external payable returns (bool success, bytes memory result);
 
-    /**
-     * @notice  Fallback function for anycall
-     * @param data calldata
-     */
-    function anyFallback(bytes calldata data) external returns (bool success, bytes memory result);
-
     /*///////////////////////////////////////////////////////////////
                              ERRORS
     //////////////////////////////////////////////////////////////*/
 
     error UnrecognizedBridgeAgentExecutor();
-
-    /*///////////////////////////////////////////////////////////////
-                             EVENTS
-    //////////////////////////////////////////////////////////////*/
-
-    event LogCallin(bytes4 selector, bytes data, uint24 fromChainId);
-    event LogCallout(bytes4 selector, bytes data, uint256, uint24 toChainId);
-    event LogCalloutFail(bytes4 selector, bytes data, uint24 toChainId);
 }

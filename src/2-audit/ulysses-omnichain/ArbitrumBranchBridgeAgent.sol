@@ -28,8 +28,9 @@ library DeployArbitrumBranchBridgeAgent {
 }
 
 /**
- * @title ArbitrumBranchBridgeAgent a Branch Bridge Agent implementation for the Arbitrum deployment.
+ * @title `ArbitrumBranchBridgeAgent` a Branch Bridge Agent implementation for Arbitrum Chain Branch deployment.
  * @author MaiaDAO
+ * @notice This contract is used to manage the deposit and withdrawal of assets between arbitrum branch contracts and the root omnichain environment. Execution gas from remote interactions si managed by `RootBridgeAgent` contract.
  */
 contract ArbitrumBranchBridgeAgent is BranchBridgeAgent {
     using SafeTransferLib for address;
@@ -85,7 +86,11 @@ contract ArbitrumBranchBridgeAgent is BranchBridgeAgent {
     /*///////////////////////////////////////////////////////////////
                             INTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-    
+
+    /**
+     * @notice Internal function to move gas to RootBridgeAgent for remote chain execution.
+     *   @param _gasToBridgeOut amount of gas to be deposited.
+     */
     function _depositGas(uint128 _gasToBridgeOut) internal override {
         address(wrappedNativeToken).safeTransfer(rootBridgeAgentAddress, _gasToBridgeOut);
     }
@@ -94,7 +99,7 @@ contract ArbitrumBranchBridgeAgent is BranchBridgeAgent {
      * @notice Reverts the current transaction with a "no enough budget" message.
      * @dev This function is used to revert the current transaction with a "no enough budget" message.
      */
-    function _forceRevert() internal override {
+    function _forceRevert() internal pure override {
         revert GasErrorOrRepeatedTx();
     }
 
@@ -150,6 +155,10 @@ contract ArbitrumBranchBridgeAgent is BranchBridgeAgent {
     function _requiresFallbackGas(uint256) internal view override {
         //Cross-chain messaging + Fallback is managed by the Root Bridge Agent
     }
+
+    /*///////////////////////////////////////////////////////////////
+                            ERRORS
+    //////////////////////////////////////////////////////////////*/
 
     error GasErrorOrRepeatedTx();
 }

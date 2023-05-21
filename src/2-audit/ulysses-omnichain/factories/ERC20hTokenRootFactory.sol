@@ -4,9 +4,9 @@ pragma solidity ^0.8.0;
 import "../interfaces/IERC20hTokenRootFactory.sol";
 
 /**
- * @title ERC20 hToken Contract for deployment in Root Chain of Hermes Omnichain Incentives System
+ * @title ERC20hTokenRoot Factory Contract
  * @author MaiaDAO
- * @dev
+ * @dev Contract for deployment in Root Chain of Ulysses Omnichain Liquidity System
  */
 contract ERC20hTokenRootFactory is Ownable, IERC20hTokenRootFactory {
     using SafeTransferLib for address;

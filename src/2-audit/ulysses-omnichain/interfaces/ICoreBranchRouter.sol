@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+/**
+ * @title ICoreBranchRouter.
+ * @author MaiaDAO.
+ * @dev This contract is used to interact with the Core Branch Router which is in charge of managing the permissionless addition of new tokens and Bridge Agents to chains and governace gated actions such as updating Branch Port parameters.
+ */
 interface ICoreBranchRouter {
     /*///////////////////////////////////////////////////////////////
                         EXTERNAL FUNCTIONS

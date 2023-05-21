@@ -239,6 +239,27 @@ interface IBranchBridgeAgent is IApp {
      */
     function redeemDeposit(uint32 _depositNonce) external;
 
+    /**
+     * @notice Function to request balance clearance from a Port to a given user.
+     *     @param _recipient token receiver.
+     *     @param _hToken  local hToken addresse to clear balance for.
+     *     @param _token  native / underlying token addresse to clear balance for.
+     *     @param _amount amounts of hToken to clear balance for.
+     *     @param _deposit amount of native / underlying tokens to clear balance for.
+     *
+     */
+    function clearToken(address _recipient, address _hToken, address _token, uint256 _amount, uint256 _deposit)
+        external;
+
+    /**
+     * @notice Function to request balance clearance from a Port to a given address.
+     *     @param _sParams encode packed multiple settlement info.
+     *
+     */
+    function clearTokens(bytes calldata _sParams, address _recipient)
+        external
+        returns (SettlementMultipleParams memory);
+
     /*///////////////////////////////////////////////////////////////
                         BRANCH ROUTER FUNCTIONS
     //////////////////////////////////////////////////////////////*/

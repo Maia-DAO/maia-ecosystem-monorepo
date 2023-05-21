@@ -15,9 +15,9 @@ import {
 } from "./IBranchBridgeAgent.sol";
 
 /**
- * @title BaseBranchRouter contract for deployment in Branch Chains of Omnichain System.
+ * @title BaseBranchRouter Contract.
  * @author MaiaDAO
- * @dev Base Branch Interface for Anycall cross-chain messaging.
+ * @dev Base Contract for the development of middleware to interact with Branch Bridge Agents. Contract for deployment in Branch Chains of Omnichain System.
  */
 interface IBranchRouter {
     /*///////////////////////////////////////////////////////////////
@@ -63,7 +63,6 @@ interface IBranchRouter {
      * @notice External function to retry a failed Settlement entry on the root chain.
      *     @param _settlementNonce Identifier for user settlement.
      *     @param _gasToBoostSettlement Additional gas to boost settlement.
-     *     @dev ACTION ID: 10
      *
      */
     function retrySettlement(uint32 _settlementNonce, uint128 _gasToBoostSettlement) external payable;
@@ -106,26 +105,10 @@ interface IBranchRouter {
      *     @param data data received from messaging layer.
      *     @param sParams SettlementParams struct containing deposit information.
      *
-     *   1            | addGlobalToken
-     *   2            | addLocalToken
-     *   3            | setLocalToken
-     *   4            | exactInputSingle
-     *   5            | exactInput
-     *   6            | exactOutputSingle
-     *   7            | exactOutput
-     *
-     *
      */
     function anyExecuteSettlementMultiple(bytes calldata data, SettlementMultipleParams memory sParams)
         external
         returns (bool success, bytes memory result);
-
-    /**
-     * @notice Function to responsible of calling clearDeposit() if a cross-chain call fails/reverts.
-     *     @param data data from reverted func.
-     *
-     */
-    function anyFallback(bytes calldata data) external returns (bool success, bytes memory result);
 
     /*///////////////////////////////////////////////////////////////
                              ERRORS

@@ -7,17 +7,42 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {IPortStrategy} from "./IPortStrategy.sol";
 
+/**
+ * @title IBranchPort.
+ * @author MaiaDAO.
+ * @dev This contract is used to interact with the Branch Port which is in charge of managing the deposit and withdrawal of assets between the a branch chain and the omnichain environment.
+ */
 interface IBranchPort {
     /*///////////////////////////////////////////////////////////////
                             VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-
+    /**
+     * @notice Returns true if the address is a Bridge Agent.
+     *   @param _bridgeAgent Bridge Agent address.
+     *   @return bool.
+     */
     function isBridgeAgent(address _bridgeAgent) external view returns (bool);
 
+    /**
+     * @notice Returns true if the address is a Strategy Token.
+     *   @param _token token address.
+     *   @return bool.
+     */
     function isStrategyToken(address _token) external view returns (bool);
 
+    /**
+     * @notice Returns true if the address is a Port Strategy.
+     *   @param _strategy strategy address.
+     *   @param _token token address.
+     *   @return bool.
+     */
     function isPortStrategy(address _strategy, address _token) external view returns (bool);
 
+    /**
+     * @notice Returns true if the address is a Bridge Agent Factory.
+     *   @param _bridgeAgentFactory Bridge Agent Factory address.
+     *   @return bool.
+     */
     function isBridgeAgentFactory(address _bridgeAgentFactory) external view returns (bool);
 
     /*///////////////////////////////////////////////////////////////
@@ -173,6 +198,19 @@ interface IBranchPort {
 
     event DebtCreated(address indexed _strategy, address indexed _token, uint256 _amount);
     event DebtRepaid(address indexed _strategy, address indexed _token, uint256 _amount);
+
+    event StrategyTokenAdded(address indexed _token, uint256 _minimumReservesRatio);
+    event StrategyTokenToggled(address indexed _token);
+
+    event PortStrategyAdded(address indexed _portStrategy, address indexed _token, uint256 _dailyManagementLimit);
+    event PortStrategyToggled(address indexed _portStrategy, address indexed _token);
+    event PortStrategyUpdated(address indexed _portStrategy, address indexed _token, uint256 _dailyManagementLimit);
+
+    event BridgeAgentFactoryAdded(address indexed _bridgeAgentFactory);
+    event BridgeAgentFactoryToggled(address indexed _bridgeAgentFactory);
+
+    event BridgeAgentToggled(address indexed _bridgeAgent);
+
 
     /*///////////////////////////////////////////////////////////////
                             ERRORS

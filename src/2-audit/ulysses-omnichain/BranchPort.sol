@@ -106,6 +106,7 @@ contract BranchPort is Ownable, IBranchPort {
         bridgeAgentFactoriesLenght++;
     }
 
+    /// @notice Function being overrriden to prevent mistakenly renouncing ownership.
     function renounceOwnership() public payable override onlyOwner {
         revert("Cannot renounce ownership");
     }
@@ -116,7 +117,8 @@ contract BranchPort is Ownable, IBranchPort {
 
     /**
      * @notice Returns amount of Strategy Tokens
-     *     @return uint256 excess reserves
+     *   @param _token Address of a given Strategy Token.
+     *   @return uint256 excess reserves
      */
     function _excessReserves(address _token) internal view returns (uint256) {
         uint256 currBalance = ERC20(_token).balanceOf(address(this));
@@ -126,7 +128,8 @@ contract BranchPort is Ownable, IBranchPort {
 
     /**
      * @notice Returns amount of Strategy Tokens needed to reach minimum reserves
-     *     @return uint256 excess reserves
+     *   @param _token Address of a given Strategy Token.
+     *   @return uint256 excess reserves
      */
     function _reservesLacking(address _token) internal view returns (uint256) {
         uint256 currBalance = ERC20(_token).balanceOf(address(this));
@@ -135,8 +138,10 @@ contract BranchPort is Ownable, IBranchPort {
     }
 
     /**
-     * @notice returns excess reserves
-     *     @return uint
+     * @notice Internal function to return the minimum amount of reserves of a given Strategy Token the Port should hold.
+     *   @param _currBalance Current balance of a given Strategy Token.
+     *   @param _token Address of a given Strategy Token.
+     *   @return uint256 minimum reserves
      */
     function _minimumReserves(uint256 _currBalance, address _token) internal view returns (uint256) {
         return ((_currBalance + getStrategyTokenDebt[_token]) * getMinimumTokenReserveRatio[_token]) / DIVISIONER;
@@ -171,16 +176,16 @@ contract BranchPort is Ownable, IBranchPort {
 
         IPortStrategy(_strategy).withdraw(address(this), _token, amountToWithdraw);
 
-        getPortStrategyTokenDebt[_strategy][_token] -= _amount;
-        getStrategyTokenDebt[_token] -= _amount;
+        getPortStrategyTokenDebt[_strategy][_token] -= amountToWithdraw;
+        getStrategyTokenDebt[_token] -= amountToWithdraw;
 
-        emit DebtRepaid(_strategy, _token, _amount);
+        emit DebtRepaid(_strategy, _token, amountToWithdraw);
     }
 
     /**
-     * @notice checks LimitRequirements
-     *     @param _token address being managed.
-     *     @param _amount token amount being managed.
+     * @notice Internal function to check if a Port Strategy has reached its daily management limit.
+     *   @param _token address being managed.
+     *   @param _amount of token being requested.
      */
     function _checkTimeLimit(address _token, uint256 _amount) internal {
         if (block.timestamp - lastManaged[msg.sender][_token] >= 1 days) {
@@ -301,16 +306,22 @@ contract BranchPort is Ownable, IBranchPort {
         isBridgeAgentFactory[_newBridgeAgentFactory] = true;
         bridgeAgentFactories.push(_newBridgeAgentFactory);
         bridgeAgentFactoriesLenght++;
+
+        emit BridgeAgentFactoryAdded(_newBridgeAgentFactory);
     }
 
     /// @inheritdoc IBranchPort
     function toggleBridgeAgentFactory(address _newBridgeAgentFactory) external requiresCoreRouter {
         isBridgeAgentFactory[_newBridgeAgentFactory] = !isBridgeAgentFactory[_newBridgeAgentFactory];
+
+        emit BridgeAgentFactoryToggled(_newBridgeAgentFactory);
     }
 
     /// @inheritdoc IBranchPort
     function toggleBridgeAgent(address _bridgeAgent) external requiresCoreRouter {
         isBridgeAgent[_bridgeAgent] = !isBridgeAgent[_bridgeAgent];
+
+        emit BridgeAgentToggled(_bridgeAgent);
     }
 
     /// @inheritdoc IBranchPort
@@ -320,11 +331,15 @@ contract BranchPort is Ownable, IBranchPort {
         strategyTokensLenght++;
         getMinimumTokenReserveRatio[_token] = _minimumReservesRatio;
         isStrategyToken[_token] = true;
+
+        emit StrategyTokenAdded(_token, _minimumReservesRatio);
     }
 
     /// @inheritdoc IBranchPort
     function toggleStrategyToken(address _token) external requiresCoreRouter {
         isStrategyToken[_token] = !isStrategyToken[_token];
+
+        emit StrategyTokenToggled(_token);
     }
 
     /// @inheritdoc IBranchPort
@@ -337,11 +352,15 @@ contract BranchPort is Ownable, IBranchPort {
         portStrategiesLenght++;
         strategyDailyLimitAmount[_portStrategy][_token] = _dailyManagementLimit;
         isPortStrategy[_portStrategy][_token] = true;
+
+        emit PortStrategyAdded(_portStrategy, _token, _dailyManagementLimit);
     }
 
     /// @inheritdoc IBranchPort
     function togglePortStrategy(address _portStrategy, address _token) external requiresCoreRouter {
         isPortStrategy[_portStrategy][_token] = !isPortStrategy[_portStrategy][_token];
+
+        emit PortStrategyToggled(_portStrategy, _token);
     }
 
     /// @inheritdoc IBranchPort
@@ -350,6 +369,8 @@ contract BranchPort is Ownable, IBranchPort {
         requiresCoreRouter
     {
         strategyDailyLimitAmount[_portStrategy][_token] = _dailyManagementLimit;
+
+        emit PortStrategyUpdated(_portStrategy, _token, _dailyManagementLimit);
     }
 
     /*///////////////////////////////////////////////////////////////

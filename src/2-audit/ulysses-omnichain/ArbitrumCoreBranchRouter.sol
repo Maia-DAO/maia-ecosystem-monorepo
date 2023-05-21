@@ -7,7 +7,6 @@ import "./CoreBranchRouter.sol";
 
 import {ERC20hTokenBranch as ERC20hToken} from "./token/ERC20hTokenBranch.sol";
 
-import {ISwapRouter} from "./interfaces/ISwapRouter.sol";
 import {IERC20hTokenBranchFactory as IFactory} from "./interfaces/IERC20hTokenBranchFactory.sol";
 
 /**
@@ -37,6 +36,7 @@ contract ArbitrumCoreBranchRouter is CoreBranchRouter {
                     TOKEN MANAGEMENT EXTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    ///@inheritdoc CoreBranchRouter
     function addLocalToken(address _underlyingAddress) external payable override {
         //Get Token Info
         string memory name = ERC20(_underlyingAddress).name();
@@ -102,13 +102,11 @@ contract ArbitrumCoreBranchRouter is CoreBranchRouter {
                     ANYCALL EXTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /**
-     * @notice Performs a cross-chain call to the root chain.
-     * @param _data the data to be sent to the root chain.
-     */
+    ///@inheritdoc CoreBranchRouter
     function anyExecuteNoSettlement(bytes calldata _data)
         external
         override
+        requiresAgentExecutor
         returns (bool success, bytes memory result)
     {
         if (_data[0] == 0x02) {

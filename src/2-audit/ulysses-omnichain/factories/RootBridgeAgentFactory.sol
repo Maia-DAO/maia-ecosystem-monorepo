@@ -8,9 +8,9 @@ import {DeployRootBridgeAgent, RootBridgeAgent} from "../RootBridgeAgent.sol";
 import {IRootPort} from "../interfaces/IRootPort.sol";
 
 /**
- * @title BridgeAgentFactory.
+ * @title RootBridgeAgent Factory Contract.
  * @author MaiaDAO.
- * @notice This contract is used to deploy new Bridge Agents which are in charge of managing the deposit and withdrawal of assets between the branch chains and the omnichain environment.
+ * @notice This contract is used to deploy new Root Bridge Agents which are in charge of managing the deposit and withdrawal of assets between the branch chains and the omnichain environment.
  */
 contract RootBridgeAgentFactory is IRootBridgeAgentFactory {
     /// @notice Root Chain Id
@@ -65,9 +65,9 @@ contract RootBridgeAgentFactory is IRootBridgeAgentFactory {
                         BRIDGE AGENT FUNCTIONS
     //////////////////////////////////////////////////////////////*/
     /**
-     * @notice Creates a new Bridge Agent.
-     *     @param _newRootRouterAddress New Root Router Address.
-     *     @return newBridgeAgent New Bridge Agent Address.
+     * @notice Creates a new Root Bridge Agent.
+     *   @param _newRootRouterAddress New Root Router Address.
+     *   @return newBridgeAgent New Bridge Agent Address.
      */
     function createBridgeAgent(address _newRootRouterAddress) external returns (address newBridgeAgent) {
         newBridgeAgent = address(

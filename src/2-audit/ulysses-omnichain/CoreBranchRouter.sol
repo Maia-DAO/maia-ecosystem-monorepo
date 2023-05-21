@@ -19,12 +19,12 @@ import {ICoreBranchRouter} from "./interfaces/ICoreBranchRouter.sol";
  *   -----------------------------
  *   FUNC ID      | FUNC NAME
  *   -------------+---------------
- *   1            | clearDeposit
- *   2            | finalizeDeposit
- *   3            | finalizeWithdraw
- *   4            | clearToken
- *   5            | clearTokens
- *   6            | addGlobalToken
+ *   0x01            | clearDeposit
+ *   0x02            | finalizeDeposit
+ *   0x03            | finalizeWithdraw
+ *   0x04            | clearToken
+ *   0x05            | clearTokens
+ *   0x06            | addGlobalToken
  *
  */
 
@@ -52,7 +52,7 @@ contract CoreBranchRouter is BaseBranchRouter {
      */
     function addGlobalToken(
         address _globalAddress,
-        uint256 _toChain,
+        uint24 _toChain,
         uint128 _remoteExecutionGas,
         uint128 _rootExecutionGas
     ) external payable {
@@ -100,7 +100,7 @@ contract CoreBranchRouter is BaseBranchRouter {
      *  @param _name token name.
      *  @param _symbol token symbol.
      *  @param _rootExecutionGas the amount of gas to be used in the root execution.
-     *  @dev FUNC ID: 9
+     *  @dev FUNC ID: 1
      *  @dev all hTokens have 18 decimals.
      *
      */
@@ -130,7 +130,7 @@ contract CoreBranchRouter is BaseBranchRouter {
      *  @param _rootBridgeAgent the address of the root bridge agent.
      *  @param _rootBridgeAgentFactory the address of the root bridge agent factory.
      *  @param _remoteExecutionGas the amount of gas to be used in the remote execution.
-     *  @dev FUNC ID: 9
+     *  @dev FUNC ID: 2
      *  @dev all hTokens have 18 decimals.
      *
      */
@@ -169,6 +169,7 @@ contract CoreBranchRouter is BaseBranchRouter {
     /**
      * @notice Function to add/deactivate a Branch Bridge Agent Factory.
      *  @param _newBridgeAgentFactoryAddress the address of the new local bridge agent factory.
+     *  @dev FUNC ID: 3
      *
      */
     function _toggleBranchBridgeAgentFactory(address _newBridgeAgentFactoryAddress) internal {
@@ -182,6 +183,7 @@ contract CoreBranchRouter is BaseBranchRouter {
     /**
      * @notice Function to remove an active Branch Bridge Agent from the system.
      *  @param _branchBridgeAgent the address of the local Bridge Agent to be removed.
+     *  @dev FUNC ID: 4
      *
      */
     function _removeBranchBridgeAgent(address _branchBridgeAgent) internal {
@@ -193,6 +195,7 @@ contract CoreBranchRouter is BaseBranchRouter {
      * @notice Function to add / remove a token to be used by Port Strategies.
      *  @param _underlyingToken the address of the underlying token.
      *  @param _minimumReservesRatio the minimum reserves ratio the Port must have.
+     *  @dev FUNC ID: 5
      *
      */
     function _manageStrategyToken(address _underlyingToken, uint256 _minimumReservesRatio) internal {
@@ -209,6 +212,7 @@ contract CoreBranchRouter is BaseBranchRouter {
      *  @param _underlyingToken the address of the underlying token.
      *  @param _dailyManagementLimit the daily management limit.
      *  @param _isUpdateDailyLimit if the daily limit is being updated.
+     *  @dev FUNC ID: 6
      *
      */
     function _managePortStrategy(
@@ -233,10 +237,7 @@ contract CoreBranchRouter is BaseBranchRouter {
                     ANYCALL EXTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /**
-     * @notice Performs a cross-chain call to the root chain.
-     * @param _data the data to be sent to the root chain.
-     */
+    /// @inheritdoc IBranchRouter
     function anyExecuteNoSettlement(bytes calldata _data)
         external
         virtual

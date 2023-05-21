@@ -65,7 +65,7 @@ contract ArbitrumBranchBridgeAgentFactory is BranchBridgeAgentFactory {
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Creates a new bridge agent for a new branch chain.
+     * @notice Creates a new bridge agent for a branch chain.
      * @param _newBranchRouterAddress Address of the new branch router.
      * @param _rootBridgeAgentAddress Address of the root bridge agent.
      */

@@ -4,9 +4,9 @@ pragma solidity ^0.8.0;
 import "../interfaces/IERC20hTokenBranchFactory.sol";
 
 /**
- * @title ERC20 hToken Contract for deployment in Branch Chains of Hermes Omnichain Incentives System
+ * @title ERC20hTokenBranch Factory Contract
  * @author MaiaDAO
- * @dev
+ * @dev Contract for deployment of hTokens in Branch Chains of Ulysses Omnichain Liquidity System
  */
 contract ERC20hTokenBranchFactory is Ownable, IERC20hTokenBranchFactory {
     /// @notice Local Network Identifier.

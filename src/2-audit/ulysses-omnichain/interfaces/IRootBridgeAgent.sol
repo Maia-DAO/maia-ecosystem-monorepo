@@ -72,6 +72,7 @@ struct Settlement {
     uint24 toChain; //Destination chain for interaction.
     uint128 gasToBridgeOut; //Gas owed to user
     address owner; //Owner of the settlement
+    address recipient; //Recipient of the settlement.
     SettlementStatus status; //Status of the settlement
     address[] hTokens; //Input Local hTokens Addresses.
     address[] tokens; //Input Native / underlying Token Addresses.
@@ -141,17 +142,43 @@ interface IRootBridgeAgent is IApp {
     /*///////////////////////////////////////////////////////////////
                             VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-
+    /**
+     * @notice External function to get the intial gas available for remote request execution.
+     *   @return uint256 Initial gas available for remote request execution.
+     */
     function initialGas() external view returns (uint256);
 
+    /**
+     * @notice External get gas fee details for current remote request being executed.
+     *   @return uint256 Gas fee for remote request execution.
+     *   @return uint256 Gas fee for remote request execution.
+     */
     function userFeeInfo() external view returns (uint128, uint128);
 
+    /**
+     * @notice External function to get the Bridge Agent Executor Address.
+     * @return address Bridge Agent Executor Address.
+     */
     function bridgeAgentExecutorAddress() external view returns (address);
 
+    /**
+     * @notice External function to get the Root Bridge Agent's Factory Address.
+     *   @return address Root Bridge Agent's Factory Address.
+     */
     function factoryAddress() external view returns (address);
 
+    /**
+     * @notice External function to get the attached Branch Bridge Agent for a given chain.
+     *   @param _chainId Chain ID of the Branch Bridge Agent.
+     *   @return address Branch Bridge Agent Address.
+     */
     function getBranchBridgeAgent(uint256 _chainId) external view returns (address);
 
+    /**
+     * @notice External function to verify a given chain has been allowed by the Root Bridge Agent's Manager for new Branch Bridge Agent creation.
+     *   @param _chainId Chain ID of the Branch Bridge Agent.
+     *   @return bool True if the chain has been allowed for new Branch Bridge Agent creation.
+     */
     function isBranchBridgeAgentAllowed(uint256 _chainId) external view returns (bool);
 
     /*///////////////////////////////////////////////////////////////
@@ -160,7 +187,7 @@ interface IRootBridgeAgent is IApp {
 
     /**
      * @notice External function performs call to AnycallProxy Contract for cross-chain messaging.
-     *   @param _recipient recipient address for any outstanding gas on the destination chain.
+     *   @param _recipient address to receive any outstanding gas on the destination chain.
      *   @param _calldata Calldata for function call.
      *   @param _toChain Chain to bridge to.
      *   @dev Internal function performs call to AnycallProxy Contract for cross-chain messaging.
@@ -169,7 +196,8 @@ interface IRootBridgeAgent is IApp {
 
     /**
      * @notice External function to move assets from root chain to branch omnichain envirsonment.
-     *   @param _recipient recipient of bridged tokens.
+     *   @param _owner address allowed for redeeming assets after a failed settlement fallback. This address' Virtual Account is also allowed.
+     *   @param _recipient recipient of bridged tokens and any outstanding gas on the destination chain.
      *   @param _data parameters for function call on branch chain.
      *   @param _globalAddress global token to be moved.
      *   @param _amount amount of ´token´.
@@ -178,6 +206,7 @@ interface IRootBridgeAgent is IApp {
      *
      */
     function callOutAndBridge(
+        address _owner,
         address _recipient,
         bytes memory _data,
         address _globalAddress,
@@ -188,6 +217,7 @@ interface IRootBridgeAgent is IApp {
 
     /**
      * @notice External function to move assets from branch chain to root omnichain environment.
+     *   @param _owner address allowed for redeeming assets after a failed settlement fallback. This address' Virtual Account is also allowed.
      *   @param _recipient recipient of bridged tokens.
      *   @param _data parameters for function call on branch chain.
      *   @param _globalAddresses global tokens to be moved.
@@ -198,6 +228,7 @@ interface IRootBridgeAgent is IApp {
      *
      */
     function callOutAndBridgeMultiple(
+        address _owner,
         address _recipient,
         bytes memory _data,
         address[] memory _globalAddresses,
@@ -342,6 +373,7 @@ interface IRootBridgeAgent is IApp {
     error AlreadyAddedBridgeAgent();
     error UnrecognizedExecutor();
     error UnrecognizedPort();
+    error UnrecognizedBridgeAgent();
     error UnrecognizedBridgeAgentManager();
     error UnrecognizedCallerNotRouter();
 
@@ -351,6 +383,7 @@ interface IRootBridgeAgent is IApp {
     error UnrecognizedAddressInDestination();
 
     error SettlementRedeemUnavailable();
+    error NotSettlementOwner();
 
     error InsufficientBalanceForSettlement();
     error InsufficientGasForFees();

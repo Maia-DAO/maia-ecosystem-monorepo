@@ -19,10 +19,6 @@ contract VirtualAccount is IVirtualAccount {
     /// @notice Address for Local Port Address where funds deposited from this chain are stored.
     address public localPortAddress;
 
-    /**
-     * @notice Initializes the VirtualAccount.
-     * @param _userAddress The address of the user who owns this account.
-     */
     constructor(address _userAddress, address _localPortAddress) {
         userAddress = _userAddress;
         localPortAddress = _localPortAddress;
