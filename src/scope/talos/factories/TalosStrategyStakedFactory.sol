@@ -11,31 +11,10 @@ import { TalosBaseStrategy } from "../base/TalosBaseStrategy.sol";
 import { BoostAggregator, BoostAggregatorFactory } from "./BoostAggregatorFactory.sol";
 import { OptimizerFactory } from "./OptimizerFactory.sol";
 import { TalosBaseStrategyFactory } from "./TalosBaseStrategyFactory.sol";
-import { TalosStrategyStaked } from "../TalosStrategyStaked.sol";
+import { DeployStaked, TalosStrategyStaked } from "../TalosStrategyStaked.sol";
 
 import { ITalosOptimizer } from "../interfaces/ITalosOptimizer.sol";
 import { ITalosStrategyStakedFactory } from "../interfaces/ITalosStrategyStakedFactory.sol";
-
-library DeployStaked {
-    function createTalosV3Strategy(
-        IUniswapV3Pool pool,
-        ITalosOptimizer optimizer,
-        BoostAggregator boostAggregator,
-        address strategyManager,
-        FlywheelCoreInstant flywheel,
-        address owner
-    ) public returns (TalosBaseStrategy) {
-        return
-            new TalosStrategyStaked(
-                pool,
-                optimizer,
-                boostAggregator,
-                strategyManager,
-                flywheel,
-                owner
-            );
-    }
-}
 
 /// @title Talos Strategy Staked Factory
 contract TalosStrategyStakedFactory is TalosBaseStrategyFactory, ITalosStrategyStakedFactory {

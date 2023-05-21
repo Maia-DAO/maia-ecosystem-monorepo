@@ -6,34 +6,13 @@ import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3
 import { INonfungiblePositionManager } from "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";
 
 import { TalosBaseStrategy } from "../base/TalosBaseStrategy.sol";
-import { TalosStrategyVanilla } from "../TalosStrategyVanilla.sol";
+import { DeployVanilla, TalosStrategyVanilla } from "../TalosStrategyVanilla.sol";
 import { TalosManager } from "../TalosManager.sol";
 
 import { OptimizerFactory } from "./OptimizerFactory.sol";
 import { TalosBaseStrategyFactory } from "./TalosBaseStrategyFactory.sol";
 
 import { ITalosOptimizer } from "../interfaces/ITalosOptimizer.sol";
-
-/// @title Deploy Vanilla
-/// @notice This library deploys talos vanilla strategies
-library DeployVanilla {
-    function createTalosV3Vanilla(
-        IUniswapV3Pool pool,
-        ITalosOptimizer optimizer,
-        INonfungiblePositionManager nonfungiblePositionManager,
-        address strategyManager,
-        address owner
-    ) public returns (TalosBaseStrategy) {
-        return
-            new TalosStrategyVanilla(
-                pool,
-                optimizer,
-                nonfungiblePositionManager,
-                strategyManager,
-                owner
-            );
-    }
-}
 
 /// @title Talos Strategy Vanilla Factory
 contract TalosStrategyVanillaFactory is TalosBaseStrategyFactory {

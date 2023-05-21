@@ -571,8 +571,8 @@ contract UniswapV3Staker is IUniswapV3Staker, Multicallable {
         if (address(gauges[uniswapV3Pool]) != uniswapV3Gauge){ 
             emit GaugeUpdated(uniswapV3Pool, uniswapV3Gauge);
 
-                gauges[uniswapV3Pool] = UniswapV3Gauge(uniswapV3Gauge);
-                gaugePool[uniswapV3Gauge] = uniswapV3Pool;
+            gauges[uniswapV3Pool] = UniswapV3Gauge(uniswapV3Gauge);
+            gaugePool[uniswapV3Gauge] = uniswapV3Pool;
         }
 
         updateBribeDepot(uniswapV3Pool);

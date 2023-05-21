@@ -76,6 +76,8 @@ contract BoostAggregator is Ownable, IERC721Receiver, IBoostAggregator {
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IERC721Receiver
+    /// @dev msg.sender not validated to be nonfungiblePositionManager in order to allow
+    ///      whitelisted addresses to retrieve NFTs incorrectly sent to this contract
     function onERC721Received(
         address,
         address from,

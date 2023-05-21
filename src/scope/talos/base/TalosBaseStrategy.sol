@@ -14,7 +14,6 @@ import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3
 import { INonfungiblePositionManager } from "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";
 
 import { PoolVariables } from "../libraries/PoolVariables.sol";
-import { TalosManager } from "../TalosManager.sol";
 
 import { ITalosBaseStrategy, IERC721Receiver } from "../interfaces/ITalosBaseStrategy.sol";
 import { ITalosOptimizer } from "../interfaces/ITalosOptimizer.sol";

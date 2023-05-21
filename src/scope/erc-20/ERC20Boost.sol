@@ -323,6 +323,15 @@ abstract contract ERC20Boost is ERC20, Ownable, IERC20Boost {
         return super.transferFrom(from, to, amount);
     }
 
+    /*///////////////////////////////////////////////////////////////
+                             MODIFIERS
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Reverts if the user does not have enough free boost.
+     * @param user The user address.
+     * @param amount The amount of boost.
+     */
     modifier notAttached(address user, uint256 amount) {
         if (freeGaugeBoost(user) < amount) revert AttachedBoost();
         _;

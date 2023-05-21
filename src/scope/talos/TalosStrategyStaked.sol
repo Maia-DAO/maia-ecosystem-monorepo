@@ -6,13 +6,34 @@ import { MultiRewardsDepot } from "@rewards/depots/MultiRewardsDepot.sol";
 import { FlywheelInstantRewards, ERC20 } from "@rewards/rewards/FlywheelInstantRewards.sol";
 
 import { BoostAggregator } from "./boost-aggregator/BoostAggregator.sol";
-import { TalosStrategySimpleRebalance } from "./strategies/TalosStrategySimpleRebalance.sol";
+import { TalosStrategySimpleRebalance, TalosBaseStrategy } from "./strategies/TalosStrategySimpleRebalance.sol";
 
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import { INonfungiblePositionManager } from "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";
 
 import { ITalosOptimizer } from "./interfaces/ITalosOptimizer.sol";
 import { ITalosStrategyStaked } from "./interfaces/ITalosStrategyStaked.sol";
+
+library DeployStaked {
+    function createTalosV3Strategy(
+        IUniswapV3Pool pool,
+        ITalosOptimizer optimizer,
+        BoostAggregator boostAggregator,
+        address strategyManager,
+        FlywheelCoreInstant flywheel,
+        address owner
+    ) public returns (TalosBaseStrategy) {
+        return
+            new TalosStrategyStaked(
+                pool,
+                optimizer,
+                boostAggregator,
+                strategyManager,
+                flywheel,
+                owner
+            );
+    }
+}
 
 /// @title Tokenized Vault implementation for a staked Uniswap V3 Non-Fungible Positions.
 contract TalosStrategyStaked is TalosStrategySimpleRebalance, ITalosStrategyStaked {

@@ -14,7 +14,28 @@ import { INonfungiblePositionManager } from "@uniswap/v3-periphery/contracts/int
 import { ITalosOptimizer } from "./interfaces/ITalosOptimizer.sol";
 import { PoolVariables } from "./libraries/PoolVariables.sol";
 
-import { TalosStrategySimpleRebalance } from "./strategies/TalosStrategySimpleRebalance.sol";
+import { TalosStrategySimpleRebalance, TalosBaseStrategy } from "./strategies/TalosStrategySimpleRebalance.sol";
+
+/// @title Deploy Vanilla
+/// @notice This library deploys talos vanilla strategies
+library DeployVanilla {
+    function createTalosV3Vanilla(
+        IUniswapV3Pool pool,
+        ITalosOptimizer optimizer,
+        INonfungiblePositionManager nonfungiblePositionManager,
+        address strategyManager,
+        address owner
+    ) public returns (TalosBaseStrategy) {
+        return
+            new TalosStrategyVanilla(
+                pool,
+                optimizer,
+                nonfungiblePositionManager,
+                strategyManager,
+                owner
+            );
+    }
+}
 
 /// @notice Minimal tokenized Vault implementation for Uniswap V3 Non Fungible Positions.
 /// @author Maia DAO (https://github.com/Maia-DAO)
