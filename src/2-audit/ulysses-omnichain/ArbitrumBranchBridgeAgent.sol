@@ -125,8 +125,17 @@ contract ArbitrumBranchBridgeAgent is BranchBridgeAgent {
      * @notice Internal function to pay for execution gas. Overwritten Gas is processed by Root Bridge Agent contract - `depositedGas` is used to pay for execution and `gasToBridgeOut`is cleared to recipient.
      */
     function _payExecutionGas(address _recipient, uint256) internal override {
-        //Transfer gas remaining to recipient
-        SafeTransferLib.safeTransferETH(_recipient, remoteCallDepositedGas);
+        //Get gas remaining
+        uint256 gasRemaining = wrappedNativeToken.balanceOf(address(this));
+
+        if (gasRemaining > 0) {
+            //Unwrap Gas
+            wrappedNativeToken.withdraw(gasRemaining);
+
+            //Transfer gas remaining to recipient
+            SafeTransferLib.safeTransferETH(_recipient, gasRemaining);
+        }
+
         delete(remoteCallDepositedGas);
     }
 

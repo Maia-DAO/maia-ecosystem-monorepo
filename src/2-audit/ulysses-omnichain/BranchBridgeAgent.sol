@@ -470,7 +470,7 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
             (remoteCallDepositedGas > 0 ? (_gasToBridgeOut, true) : (msg.value.toUint128(), false));
 
         //Wrap the gas allocated for omnichain execution.
-        if (!isRemote) wrappedNativeToken.deposit{value: msg.value}();
+        if (!isRemote && gasToBridgeOut > 0) wrappedNativeToken.deposit{value: msg.value}();
 
         //Check Fallback Gas
         _requiresFallbackGas(gasToBridgeOut);
@@ -495,7 +495,7 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
             (remoteCallDepositedGas > 0 ? (_gasToBridgeOut, true) : (msg.value.toUint128(), false));
 
         //Wrap the gas allocated for omnichain execution.
-        if (!isRemote) wrappedNativeToken.deposit{value: msg.value}();
+        if (!isRemote && gasToBridgeOut > 0) wrappedNativeToken.deposit{value: msg.value}();
 
         //Check Fallback Gas
         _requiresFallbackGas(gasToBridgeOut);
@@ -517,7 +517,7 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
             (remoteCallDepositedGas > 0 ? (_gasToBridgeOut, true) : (msg.value.toUint128(), false));
 
         //Wrap the gas allocated for omnichain execution.
-        if (!isRemote) wrappedNativeToken.deposit{value: msg.value}();
+        if (!isRemote && gasToBridgeOut > 0) wrappedNativeToken.deposit{value: msg.value}();
 
         //Check Fallback Gas
         _requiresFallbackGas(gasToBridgeOut);
@@ -539,7 +539,7 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
             (remoteCallDepositedGas > 0 ? (_gasToBridgeOut, true) : (msg.value.toUint128(), false));
 
         //Wrap the gas allocated for omnichain execution.
-        if (!isRemote) wrappedNativeToken.deposit{value: msg.value}();
+        if (!isRemote && gasToBridgeOut > 0) wrappedNativeToken.deposit{value: msg.value}();
 
         //Check Fallback Gas
         _requiresFallbackGas(gasToBridgeOut);
