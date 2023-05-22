@@ -2,12 +2,12 @@
 
 pragma solidity ^0.8.0;
 
-import { BaseV2Gauge } from "@gauges/BaseV2Gauge.sol";
-import { bHermesBoost } from "@hermes/tokens/bHermesBoost.sol";
+import {BaseV2Gauge} from "@gauges/BaseV2Gauge.sol";
+import {bHermesBoost} from "@hermes/tokens/bHermesBoost.sol";
 
-import { BaseV2GaugeManager } from "../factories/BaseV2GaugeManager.sol";
+import {BaseV2GaugeManager} from "../factories/BaseV2GaugeManager.sol";
 
-import { BribesFactory } from "../factories/BribesFactory.sol";
+import {BribesFactory} from "../factories/BribesFactory.sol";
 
 /**
  * @title Base V2 Gauge Factory
@@ -50,10 +50,10 @@ interface IBaseV2GaugeFactory {
     /// @notice The gauge factory manager
     function gaugeManager() external view returns (BaseV2GaugeManager);
 
-    /// @notice The bHermes token used for boost accounting 
+    /// @notice The bHermes token used for boost accounting
     function bHermesBoostToken() external view returns (bHermesBoost);
 
-    /// @notice The factory of bribe flywheels    
+    /// @notice The factory of bribe flywheels
     function bribesFactory() external view returns (BribesFactory);
 
     /// @notice Stores all the gauges created by the factory.

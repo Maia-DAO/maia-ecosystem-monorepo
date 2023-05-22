@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { Ownable } from "solady/auth/Ownable.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
 
-import { ERC20 } from "solmate/tokens/ERC20.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
-import { bHermesBoost } from "@hermes/tokens/bHermesBoost.sol";
+import {bHermesBoost} from "@hermes/tokens/bHermesBoost.sol";
 
-import { MultiRewardsDepot } from "@rewards/depots/MultiRewardsDepot.sol";
-import { FlywheelBribeRewards } from "@rewards/rewards/FlywheelBribeRewards.sol";
-import { FlywheelCore } from "@rewards/FlywheelCoreStrategy.sol";
-import { FlywheelGaugeRewards } from "@rewards/rewards/FlywheelGaugeRewards.sol";
+import {MultiRewardsDepot} from "@rewards/depots/MultiRewardsDepot.sol";
+import {FlywheelBribeRewards} from "@rewards/rewards/FlywheelBribeRewards.sol";
+import {FlywheelCore} from "@rewards/FlywheelCoreStrategy.sol";
+import {FlywheelGaugeRewards} from "@rewards/rewards/FlywheelGaugeRewards.sol";
 
-import { BaseV2GaugeFactory } from "./factories/BaseV2GaugeFactory.sol";
+import {BaseV2GaugeFactory} from "./factories/BaseV2GaugeFactory.sol";
 
-import { IBaseV2Gauge } from "./interfaces/IBaseV2Gauge.sol";
+import {IBaseV2Gauge} from "./interfaces/IBaseV2Gauge.sol";
 
 /// @title Base V2 Gauge
 abstract contract BaseV2Gauge is Ownable, IBaseV2Gauge {
@@ -46,9 +46,11 @@ abstract contract BaseV2Gauge is Ownable, IBaseV2Gauge {
     /// @inheritdoc IBaseV2Gauge
     uint256 public override epoch;
 
+    /// @notice Bribes flywheels array to accrue bribes from.
     FlywheelCore[] private bribeFlywheels;
 
-    uint256 internal constant WEEK = 604800;
+    /// @notice 1 week in seconds.
+    uint256 internal constant WEEK = 1 weeks;
 
     /**
      * @notice Constructs the BaseV2Gauge contract.
@@ -56,11 +58,7 @@ abstract contract BaseV2Gauge is Ownable, IBaseV2Gauge {
      * @param _strategy The strategy address.
      * @param _owner The owner address.
      */
-    constructor(
-        FlywheelGaugeRewards _flywheelGaugeRewards,
-        address _strategy,
-        address _owner
-    ) {
+    constructor(FlywheelGaugeRewards _flywheelGaugeRewards, address _strategy, address _owner) {
         _initializeOwner(_owner);
         flywheelGaugeRewards = _flywheelGaugeRewards;
         rewardToken = _flywheelGaugeRewards.rewardToken();
@@ -96,6 +94,7 @@ abstract contract BaseV2Gauge is Ownable, IBaseV2Gauge {
         }
     }
 
+    /// @notice Distributes weekly emissions to the strategy.
     function distribute(uint256 amount) internal virtual;
 
     /// @inheritdoc IBaseV2Gauge
@@ -112,7 +111,7 @@ abstract contract BaseV2Gauge is Ownable, IBaseV2Gauge {
     function accrueBribes(address user) external {
         FlywheelCore[] storage _bribeFlywheels = bribeFlywheels;
         uint256 length = _bribeFlywheels.length;
-        for (uint256 i = 0; i < length; ) {
+        for (uint256 i = 0; i < length;) {
             if (isActive[_bribeFlywheels[i]]) _bribeFlywheels[i].accrue(ERC20(address(this)), user);
 
             unchecked {
@@ -152,6 +151,7 @@ abstract contract BaseV2Gauge is Ownable, IBaseV2Gauge {
         emit RemoveBribeFlywheel(bribeFlywheel);
     }
 
+    /// @notice Only the strategy can attach and detach users.
     modifier onlyStrategy() virtual {
         if (msg.sender != strategy) revert StrategyError();
         _;

@@ -2,9 +2,9 @@
 // Logic inspired by Popsicle Finance Contracts (PopsicleV3Optimizer/contracts/popsicle-v3-optimizer/OptimizerStrategy.sol)
 pragma solidity ^0.8.0;
 
-import { Ownable } from "solady/auth/Ownable.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
 
-import { ITalosOptimizer } from "./interfaces/ITalosOptimizer.sol";
+import {ITalosOptimizer} from "./interfaces/ITalosOptimizer.sol";
 
 /// @title Permissioned Optimizer variables
 contract TalosOptimizer is Ownable, ITalosOptimizer {
@@ -41,8 +41,9 @@ contract TalosOptimizer is Ownable, ITalosOptimizer {
     ) {
         if (_maxTwapDeviation < 20) revert MaxTwapDeviationTooLow();
         if (_twapDuration < 100) revert TwapDurationTooLow();
-        if (_priceImpactPercentage >= 1e6 || _priceImpactPercentage == 0)
+        if (_priceImpactPercentage >= 1e6 || _priceImpactPercentage == 0) {
             revert PriceImpactPercentageInvalid();
+        }
         if (_maxTotalSupply == 0) revert MaxTotalSupplyIsZero();
 
         _initializeOwner(_owner);
@@ -82,8 +83,9 @@ contract TalosOptimizer is Ownable, ITalosOptimizer {
 
     /// @inheritdoc ITalosOptimizer
     function setPriceImpact(uint24 _priceImpactPercentage) external onlyOwner {
-        if (_priceImpactPercentage >= 1e6 || _priceImpactPercentage == 0)
+        if (_priceImpactPercentage >= 1e6 || _priceImpactPercentage == 0) {
             revert PriceImpactPercentageInvalid();
+        }
         priceImpactPercentage = _priceImpactPercentage;
     }
 }

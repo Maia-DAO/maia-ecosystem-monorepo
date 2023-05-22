@@ -2,23 +2,28 @@
 
 pragma solidity ^0.8.0;
 
-import { Ownable } from "solady/auth/Ownable.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
 
-import { ERC20 } from "solmate/tokens/ERC20.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
-import { bHermesBoost } from "@hermes/tokens/bHermesBoost.sol";
+import {bHermesBoost} from "@hermes/tokens/bHermesBoost.sol";
 
-import { UniswapV3Gauge, BaseV2Gauge } from "@gauges/UniswapV3Gauge.sol";
+import {UniswapV3Gauge, BaseV2Gauge} from "@gauges/UniswapV3Gauge.sol";
 
-import { FlywheelGaugeRewards } from "@rewards/rewards/FlywheelGaugeRewards.sol";
+import {FlywheelGaugeRewards} from "@rewards/rewards/FlywheelGaugeRewards.sol";
 
-import { UniswapV3Staker, IUniswapV3Factory, INonfungiblePositionManager, IUniswapV3Pool } from "@v3-staker/UniswapV3Staker.sol";
+import {
+    UniswapV3Staker,
+    IUniswapV3Factory,
+    INonfungiblePositionManager,
+    IUniswapV3Pool
+} from "@v3-staker/UniswapV3Staker.sol";
 
-import { BribesFactory } from "./BribesFactory.sol";
-import { BaseV2GaugeFactory } from "./BaseV2GaugeFactory.sol";
-import { BaseV2GaugeManager } from "./BaseV2GaugeManager.sol";
+import {BribesFactory} from "./BribesFactory.sol";
+import {BaseV2GaugeFactory} from "./BaseV2GaugeFactory.sol";
+import {BaseV2GaugeManager} from "./BaseV2GaugeManager.sol";
 
-import { IUniswapV3GaugeFactory } from "../interfaces/IUniswapV3GaugeFactory.sol";
+import {IUniswapV3GaugeFactory} from "../interfaces/IUniswapV3GaugeFactory.sol";
 
 /// @title Uniswap V3 Gauge Factory.
 contract UniswapV3GaugeFactory is BaseV2GaugeFactory, IUniswapV3GaugeFactory {
@@ -70,8 +75,7 @@ contract UniswapV3GaugeFactory is BaseV2GaugeFactory, IUniswapV3GaugeFactory {
     /// @notice Creates a new Uniswap V3 Gauge
     function newGauge(address strategy, bytes memory data) internal override returns (BaseV2Gauge) {
         uint24 minimumWidth = abi.decode(data, (uint24));
-        return
-            new UniswapV3Gauge(
+        return new UniswapV3Gauge(
                 flywheelGaugeRewards,
                 address(uniswapV3Staker),
                 strategy,

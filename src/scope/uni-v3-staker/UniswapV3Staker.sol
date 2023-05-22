@@ -2,23 +2,23 @@
 // Rewards logic inspired by Uniswap V3 Contracts (Uniswap/v3-staker/contracts/UniswapV3Staker.sol)
 pragma solidity ^0.8.0;
 
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
-import { Multicallable } from "solady/utils/Multicallable.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+import {Multicallable} from "solady/utils/Multicallable.sol";
 
-import { IUniswapV3Factory } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
-import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-import { INonfungiblePositionManager } from "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";
+import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
+import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import {INonfungiblePositionManager} from "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";
 
-import { IUniswapV3GaugeFactory } from "@gauges/interfaces/IUniswapV3GaugeFactory.sol";
-import { UniswapV3Gauge } from "@gauges/UniswapV3Gauge.sol";
-import { bHermesBoost } from "@hermes/tokens/bHermesBoost.sol";
+import {IUniswapV3GaugeFactory} from "@gauges/interfaces/IUniswapV3GaugeFactory.sol";
+import {UniswapV3Gauge} from "@gauges/UniswapV3Gauge.sol";
+import {bHermesBoost} from "@hermes/tokens/bHermesBoost.sol";
 
-import { IncentiveId } from "./libraries/IncentiveId.sol";
-import { IncentiveTime } from "./libraries/IncentiveTime.sol";
-import { NFTPositionInfo } from "./libraries/NFTPositionInfo.sol";
-import { RewardMath } from "./libraries/RewardMath.sol";
+import {IncentiveId} from "./libraries/IncentiveId.sol";
+import {IncentiveTime} from "./libraries/IncentiveTime.sol";
+import {NFTPositionInfo} from "./libraries/NFTPositionInfo.sol";
+import {RewardMath} from "./libraries/RewardMath.sol";
 
-import { IERC721Receiver, IUniswapV3Staker } from "./interfaces/IUniswapV3Staker.sol";
+import {IERC721Receiver, IUniswapV3Staker} from "./interfaces/IUniswapV3Staker.sol";
 
 /// @title Uniswap V3 Staker Interface with bHermes Boost.
 contract UniswapV3Staker is IUniswapV3Staker, Multicallable {
@@ -141,7 +141,7 @@ contract UniswapV3Staker is IUniswapV3Staker, Multicallable {
 
         if (address(pool) == address(0)) revert IncentiveCallerMustBeRegisteredGauge();
 
-        IncentiveKey memory key = IncentiveKey({ startTime: startTime, pool: pool });
+        IncentiveKey memory key = IncentiveKey({startTime: startTime, pool: pool});
         bytes32 incentiveId = IncentiveId.compute(key);
 
         incentives[incentiveId].totalRewardUnclaimed += reward;
@@ -160,11 +160,13 @@ contract UniswapV3Staker is IUniswapV3Staker, Multicallable {
         if (startTime != key.startTime) revert IncentiveStartTimeNotAtEndOfAnEpoch();
 
         if (startTime <= block.timestamp) revert IncentiveStartTimeMustBeNowOrInTheFuture();
-        if (startTime - block.timestamp > maxIncentiveStartLeadTime)
+        if (startTime - block.timestamp > maxIncentiveStartLeadTime) {
             revert IncentiveStartTimeTooFarIntoFuture();
+        }
 
-        if (address(gauges[key.pool]) == address(0))
+        if (address(gauges[key.pool]) == address(0)) {
             revert IncentiveCannotBeCreatedForPoolWithNoGauge();
+        }
 
         bytes32 incentiveId = IncentiveId.compute(key);
 
@@ -181,8 +183,9 @@ contract UniswapV3Staker is IUniswapV3Staker, Multicallable {
 
     /// @inheritdoc IUniswapV3Staker
     function endIncentive(IncentiveKey memory key) external returns (uint256 refund) {
-        if (block.timestamp < IncentiveTime.getEnd(key.startTime))
+        if (block.timestamp < IncentiveTime.getEnd(key.startTime)) {
             revert EndIncentiveBeforeEndTime();
+        }
 
         bytes32 incentiveId = IncentiveId.compute(key);
 
@@ -210,24 +213,18 @@ contract UniswapV3Staker is IUniswapV3Staker, Multicallable {
     /// @dev Upon receiving a Uniswap V3 ERC721, create the token deposit and
     ///      _stakes in current incentive setting owner to `from`.
     /// @inheritdoc IERC721Receiver
-    function onERC721Received(
-        address,
-        address from,
-        uint256 tokenId,
-        bytes calldata
-    ) external override returns (bytes4) {
+    function onERC721Received(address, address from, uint256 tokenId, bytes calldata)
+        external
+        override
+        returns (bytes4)
+    {
         INonfungiblePositionManager _nonfungiblePositionManager = nonfungiblePositionManager;
         if (msg.sender != address(_nonfungiblePositionManager)) revert TokenNotUniswapV3NFT();
 
-        (IUniswapV3Pool pool, int24 tickLower, int24 tickUpper, uint128 liquidity) = NFTPositionInfo
-            .getPositionInfo(factory, nonfungiblePositionManager, tokenId);
+        (IUniswapV3Pool pool, int24 tickLower, int24 tickUpper, uint128 liquidity) =
+            NFTPositionInfo.getPositionInfo(factory, nonfungiblePositionManager, tokenId);
 
-        deposits[tokenId] = Deposit({
-            owner: from,
-            tickLower: tickLower,
-            tickUpper: tickUpper,
-            stakedTimestamp: 0
-        });
+        deposits[tokenId] = Deposit({owner: from, tickLower: tickLower, tickUpper: tickUpper, stakedTimestamp: 0});
         emit DepositTransferred(tokenId, address(0), from);
 
         // stake the token in the current incentive
@@ -241,11 +238,7 @@ contract UniswapV3Staker is IUniswapV3Staker, Multicallable {
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IUniswapV3Staker
-    function withdrawToken(
-        uint256 tokenId,
-        address to,
-        bytes memory data
-    ) external {
+    function withdrawToken(uint256 tokenId, address to, bytes memory data) external {
         if (to == address(0)) revert InvalidRecipient();
 
         Deposit storage deposit = deposits[tokenId];
@@ -297,11 +290,8 @@ contract UniswapV3Staker is IUniswapV3Staker, Multicallable {
     {
         Deposit storage deposit = deposits[tokenId];
 
-        (uint96 endTime, uint256 stakedDuration) = IncentiveTime.getEndAndDuration(
-            key.startTime,
-            deposit.stakedTimestamp,
-            block.timestamp
-        );
+        (uint96 endTime, uint256 stakedDuration) =
+            IncentiveTime.getEndAndDuration(key.startTime, deposit.stakedTimestamp, block.timestamp);
 
         bytes32 incentiveId = IncentiveId.compute(key);
         {
@@ -311,22 +301,14 @@ contract UniswapV3Staker is IUniswapV3Staker, Multicallable {
             // If tokenId is attached to gauge
             if (_userAttachements[owner][key.pool] == tokenId) {
                 // get boost amount and total supply
-                (boostAmount, boostTotalSupply) = hermesGaugeBoost.getUserGaugeBoost(
-                    owner,
-                    address(gauges[key.pool])
-                );
+                (boostAmount, boostTotalSupply) = hermesGaugeBoost.getUserGaugeBoost(owner, address(gauges[key.pool]));
             }
 
-            (uint160 secondsPerLiquidityInsideInitialX128, uint128 liquidity) = stakes(
-                tokenId,
-                incentiveId
-            );
+            (uint160 secondsPerLiquidityInsideInitialX128, uint128 liquidity) = stakes(tokenId, incentiveId);
             if (liquidity == 0) revert TokenNotStaked();
 
-            (, uint160 secondsPerLiquidityInsideX128, ) = key.pool.snapshotCumulativesInside(
-                deposit.tickLower,
-                deposit.tickUpper
-            );
+            (, uint160 secondsPerLiquidityInsideX128,) =
+                key.pool.snapshotCumulativesInside(deposit.tickLower, deposit.tickUpper);
 
             secondsInsideX128 = RewardMath.computeBoostedSecondsInsideX128(
                 stakedDuration,
@@ -357,8 +339,8 @@ contract UniswapV3Staker is IUniswapV3Staker, Multicallable {
         IncentiveKey storage incentiveId = stakedIncentiveKey[tokenId];
         if (incentiveId.startTime != 0) _unstakeToken(incentiveId, tokenId, true);
 
-        (IUniswapV3Pool pool, int24 tickLower, int24 tickUpper, uint128 liquidity) = NFTPositionInfo
-            .getPositionInfo(factory, nonfungiblePositionManager, tokenId);
+        (IUniswapV3Pool pool, int24 tickLower, int24 tickUpper, uint128 liquidity) =
+            NFTPositionInfo.getPositionInfo(factory, nonfungiblePositionManager, tokenId);
 
         _stakeToken(tokenId, pool, tickLower, tickUpper, liquidity);
     }
@@ -381,11 +363,8 @@ contract UniswapV3Staker is IUniswapV3Staker, Multicallable {
     function _unstakeToken(IncentiveKey memory key, uint256 tokenId, bool isNotRestake) private {
         Deposit storage deposit = deposits[tokenId];
 
-        (uint96 endTime, uint256 stakedDuration) = IncentiveTime.getEndAndDuration(
-            key.startTime,
-            deposit.stakedTimestamp,
-            block.timestamp
-        );
+        (uint96 endTime, uint256 stakedDuration) =
+            IncentiveTime.getEndAndDuration(key.startTime, deposit.stakedTimestamp, block.timestamp);
 
         address owner = deposit.owner;
 
@@ -418,15 +397,9 @@ contract UniswapV3Staker is IUniswapV3Staker, Multicallable {
             UniswapV3Gauge gauge = gauges[key.pool]; // saves another SLOAD if no tokenId is attached
 
             // If tokenId is attached to gauge
-            if (
-                hermesGaugeBoost.isUserGauge(owner, address(gauge))
-                    && _userAttachements[owner][key.pool] == tokenId
-            ) {
+            if (hermesGaugeBoost.isUserGauge(owner, address(gauge)) && _userAttachements[owner][key.pool] == tokenId) {
                 // get boost amount and total supply
-                (boostAmount, boostTotalSupply) = hermesGaugeBoost.getUserGaugeBoost(
-                    owner,
-                    address(gauge)
-                );
+                (boostAmount, boostTotalSupply) = hermesGaugeBoost.getUserGaugeBoost(owner, address(gauge));
                 gauge.detachUser(owner);
                 _userAttachements[owner][key.pool] = 0;
             }
@@ -435,10 +408,8 @@ contract UniswapV3Staker is IUniswapV3Staker, Multicallable {
             (secondsPerLiquidityInsideInitialX128, liquidity) = stakes(tokenId, incentiveId);
             if (liquidity == 0) revert TokenNotStaked();
 
-            (, uint160 secondsPerLiquidityInsideX128, ) = key.pool.snapshotCumulativesInside(
-                deposit.tickLower,
-                deposit.tickUpper
-            );
+            (, uint160 secondsPerLiquidityInsideX128,) =
+                key.pool.snapshotCumulativesInside(deposit.tickLower, deposit.tickUpper);
 
             secondsInsideX128 = RewardMath.computeBoostedSecondsInsideX128(
                 stakedDuration,
@@ -493,24 +464,17 @@ contract UniswapV3Staker is IUniswapV3Staker, Multicallable {
     function stakeToken(uint256 tokenId) external override {
         if (deposits[tokenId].stakedTimestamp != 0) revert TokenStakedError();
 
-        (IUniswapV3Pool pool, int24 tickLower, int24 tickUpper, uint128 liquidity) = NFTPositionInfo
-            .getPositionInfo(factory, nonfungiblePositionManager, tokenId);
+        (IUniswapV3Pool pool, int24 tickLower, int24 tickUpper, uint128 liquidity) =
+            NFTPositionInfo.getPositionInfo(factory, nonfungiblePositionManager, tokenId);
 
         _stakeToken(tokenId, pool, tickLower, tickUpper, liquidity);
     }
 
     /// @dev Stakes a deposited token without doing an already staked in another position check
-    function _stakeToken(
-        uint256 tokenId,
-        IUniswapV3Pool pool,
-        int24 tickLower,
-        int24 tickUpper,
-        uint128 liquidity
-    ) private {
-        IncentiveKey memory key = IncentiveKey({
-            pool: pool,
-            startTime: IncentiveTime.computeStart(block.timestamp)
-        });
+    function _stakeToken(uint256 tokenId, IUniswapV3Pool pool, int24 tickLower, int24 tickUpper, uint128 liquidity)
+        private
+    {
+        IncentiveKey memory key = IncentiveKey({pool: pool, startTime: IncentiveTime.computeStart(block.timestamp)});
 
         bytes32 incentiveId = IncentiveId.compute(key);
 
@@ -535,10 +499,7 @@ contract UniswapV3Staker is IUniswapV3Staker, Multicallable {
         deposits[tokenId].stakedTimestamp = uint40(block.timestamp);
         incentives[incentiveId].numberOfStakes++;
 
-        (, uint160 secondsPerLiquidityInsideX128, ) = pool.snapshotCumulativesInside(
-            tickLower,
-            tickUpper
-        );
+        (, uint160 secondsPerLiquidityInsideX128,) = pool.snapshotCumulativesInside(tickLower, tickUpper);
 
         if (liquidity >= type(uint96).max) {
             _stakes[tokenId][incentiveId] = Stake({
@@ -561,14 +522,11 @@ contract UniswapV3Staker is IUniswapV3Staker, Multicallable {
 
     /// @inheritdoc IUniswapV3Staker
     function updateGauges(IUniswapV3Pool uniswapV3Pool) external {
-        address uniswapV3Gauge = address(
-            uniswapV3GaugeFactory.strategyGauges(address(uniswapV3Pool))
-        );
-        
-        if (uniswapV3Gauge == address(0)) revert InvalidGauge();
-        
+        address uniswapV3Gauge = address(uniswapV3GaugeFactory.strategyGauges(address(uniswapV3Pool)));
 
-        if (address(gauges[uniswapV3Pool]) != uniswapV3Gauge){ 
+        if (uniswapV3Gauge == address(0)) revert InvalidGauge();
+
+        if (address(gauges[uniswapV3Pool]) != uniswapV3Gauge) {
             emit GaugeUpdated(uniswapV3Pool, uniswapV3Gauge);
 
             gauges[uniswapV3Pool] = UniswapV3Gauge(uniswapV3Gauge);
@@ -582,7 +540,7 @@ contract UniswapV3Staker is IUniswapV3Staker, Multicallable {
     /// @inheritdoc IUniswapV3Staker
     function updateBribeDepot(IUniswapV3Pool uniswapV3Pool) public {
         address newDepot = address(gauges[uniswapV3Pool].multiRewardsDepot());
-        if (newDepot != bribeDepots[uniswapV3Pool]){
+        if (newDepot != bribeDepots[uniswapV3Pool]) {
             bribeDepots[uniswapV3Pool] = newDepot;
 
             emit BribeDepotUpdated(uniswapV3Pool, newDepot);
@@ -592,7 +550,7 @@ contract UniswapV3Staker is IUniswapV3Staker, Multicallable {
     /// @inheritdoc IUniswapV3Staker
     function updatePoolMinimumWidth(IUniswapV3Pool uniswapV3Pool) public {
         uint24 minimumWidth = gauges[uniswapV3Pool].minimumWidth();
-        if (minimumWidth != poolsMinimumWidth[uniswapV3Pool]){
+        if (minimumWidth != poolsMinimumWidth[uniswapV3Pool]) {
             poolsMinimumWidth[uniswapV3Pool] = minimumWidth;
 
             emit PoolMinimumWidthUpdated(uniswapV3Pool, minimumWidth);

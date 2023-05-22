@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import { Ownable } from "solady/auth/Ownable.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
-import { ERC4626 } from "@ERC4626/ERC4626.sol";
+import {ERC4626} from "@ERC4626/ERC4626.sol";
 
-import { HERMES } from "@hermes/tokens/HERMES.sol";
+import {HERMES} from "@hermes/tokens/HERMES.sol";
 
-import { FlywheelGaugeRewards } from "@rewards/rewards/FlywheelGaugeRewards.sol";
+import {FlywheelGaugeRewards} from "@rewards/rewards/FlywheelGaugeRewards.sol";
 
-import { IBaseV2Minter } from "../interfaces/IBaseV2Minter.sol";
+import {IBaseV2Minter} from "../interfaces/IBaseV2Minter.sol";
 
 /// @title Base V2 Minter
 contract BaseV2Minter is Ownable, IBaseV2Minter {

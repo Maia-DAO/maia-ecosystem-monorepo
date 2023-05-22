@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 // Rewards logic inspired by Uniswap V3 Contracts (Uniswap/v3-staker/contracts/libraries/RewardMath.sol)
-import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
+
+import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 
 /// @title Math for computing rewards
 /// @notice Allows computing rewards given some parameters of stakes and incentives
@@ -25,19 +26,19 @@ library RewardMath {
         uint160 secondsPerLiquidityInsideX128
     ) internal pure returns (uint160 boostedSecondsInsideX128) {
         // this operation is safe, as the difference cannot be greater than 1/stake.liquidity
-        uint160 secondsInsideX128 = (secondsPerLiquidityInsideX128 -
-            secondsPerLiquidityInsideInitialX128) * liquidity;
+        uint160 secondsInsideX128 = (secondsPerLiquidityInsideX128 - secondsPerLiquidityInsideInitialX128) * liquidity;
 
         if (boostTotalSupply > 0) {
-            // calculate boosted seconds insisde 
+            // calculate boosted seconds insisde
             // 40% of original value + 60% of ((staked duration * boost amount) / boost total supply)
             boostedSecondsInsideX128 = uint160(
                 ((secondsInsideX128 * 4) / 10) + ((((stakedDuration << 128) * boostAmount) / boostTotalSupply) * 6) / 10
             );
 
             // calculate boosted seconds inside, can't be larger than the original reward amount
-            if (boostedSecondsInsideX128 > secondsInsideX128)
+            if (boostedSecondsInsideX128 > secondsInsideX128) {
                 boostedSecondsInsideX128 = secondsInsideX128;
+            }
         } else {
             // if no boost supply, then just use 40% of original value
             boostedSecondsInsideX128 = (secondsInsideX128 * 4) / 10;
@@ -63,8 +64,7 @@ library RewardMath {
         // this should never be called before the start time
         assert(currentTime >= startTime);
 
-        uint256 totalSecondsUnclaimedX128 = ((endTime.max(currentTime) - startTime) << 128) -
-            totalSecondsClaimedX128;
+        uint256 totalSecondsUnclaimedX128 = ((endTime.max(currentTime) - startTime) << 128) - totalSecondsClaimedX128;
 
         return totalRewardUnclaimed.mulDiv(secondsInsideX128, totalSecondsUnclaimedX128);
     }

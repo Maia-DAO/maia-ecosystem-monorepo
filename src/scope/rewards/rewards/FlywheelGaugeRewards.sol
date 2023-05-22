@@ -2,17 +2,17 @@
 // Rewards logic inspired by Tribe DAO Contracts (flywheel-v2/src/rewards/FlywheelGaugeRewards.sol)
 pragma solidity ^0.8.0;
 
-import { Ownable } from "solady/auth/Ownable.sol";
-import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
+import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
-import { ERC20 } from "solmate/tokens/ERC20.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
-import { ERC20Gauges } from "@ERC20/ERC20Gauges.sol";
+import {ERC20Gauges} from "@ERC20/ERC20Gauges.sol";
 
-import { IFlywheelGaugeRewards } from "../interfaces/IFlywheelGaugeRewards.sol";
+import {IFlywheelGaugeRewards} from "../interfaces/IFlywheelGaugeRewards.sol";
 
-import { IBaseV2Minter } from "@hermes/interfaces/IBaseV2Minter.sol";
+import {IBaseV2Minter} from "@hermes/interfaces/IBaseV2Minter.sol";
 
 /// @title Flywheel Gauge Reward Stream
 contract FlywheelGaugeRewards is Ownable, IFlywheelGaugeRewards {
@@ -50,12 +50,7 @@ contract FlywheelGaugeRewards is Ownable, IFlywheelGaugeRewards {
     // the offset during pagination of the queue
     uint32 internal paginationOffset;
 
-    constructor(
-        address _rewardToken,
-        address _owner,
-        ERC20Gauges _gaugeToken,
-        IBaseV2Minter _minter
-    ) {
+    constructor(address _rewardToken, address _owner, ERC20Gauges _gaugeToken, IBaseV2Minter _minter) {
         _initializeOwner(_owner);
         rewardToken = _rewardToken;
 
@@ -171,12 +166,9 @@ contract FlywheelGaugeRewards is Ownable, IFlywheelGaugeRewards {
      * @param lastCycle timestamp representing the end of the of the last cycle.
      * @param totalQueuedForCycle total number of rewards queued for the next cycle.
      */
-    function _queueRewards(
-        address[] memory gauges,
-        uint32 currentCycle,
-        uint32 lastCycle,
-        uint256 totalQueuedForCycle
-    ) internal {
+    function _queueRewards(address[] memory gauges, uint32 currentCycle, uint32 lastCycle, uint256 totalQueuedForCycle)
+        internal
+    {
         uint256 size = gauges.length;
 
         if (size == 0) revert EmptyGaugesError();
@@ -190,13 +182,8 @@ contract FlywheelGaugeRewards is Ownable, IFlywheelGaugeRewards {
             require(queuedRewards.storedCycle < currentCycle);
             assert(queuedRewards.storedCycle == 0 || queuedRewards.storedCycle >= lastCycle);
 
-            uint112 completedRewards = queuedRewards.storedCycle == lastCycle
-                ? queuedRewards.cycleRewards
-                : 0;
-            uint256 nextRewards = gaugeToken.calculateGaugeAllocation(
-                address(gauge),
-                totalQueuedForCycle
-            );
+            uint112 completedRewards = queuedRewards.storedCycle == lastCycle ? queuedRewards.cycleRewards : 0;
+            uint256 nextRewards = gaugeToken.calculateGaugeAllocation(address(gauge), totalQueuedForCycle);
             require(nextRewards <= type(uint112).max); // safe cast
 
             gaugeQueuedRewards[gauge] = QueuedRewards({
@@ -220,10 +207,7 @@ contract FlywheelGaugeRewards is Ownable, IFlywheelGaugeRewards {
         bool incompleteCycle = queuedRewards.storedCycle > cycle;
 
         // no rewards
-        if (
-            queuedRewards.priorCycleRewards == 0 &&
-            (queuedRewards.cycleRewards == 0 || incompleteCycle)
-        ) {
+        if (queuedRewards.priorCycleRewards == 0 && (queuedRewards.cycleRewards == 0 || incompleteCycle)) {
             return 0;
         }
 

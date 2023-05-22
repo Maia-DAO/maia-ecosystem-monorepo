@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0;
 
-import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
-import { ERC20 } from "solmate/tokens/ERC20.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
 /// @notice Minimal ERC4626 tokenized Vault implementation.
 /// @author Solmate (https://github.com/transmissions11/solmate/blob/main/src/mixins/ERC4626.sol)
@@ -19,11 +19,7 @@ abstract contract ERC4626 is ERC20 {
     event Deposit(address indexed caller, address indexed owner, uint256 assets, uint256 shares);
 
     event Withdraw(
-        address indexed caller,
-        address indexed receiver,
-        address indexed owner,
-        uint256 assets,
-        uint256 shares
+        address indexed caller, address indexed receiver, address indexed owner, uint256 assets, uint256 shares
     );
 
     /*//////////////////////////////////////////////////////////////
@@ -32,11 +28,7 @@ abstract contract ERC4626 is ERC20 {
 
     ERC20 public immutable asset;
 
-    constructor(
-        ERC20 _asset,
-        string memory _name,
-        string memory _symbol
-    ) ERC20(_name, _symbol, _asset.decimals()) {
+    constructor(ERC20 _asset, string memory _name, string memory _symbol) ERC20(_name, _symbol, _asset.decimals()) {
         asset = _asset;
     }
 
@@ -71,11 +63,7 @@ abstract contract ERC4626 is ERC20 {
         afterDeposit(assets, shares);
     }
 
-    function withdraw(
-        uint256 assets,
-        address receiver,
-        address owner
-    ) public virtual returns (uint256 shares) {
+    function withdraw(uint256 assets, address receiver, address owner) public virtual returns (uint256 shares) {
         shares = previewWithdraw(assets); // No need to check for rounding error, previewWithdraw rounds up.
 
         if (msg.sender != owner) {
@@ -93,11 +81,7 @@ abstract contract ERC4626 is ERC20 {
         address(asset).safeTransfer(receiver, assets);
     }
 
-    function redeem(
-        uint256 shares,
-        address receiver,
-        address owner
-    ) public virtual returns (uint256 assets) {
+    function redeem(uint256 shares, address receiver, address owner) public virtual returns (uint256 assets) {
         if (msg.sender != owner) {
             uint256 allowed = allowance[owner][msg.sender]; // Saves gas for limited approvals.
 

@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { ERC20 } from "solmate/tokens/ERC20.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
-import { UniswapV3Staker } from "@v3-staker/UniswapV3Staker.sol";
+import {UniswapV3Staker} from "@v3-staker/UniswapV3Staker.sol";
 
-import { BoostAggregator } from "../boost-aggregator/BoostAggregator.sol";
+import {BoostAggregator} from "../boost-aggregator/BoostAggregator.sol";
 
-import { IBoostAggregatorFactory } from "../interfaces/IBoostAggregatorFactory.sol";
+import {IBoostAggregatorFactory} from "../interfaces/IBoostAggregatorFactory.sol";
 
 /// @title Boost Aggregator Factory
 contract BoostAggregatorFactory is IBoostAggregatorFactory {
@@ -34,6 +34,8 @@ contract BoostAggregatorFactory is IBoostAggregatorFactory {
     constructor(UniswapV3Staker _uniswapV3Staker) {
         uniswapV3Staker = _uniswapV3Staker;
         hermes = ERC20(_uniswapV3Staker.hermes());
+
+        boostAggregators.push(BoostAggregator(address(0)));
     }
 
     /// @inheritdoc IBoostAggregatorFactory

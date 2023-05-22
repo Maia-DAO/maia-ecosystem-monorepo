@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { TalosOptimizer } from "../TalosOptimizer.sol";
+import {TalosOptimizer} from "../TalosOptimizer.sol";
 
 contract OptimizerFactory {
     /*//////////////////////////////////////////////////////////////
                         OPTIMIZER FACTORY STATE
     //////////////////////////////////////////////////////////////*/
+
     TalosOptimizer[] public optimizers;
 
     mapping(TalosOptimizer => uint256) public optimizerIds;
@@ -19,16 +20,7 @@ contract OptimizerFactory {
      * @notice Construct a new Optimizer Factory contract.
      */
     constructor() {
-        optimizers.push(
-            new TalosOptimizer(
-                0,
-                0,
-                0,
-                0,
-                0,
-                address(0)
-            )
-        );
+        optimizers.push(TalosOptimizer(address(0)));
     }
 
     /*//////////////////////////////////////////////////////////////

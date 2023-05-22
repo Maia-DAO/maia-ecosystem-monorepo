@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { bHermes } from "@hermes/bHermes.sol";
+import {bHermes} from "@hermes/bHermes.sol";
 
-import { PartnerManagerFactory } from "../factories/PartnerManagerFactory.sol";
+import {PartnerManagerFactory} from "../factories/PartnerManagerFactory.sol";
 
 /**
  * @title Yield bearing, boosting, voting, and gauge enabled Partner Token
@@ -55,13 +55,13 @@ interface IERC4626PartnerManager {
 
     /**
      * @notice Allows owner to raise the conversion rate used for deposit.
-     *         Conversion rate can only be raised. Sets the ratio 
+     *         Conversion rate can only be raised. Sets the ratio
      *         between pbHermes<>bHermes. If the ratio is 1 it means that
      *         1 $pbHermes has 1 $bHermes worth of voting power.
      * @param newRate new bHermes to pbHermes conversion rate. represents
-                      the value that correlates partnerToken with bHermes voting power.
+     *                   the value that correlates partnerToken with bHermes voting power.
      * @dev Maximum increase of conversion rate up to:
-            `bHermes.balanceOf(address(partnerVault)) / totalSupply()`.
+     *         `bHermes.balanceOf(address(partnerVault)) / totalSupply()`.
      */
     function increaseConversionRate(uint256 newRate) external;
 

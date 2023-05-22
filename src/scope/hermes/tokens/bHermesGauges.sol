@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { ERC20 } from "solmate/tokens/ERC20.sol";
-import { Ownable } from "solady/auth/Ownable.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
 
-import { ERC20Gauges } from "@ERC20/ERC20Gauges.sol";
+import {ERC20Gauges} from "@ERC20/ERC20Gauges.sol";
 
-import { IbHermesUnderlying } from "../interfaces/IbHermesUnderlying.sol";
+import {IbHermesUnderlying} from "../interfaces/IbHermesUnderlying.sol";
 
 /**
  * @title bHermesGauges: Directs hermes emissions.
@@ -23,11 +23,7 @@ contract bHermesGauges is ERC20Gauges, IbHermesUnderlying {
     /// @inheritdoc IbHermesUnderlying
     address public immutable bHermes;
 
-    constructor(
-        address _owner,
-        uint32 _rewardsCycleLength,
-        uint32 _incrementFreezeWindow
-    )
+    constructor(address _owner, uint32 _rewardsCycleLength, uint32 _incrementFreezeWindow)
         ERC20Gauges(_rewardsCycleLength, _incrementFreezeWindow)
         ERC20("bHermes Gauges", "bHERMES-G", 18)
     {

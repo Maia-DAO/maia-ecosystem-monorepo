@@ -6,7 +6,7 @@ pragma solidity ^0.8.0;
  *  @title Flywheel Instant Rewards.
  *  @author Maia DAO (https://github.com/Maia-DAO)
  *  @notice This contract is responsible for strategy rewards management.
- *          At any moment all the rewards can be accrued from the strategy's 
+ *          At any moment all the rewards can be accrued from the strategy's
  *          corresponding rewards depot for subsequent distribution.
  *          The reward depot serves as a pool of rewards.
  */

@@ -1,30 +1,25 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
-import { Ownable } from "solady/auth/Ownable.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
-import { ERC20 } from "solmate/tokens/ERC20.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
-import { ERC4626 } from "@ERC4626/ERC4626.sol";
+import {ERC4626} from "@ERC4626/ERC4626.sol";
 
-import { bHermes } from "@hermes/bHermes.sol";
-import { bHermesVotes as ERC20MultiVotes } from "@hermes/tokens/bHermesVotes.sol";
+import {bHermes} from "@hermes/bHermes.sol";
+import {bHermesVotes as ERC20MultiVotes} from "@hermes/tokens/bHermesVotes.sol";
 
-import { PartnerManagerFactory } from "../factories/PartnerManagerFactory.sol";
-import { IBaseVault } from "../interfaces/IBaseVault.sol";
-import { PartnerUtilityManager } from "../PartnerUtilityManager.sol";
+import {PartnerManagerFactory} from "../factories/PartnerManagerFactory.sol";
+import {IBaseVault} from "../interfaces/IBaseVault.sol";
+import {PartnerUtilityManager} from "../PartnerUtilityManager.sol";
 
-import { IERC4626PartnerManager } from "../interfaces/IERC4626PartnerManager.sol";
+import {IERC4626PartnerManager} from "../interfaces/IERC4626PartnerManager.sol";
 
 /// @title Yield bearing, boosting, voting, and gauge enabled Partner Token
-abstract contract ERC4626PartnerManager is
-    PartnerUtilityManager,
-    Ownable,
-    ERC4626,
-    IERC4626PartnerManager
-{
+abstract contract ERC4626PartnerManager is PartnerUtilityManager, Ownable, ERC4626, IERC4626PartnerManager {
     using SafeTransferLib for address;
     using FixedPointMathLib for uint256;
 
@@ -221,14 +216,14 @@ abstract contract ERC4626PartnerManager is
     function increaseConversionRate(uint256 newRate) external onlyOwner {
         if (newRate < bHermesRate) revert InvalidRate();
 
-        if (newRate > (address(bHermesToken).balanceOf(address(this)) / totalSupply))
+        if (newRate > (address(bHermesToken).balanceOf(address(this)) / totalSupply)) {
             revert InsufficientBacking();
+        }
 
         bHermesRate = newRate;
 
         partnerGovernance.mint(
-            address(this),
-            totalSupply * newRate - address(partnerGovernance).balanceOf(address(this))
+            address(this), totalSupply * newRate - address(partnerGovernance).balanceOf(address(this))
         );
         bHermesToken.claimOutstanding();
     }
@@ -256,12 +251,7 @@ abstract contract ERC4626PartnerManager is
      * @param from account to burn the partner manager from
      * @param amount amounts of vMaia to burn
      */
-    function _burn(address from, uint256 amount)
-        internal
-        virtual
-        override
-        checkTransfer(from, amount)
-    {
+    function _burn(address from, uint256 amount) internal virtual override checkTransfer(from, amount) {
         super._burn(from, amount);
     }
 
@@ -286,11 +276,13 @@ abstract contract ERC4626PartnerManager is
      * @param to address to transfer the tokens to.
      * @param amount amounts of tokens to transfer.
      */
-    function transferFrom(
-        address from,
-        address to,
-        uint256 amount
-    ) public virtual override checkTransfer(from, amount) returns (bool) {
+    function transferFrom(address from, address to, uint256 amount)
+        public
+        virtual
+        override
+        checkTransfer(from, amount)
+        returns (bool)
+    {
         return super.transferFrom(from, to, amount);
     }
 
@@ -300,15 +292,17 @@ abstract contract ERC4626PartnerManager is
 
     /// @dev Checks available weight allows for call.
     modifier checkWeight(uint256 amount) virtual override {
-        if (balanceOf[msg.sender] * bHermesRate < amount + userClaimedWeight[msg.sender])
+        if (balanceOf[msg.sender] * bHermesRate < amount + userClaimedWeight[msg.sender]) {
             revert InsufficientShares();
+        }
         _;
     }
 
     /// @dev Checks available boost allows for call.
     modifier checkBoost(uint256 amount) virtual override {
-        if (balanceOf[msg.sender] * bHermesRate < amount + userClaimedBoost[msg.sender])
+        if (balanceOf[msg.sender] * bHermesRate < amount + userClaimedBoost[msg.sender]) {
             revert InsufficientShares();
+        }
         _;
     }
 
@@ -322,9 +316,7 @@ abstract contract ERC4626PartnerManager is
 
     /// @dev Checks available partner governance allows for call.
     modifier checkPartnerGovernance(uint256 amount) virtual override {
-        if (
-            balanceOf[msg.sender] * bHermesRate < amount + userClaimedPartnerGovernance[msg.sender]
-        ) {
+        if (balanceOf[msg.sender] * bHermesRate < amount + userClaimedPartnerGovernance[msg.sender]) {
             revert InsufficientShares();
         }
         _;
@@ -334,10 +326,9 @@ abstract contract ERC4626PartnerManager is
         uint256 userBalance = balanceOf[from] * bHermesRate;
 
         if (
-            userBalance - userClaimedWeight[from] < amount ||
-            userBalance - userClaimedBoost[from] < amount ||
-            userBalance - userClaimedGovernance[from] < amount ||
-            userBalance - userClaimedPartnerGovernance[from] < amount
+            userBalance - userClaimedWeight[from] < amount || userBalance - userClaimedBoost[from] < amount
+                || userBalance - userClaimedGovernance[from] < amount
+                || userBalance - userClaimedPartnerGovernance[from] < amount
         ) revert InsufficientUnderlying();
 
         _;

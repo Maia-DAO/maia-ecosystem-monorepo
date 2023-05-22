@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { FlywheelCore } from "@rewards/FlywheelCoreStrategy.sol";
-import { FlywheelGaugeRewards } from "@rewards/rewards/FlywheelGaugeRewards.sol";
-import { MultiRewardsDepot } from "@rewards/depots/MultiRewardsDepot.sol";
+import {FlywheelCore} from "@rewards/FlywheelCoreStrategy.sol";
+import {FlywheelGaugeRewards} from "@rewards/rewards/FlywheelGaugeRewards.sol";
+import {MultiRewardsDepot} from "@rewards/depots/MultiRewardsDepot.sol";
 
 /**
  * @title Base V2 Gauge
  *  @author Maia DAO (https://github.com/Maia-DAO)
- *  @notice Handles rewards for distribution, boost attaching/detaching and 
+ *  @notice Handles rewards for distribution, boost attaching/detaching and
  *          accruing bribes for a given strategy.
  * ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡤⠒⠈⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠐⢤⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠑⠦⣄⠀⠀⢀⣠⠖⢶⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀
  * ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⠞⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠑⢤⡈⠳⣦⡀⠀⠀⠀⠀⠀⠀⠒⢦⣀⠀⠀⠈⢱⠖⠉⠀⠀⠀⠳⡄⠀⠀⠀⠀⠀⠀⠀
@@ -96,6 +96,7 @@ interface IBaseV2Gauge {
     /*///////////////////////////////////////////////////////////////
                         ADMIN ACTIONS    
     //////////////////////////////////////////////////////////////*/
+
     /// @notice adds a new bribe flywheel
     /// @dev only owner can call this function
     function addBribeFlywheel(FlywheelCore bribeFlywheel) external;
@@ -108,10 +109,23 @@ interface IBaseV2Gauge {
                             EVENTS
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Emitted when weekly emissions are distributed
+     * @param amount amount of tokens distributed
+     * @param epoch current epoch
+     */
     event Distribute(uint256 indexed amount, uint256 indexed epoch);
 
+    /**
+     * @notice Emitted when adding a new bribe flywheel
+     * @param bribeFlywheel address of the bribe flywheel
+     */
     event AddedBribeFlywheel(FlywheelCore indexed bribeFlywheel);
 
+    /**
+     * @notice Emitted when removing a bribe flywheel
+     * @param bribeFlywheel address of the bribe flywheel
+     */
     event RemoveBribeFlywheel(FlywheelCore indexed bribeFlywheel);
 
     /*///////////////////////////////////////////////////////////////

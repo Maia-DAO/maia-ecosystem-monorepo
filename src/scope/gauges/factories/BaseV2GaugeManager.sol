@@ -2,13 +2,13 @@
 
 pragma solidity ^0.8.0;
 
-import { Ownable } from "solady/auth/Ownable.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
 
-import { bHermes, bHermesBoost, bHermesGauges } from "@hermes/bHermes.sol";
+import {bHermes, bHermesBoost, bHermesGauges} from "@hermes/bHermes.sol";
 
-import { BaseV2GaugeFactory } from "./BaseV2GaugeFactory.sol";
+import {BaseV2GaugeFactory} from "./BaseV2GaugeFactory.sol";
 
-import { IBaseV2GaugeManager } from "../interfaces/IBaseV2GaugeManager.sol";
+import {IBaseV2GaugeManager} from "../interfaces/IBaseV2GaugeManager.sol";
 
 /// @title Base V2 Gauge Factory Manager
 contract BaseV2GaugeManager is Ownable, IBaseV2GaugeManager {
@@ -40,11 +40,7 @@ contract BaseV2GaugeManager is Ownable, IBaseV2GaugeManager {
      * @param _owner can add BaseV2GaugeFactories.
      * @param _admin can transfer ownership of bHermesWeight and bHermesBoost.
      */
-    constructor(
-        bHermes _bHermes,
-        address _owner,
-        address _admin
-    ) {
+    constructor(bHermes _bHermes, address _owner, address _admin) {
         admin = _admin;
         _initializeOwner(_owner);
         bHermesGaugeWeight = _bHermes.gaugeWeight();
@@ -65,7 +61,7 @@ contract BaseV2GaugeManager is Ownable, IBaseV2GaugeManager {
         BaseV2GaugeFactory[] storage _gaugeFactories = gaugeFactories;
 
         uint256 length = _gaugeFactories.length;
-        for (uint256 i = 0; i < length; ) {
+        for (uint256 i = 0; i < length;) {
             if (activeGaugeFactories[_gaugeFactories[i]]) _gaugeFactories[i].newEpoch();
 
             unchecked {
@@ -81,7 +77,7 @@ contract BaseV2GaugeManager is Ownable, IBaseV2GaugeManager {
         uint256 length = _gaugeFactories.length;
         if (end > length) end = length;
 
-        for (uint256 i = start; i < end; ) {
+        for (uint256 i = start; i < end;) {
             if (activeGaugeFactories[_gaugeFactories[i]]) _gaugeFactories[i].newEpoch();
 
             unchecked {
@@ -123,10 +119,9 @@ contract BaseV2GaugeManager is Ownable, IBaseV2GaugeManager {
 
     /// @inheritdoc IBaseV2GaugeManager
     function removeGaugeFactory(BaseV2GaugeFactory gaugeFactory) external onlyOwner {
-        if (
-            !activeGaugeFactories[gaugeFactory] ||
-            gaugeFactories[gaugeFactoryIds[gaugeFactory]] != gaugeFactory
-        ) revert NotActiveGaugeFactory();
+        if (!activeGaugeFactories[gaugeFactory] || gaugeFactories[gaugeFactoryIds[gaugeFactory]] != gaugeFactory) {
+            revert NotActiveGaugeFactory();
+        }
         delete gaugeFactories[gaugeFactoryIds[gaugeFactory]];
         delete gaugeFactoryIds[gaugeFactory];
         delete activeGaugeFactories[gaugeFactory];

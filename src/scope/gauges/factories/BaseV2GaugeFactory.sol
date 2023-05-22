@@ -2,17 +2,17 @@
 
 pragma solidity ^0.8.0;
 
-import { Ownable } from "solady/auth/Ownable.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
 
-import { ERC20 } from "solmate/tokens/ERC20.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
-import { bHermesBoost } from "@hermes/tokens/bHermesBoost.sol";
-import { BaseV2Gauge } from "@gauges/BaseV2Gauge.sol";
+import {bHermesBoost} from "@hermes/tokens/bHermesBoost.sol";
+import {BaseV2Gauge} from "@gauges/BaseV2Gauge.sol";
 
-import { BribesFactory } from "./BribesFactory.sol";
-import { BaseV2GaugeManager } from "./BaseV2GaugeManager.sol";
+import {BribesFactory} from "./BribesFactory.sol";
+import {BaseV2GaugeManager} from "./BaseV2GaugeManager.sol";
 
-import { IBaseV2GaugeFactory } from "../interfaces/IBaseV2GaugeFactory.sol";
+import {IBaseV2GaugeFactory} from "../interfaces/IBaseV2GaugeFactory.sol";
 
 /// @title Base V2 Gauge Factory
 abstract contract BaseV2GaugeFactory is Ownable, IBaseV2GaugeFactory {
@@ -74,7 +74,7 @@ abstract contract BaseV2GaugeFactory is Ownable, IBaseV2GaugeFactory {
         BaseV2Gauge[] storage _gauges = gauges;
 
         uint256 length = _gauges.length;
-        for (uint256 i = 0; i < length; ) {
+        for (uint256 i = 0; i < length;) {
             if (activeGauges[_gauges[i]]) _gauges[i].newEpoch();
 
             unchecked {
@@ -90,7 +90,7 @@ abstract contract BaseV2GaugeFactory is Ownable, IBaseV2GaugeFactory {
         uint256 length = _gauges.length;
         if (end > length) end = length;
 
-        for (uint256 i = start; i < end; ) {
+        for (uint256 i = start; i < end;) {
             if (activeGauges[_gauges[i]]) _gauges[i].newEpoch();
 
             unchecked {
@@ -124,10 +124,7 @@ abstract contract BaseV2GaugeFactory is Ownable, IBaseV2GaugeFactory {
 
     function afterCreateGauge(address strategy, bytes memory data) internal virtual;
 
-    function newGauge(address strategy, bytes memory data)
-        internal
-        virtual
-        returns (BaseV2Gauge gauge);
+    function newGauge(address strategy, bytes memory data) internal virtual returns (BaseV2Gauge gauge);
 
     /// @inheritdoc IBaseV2GaugeFactory
     function removeGauge(BaseV2Gauge gauge) external onlyOwner {
@@ -144,20 +141,14 @@ abstract contract BaseV2GaugeFactory is Ownable, IBaseV2GaugeFactory {
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IBaseV2GaugeFactory
-    function addBribeToGauge(BaseV2Gauge gauge, address bribeToken)
-        external
-        onlyOwnerOrBribesFactoryOwner
-    {
+    function addBribeToGauge(BaseV2Gauge gauge, address bribeToken) external onlyOwnerOrBribesFactoryOwner {
         if (!activeGauges[gauge]) revert InvalidGauge();
         gauge.addBribeFlywheel(bribesFactory.flywheelTokens(bribeToken));
         bribesFactory.addGaugetoFlywheel(address(gauge), bribeToken);
     }
 
     /// @inheritdoc IBaseV2GaugeFactory
-    function removeBribeFromGauge(BaseV2Gauge gauge, address bribeToken)
-        external
-        onlyOwnerOrBribesFactoryOwner
-    {
+    function removeBribeFromGauge(BaseV2Gauge gauge, address bribeToken) external onlyOwnerOrBribesFactoryOwner {
         if (!activeGauges[gauge]) revert InvalidGauge();
         gauge.removeBribeFlywheel(bribesFactory.flywheelTokens(bribeToken));
     }
@@ -167,8 +158,9 @@ abstract contract BaseV2GaugeFactory is Ownable, IBaseV2GaugeFactory {
     //////////////////////////////////////////////////////////////*/
 
     modifier onlyOwnerOrBribesFactoryOwner() {
-        if (msg.sender != bribesFactory.owner() && msg.sender != owner())
+        if (msg.sender != bribesFactory.owner() && msg.sender != owner()) {
             revert NotOwnerOrBribesFactoryOwner();
+        }
         _;
     }
 }

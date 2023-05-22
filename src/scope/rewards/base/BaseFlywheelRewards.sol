@@ -2,13 +2,13 @@
 // Rewards logic inspired by Tribe DAO Contracts (flywheel-v2/src/rewards/BaseFlywheelRewards.sol)
 pragma solidity ^0.8.0;
 
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
-import { ERC20 } from "solmate/tokens/ERC20.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
-import { FlywheelCore } from "./FlywheelCore.sol";
+import {FlywheelCore} from "./FlywheelCore.sol";
 
-import { IFlywheelRewards } from "../interfaces/IFlywheelRewards.sol";
+import {IFlywheelRewards} from "../interfaces/IFlywheelRewards.sol";
 
 /**
  * @title Flywheel Reward Module

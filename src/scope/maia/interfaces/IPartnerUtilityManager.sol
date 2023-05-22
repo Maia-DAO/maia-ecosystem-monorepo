@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { bHermesVotes as ERC20Votes } from "@hermes/tokens/bHermesVotes.sol";
+import {bHermesVotes as ERC20Votes} from "@hermes/tokens/bHermesVotes.sol";
 
 /**
  * @title Partner Utility Manager Contract.
@@ -28,24 +28,16 @@ interface IPartnerUtilityManager {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Forfeits multiple amounts of multiple utility tokens.
-    function forfeitMultipleAmounts(
-        uint256 weight,
-        uint256 boost,
-        uint256 _governance,
-        uint256 partnerGovernance
-    ) external;
+    function forfeitMultipleAmounts(uint256 weight, uint256 boost, uint256 _governance, uint256 partnerGovernance)
+        external;
 
     /// @notice Forfeits amounts of partner governance utility token.
     /// @param amount The amount to send to partner manager
     function forfeitPartnerGovernance(uint256 amount) external;
 
     /// @notice Claims multiple amounts of multiple utility tokens.
-    function claimMultipleAmounts(
-        uint256 weight,
-        uint256 boost,
-        uint256 _governance,
-        uint256 partnerGovernance
-    ) external;
+    function claimMultipleAmounts(uint256 weight, uint256 boost, uint256 _governance, uint256 partnerGovernance)
+        external;
 
     /// @notice Claims amounts of partner governance utility token.
     /// @param amount The amount to send to partner manager

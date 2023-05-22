@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { Ownable } from "solady/auth/Ownable.sol";
-import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
+import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
-import { ERC20 } from "solmate/tokens/ERC20.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
-import { FlywheelCore as Core } from "./base/FlywheelCore.sol";
+import {FlywheelCore as Core} from "./base/FlywheelCore.sol";
 
-import { IFlywheelBooster } from "./interfaces/IFlywheelBooster.sol";
-import { IFlywheelInstantRewards } from "./interfaces/IFlywheelInstantRewards.sol";
-import { IFlywheelRewards } from "./interfaces/IFlywheelRewards.sol";
+import {IFlywheelBooster} from "./interfaces/IFlywheelBooster.sol";
+import {IFlywheelInstantRewards} from "./interfaces/IFlywheelInstantRewards.sol";
+import {IFlywheelRewards} from "./interfaces/IFlywheelRewards.sol";
 
 /**
  * @title Flywheel Core Incentives Manager

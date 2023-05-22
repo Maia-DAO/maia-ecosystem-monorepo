@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0;
 
-import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
-import { ERC20 } from "solmate/tokens/ERC20.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
 /// @notice Minimal Deposit Only ERC4626 tokenized Vault implementation.
 abstract contract ERC4626DepositOnly is ERC20 {
@@ -18,11 +18,7 @@ abstract contract ERC4626DepositOnly is ERC20 {
     event Deposit(address indexed caller, address indexed owner, uint256 assets, uint256 shares);
 
     event Withdraw(
-        address indexed caller,
-        address indexed receiver,
-        address indexed owner,
-        uint256 assets,
-        uint256 shares
+        address indexed caller, address indexed receiver, address indexed owner, uint256 assets, uint256 shares
     );
 
     /*//////////////////////////////////////////////////////////////
@@ -31,11 +27,7 @@ abstract contract ERC4626DepositOnly is ERC20 {
 
     ERC20 public immutable asset;
 
-    constructor(
-        ERC20 _asset,
-        string memory _name,
-        string memory _symbol
-    ) ERC20(_name, _symbol, _asset.decimals()) {
+    constructor(ERC20 _asset, string memory _name, string memory _symbol) ERC20(_name, _symbol, _asset.decimals()) {
         asset = _asset;
     }
 

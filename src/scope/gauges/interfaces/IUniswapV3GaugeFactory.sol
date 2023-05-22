@@ -2,9 +2,9 @@
 
 pragma solidity ^0.8.0;
 
-import { FlywheelGaugeRewards } from "@rewards/rewards/FlywheelGaugeRewards.sol";
+import {FlywheelGaugeRewards} from "@rewards/rewards/FlywheelGaugeRewards.sol";
 
-import { UniswapV3Staker } from "@v3-staker/UniswapV3Staker.sol";
+import {UniswapV3Staker} from "@v3-staker/UniswapV3Staker.sol";
 
 import {IBaseV2GaugeFactory} from "./IBaseV2GaugeFactory.sol";
 

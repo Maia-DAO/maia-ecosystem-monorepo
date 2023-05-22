@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { FlywheelCoreInstant } from "@rewards/FlywheelCoreInstant.sol";
-import { FlywheelInstantRewards } from "@rewards/rewards/FlywheelInstantRewards.sol";
+import {FlywheelCoreInstant} from "@rewards/FlywheelCoreInstant.sol";
+import {FlywheelInstantRewards} from "@rewards/rewards/FlywheelInstantRewards.sol";
 
-import { BoostAggregatorFactory } from "../factories/BoostAggregatorFactory.sol";
+import {BoostAggregatorFactory} from "../factories/BoostAggregatorFactory.sol";
 
 /**
  * @title Talos Strategy Staked Factory

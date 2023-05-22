@@ -2,19 +2,19 @@
 // Logic inspired by Popsicle Finance Contracts (PopsicleV3Optimizer/contracts/popsicle-v3-optimizer/PopsicleV3Optimizer.sol)
 pragma solidity >=0.8.0;
 
-import { Ownable } from "solady/auth/Ownable.sol";
-import { ERC20 } from "solmate/tokens/ERC20.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
-import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
+import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 
-import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
-import { INonfungiblePositionManager } from "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";
+import {INonfungiblePositionManager} from "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";
 
-import { ITalosOptimizer } from "./interfaces/ITalosOptimizer.sol";
-import { PoolVariables } from "./libraries/PoolVariables.sol";
+import {ITalosOptimizer} from "./interfaces/ITalosOptimizer.sol";
+import {PoolVariables} from "./libraries/PoolVariables.sol";
 
-import { TalosStrategySimpleRebalance, TalosBaseStrategy } from "./strategies/TalosStrategySimpleRebalance.sol";
+import {TalosStrategySimpleRebalance, TalosBaseStrategy} from "./strategies/TalosStrategySimpleRebalance.sol";
 
 /// @title Deploy Vanilla
 /// @notice This library deploys talos vanilla strategies
@@ -26,8 +26,7 @@ library DeployVanilla {
         address strategyManager,
         address owner
     ) public returns (TalosBaseStrategy) {
-        return
-            new TalosStrategyVanilla(
+        return new TalosStrategyVanilla(
                 pool,
                 optimizer,
                 nonfungiblePositionManager,
@@ -62,15 +61,7 @@ contract TalosStrategyVanilla is TalosStrategySimpleRebalance {
         INonfungiblePositionManager _nonfungiblePositionManager,
         address _strategyManager,
         address _owner
-    )
-        TalosStrategySimpleRebalance(
-            _pool,
-            _optimizer,
-            _nonfungiblePositionManager,
-            _strategyManager,
-            _owner
-        )
-    {}
+    ) TalosStrategySimpleRebalance(_pool, _optimizer, _nonfungiblePositionManager, _strategyManager, _owner) {}
 
     /*//////////////////////////////////////////////////////////////
                           INTERNAL HOOKS LOGIC
@@ -171,12 +162,7 @@ contract TalosStrategyVanilla is TalosStrategySimpleRebalance {
     /// @param feesFromPool1 Total amount of fees collected in terms of token 1
     /// @param usersFees0 Total amount of fees collected by users in terms of token 0
     /// @param usersFees1 Total amount of fees collected by users in terms of token 1
-    event CollectFees(
-        uint256 feesFromPool0,
-        uint256 feesFromPool1,
-        uint256 usersFees0,
-        uint256 usersFees1
-    );
+    event CollectFees(uint256 feesFromPool0, uint256 feesFromPool1, uint256 usersFees0, uint256 usersFees1);
 
     /// @notice Emitted when fees was compuonded to the pool
     /// @param amount0 Total amount of fees compounded in terms of token 0

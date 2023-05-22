@@ -138,11 +138,7 @@ interface IERC20Gauges {
      *   @param offset the index of the first gauge element to read.
      *   @param num the number of gauges to return.
      */
-    function userGauges(
-        address user,
-        uint256 offset,
-        uint256 num
-    ) external view returns (address[] memory values);
+    function userGauges(address user, uint256 offset, uint256 num) external view returns (address[] memory values);
 
     /**
      * @notice returns the number of user gauges
@@ -155,10 +151,7 @@ interface IERC20Gauges {
      *  @param quantity a representation of a resource to be shared among all gauges
      *  @return the proportion of `quantity` allocated to `gauge`. Returns 0 if a gauge is not live, even if it has weight.
      */
-    function calculateGaugeAllocation(address gauge, uint256 quantity)
-        external
-        view
-        returns (uint256);
+    function calculateGaugeAllocation(address gauge, uint256 quantity) external view returns (uint256);
 
     /*///////////////////////////////////////////////////////////////
                         USER GAUGE OPERATIONS
@@ -246,20 +239,10 @@ interface IERC20Gauges {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice emitted when incrementing a gauge
-    event IncrementGaugeWeight(
-        address indexed user,
-        address indexed gauge,
-        uint256 weight,
-        uint32 cycleEnd
-    );
+    event IncrementGaugeWeight(address indexed user, address indexed gauge, uint256 weight, uint32 cycleEnd);
 
     /// @notice emitted when decrementing a gauge
-    event DecrementGaugeWeight(
-        address indexed user,
-        address indexed gauge,
-        uint256 weight,
-        uint32 cycleEnd
-    );
+    event DecrementGaugeWeight(address indexed user, address indexed gauge, uint256 weight, uint32 cycleEnd);
 
     /// @notice emitted when adding a new gauge to the live set.
     event AddGauge(address indexed gauge);
@@ -271,10 +254,7 @@ interface IERC20Gauges {
     event MaxGaugesUpdate(uint256 oldMaxGauges, uint256 newMaxGauges);
 
     /// @notice emitted when changing a contract's approval to go over the max gauges.
-    event CanContractExceedMaxGaugesUpdate(
-        address indexed account,
-        bool canContractExceedMaxGauges
-    );
+    event CanContractExceedMaxGaugesUpdate(address indexed account, bool canContractExceedMaxGauges);
 
     /*///////////////////////////////////////////////////////////////
                             ERRORS

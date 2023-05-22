@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
-import { IUniswapV3Staker } from "@v3-staker/interfaces/IUniswapV3Staker.sol";
+import {IUniswapV3Staker} from "@v3-staker/interfaces/IUniswapV3Staker.sol";
 
-import { BaseV2Gauge, FlywheelGaugeRewards } from "./BaseV2Gauge.sol";
-import { IUniswapV3Gauge } from "./interfaces/IUniswapV3Gauge.sol";
+import {BaseV2Gauge, FlywheelGaugeRewards} from "./BaseV2Gauge.sol";
+import {IUniswapV3Gauge} from "./interfaces/IUniswapV3Gauge.sol";
 
 /// @title Uniswap V3 Gauge, implementation of Base V2 Gauge.
 contract UniswapV3Gauge is BaseV2Gauge, IUniswapV3Gauge {
@@ -45,9 +45,12 @@ contract UniswapV3Gauge is BaseV2Gauge, IUniswapV3Gauge {
         rewardToken.safeApprove(_uniswapV3Staker, type(uint256).max);
     }
 
+    /**
+     *  @notice Distributes weekly emissions to the Uniswap V3 Staker for the current epoch.
+     *  @dev must be called during the 12-hour offset after an epoch ends
+     *       or rewards will be queued for the next epoch.
+     */
     function distribute(uint256 amount) internal override {
-        /// @dev must be called during the 12-hour offset after an epoch ends
-        ///      or rewards will be queued for the next epoch.
         IUniswapV3Staker(uniswapV3Staker).createIncentiveFromGauge(amount);
     }
 
@@ -66,8 +69,8 @@ contract UniswapV3Gauge is BaseV2Gauge, IUniswapV3Gauge {
                          MODIFIERS
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Only the UniswapV3Staker contract can attach and detach users.
     modifier onlyStrategy() override {
-        /// Only the UniswapV3Staker contract can attach and detach users.
         if (msg.sender != uniswapV3Staker) revert StrategyError();
         _;
     }

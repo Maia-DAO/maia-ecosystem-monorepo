@@ -2,11 +2,11 @@
 // Rewards logic inspired by Tribe DAO Contracts (flywheel-v2/src/rewards/FlywheelGaugeRewards.sol)
 pragma solidity ^0.8.0;
 
-import { ERC20 } from "solmate/tokens/ERC20.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
-import { ERC20Gauges } from "@ERC20/ERC20Gauges.sol";
+import {ERC20Gauges} from "@ERC20/ERC20Gauges.sol";
 
-import { FlywheelCore } from "../base/FlywheelCore.sol";
+import {FlywheelCore} from "../base/FlywheelCore.sol";
 
 /// @notice a contract that streams reward tokens to the FlywheelRewards module
 interface IRewardsStream {
@@ -59,11 +59,7 @@ interface IFlywheelGaugeRewards {
     function gaugeQueuedRewards(ERC20)
         external
         view
-        returns (
-            uint112 priorCycleRewards,
-            uint112 cycleRewards,
-            uint32 storedCycle
-        );
+        returns (uint112 priorCycleRewards, uint112 cycleRewards, uint32 storedCycle);
 
     /*//////////////////////////////////////////////////////////////
                         GAUGE REWARDS LOGIC

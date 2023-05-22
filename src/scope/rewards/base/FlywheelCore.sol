@@ -2,14 +2,14 @@
 // Rewards logic inspired by Tribe DAO Contracts (flywheel-v2/src/FlywheelCore.sol)
 pragma solidity ^0.8.0;
 
-import { Ownable } from "solady/auth/Ownable.sol";
-import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
+import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
-import { ERC20 } from "solmate/tokens/ERC20.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
-import { IFlywheelBooster } from "../interfaces/IFlywheelBooster.sol";
-import { IFlywheelCore } from "../interfaces/IFlywheelCore.sol";
+import {IFlywheelBooster} from "../interfaces/IFlywheelBooster.sol";
+import {IFlywheelCore} from "../interfaces/IFlywheelCore.sol";
 
 /// @title Flywheel Core Incentives Manager
 abstract contract FlywheelCore is Ownable, IFlywheelCore {
@@ -42,12 +42,7 @@ abstract contract FlywheelCore is Ownable, IFlywheelCore {
      *  @param _flywheelBooster the flywheel booster contract
      *  @param _owner the owner of this contract
      */
-    constructor(
-        address _rewardToken,
-        address _flywheelRewards,
-        IFlywheelBooster _flywheelBooster,
-        address _owner
-    ) {
+    constructor(address _rewardToken, address _flywheelRewards, IFlywheelBooster _flywheelBooster, address _owner) {
         _initializeOwner(_owner);
         rewardToken = _rewardToken;
         flywheelRewards = _flywheelRewards;
@@ -86,11 +81,7 @@ abstract contract FlywheelCore is Ownable, IFlywheelCore {
     }
 
     /// @inheritdoc IFlywheelCore
-    function accrue(
-        ERC20 strategy,
-        address user,
-        address secondUser
-    ) public returns (uint256, uint256) {
+    function accrue(ERC20 strategy, address user, address secondUser) public returns (uint256, uint256) {
         uint256 index = strategyIndex[strategy];
 
         if (index == 0) return (0, 0);
@@ -134,11 +125,7 @@ abstract contract FlywheelCore is Ownable, IFlywheelCore {
     function setFlywheelRewards(address newFlywheelRewards) external onlyOwner {
         uint256 oldRewardBalance = rewardToken.balanceOf(address(flywheelRewards));
         if (oldRewardBalance > 0) {
-            rewardToken.safeTransferFrom(
-                address(flywheelRewards),
-                address(newFlywheelRewards),
-                oldRewardBalance
-            );
+            rewardToken.safeTransferFrom(address(flywheelRewards), address(newFlywheelRewards), oldRewardBalance);
         }
 
         flywheelRewards = newFlywheelRewards;
@@ -180,8 +167,9 @@ abstract contract FlywheelCore is Ownable, IFlywheelCore {
 
             uint224 deltaIndex;
 
-            if (supplyTokens != 0)
+            if (supplyTokens != 0) {
                 deltaIndex = ((strategyRewardsAccrued * ONE) / supplyTokens).toUint224();
+            }
 
             // accumulate rewards per token onto the index, multiplied by a fixed-point factor
             rewardsIndex += deltaIndex;
@@ -190,11 +178,7 @@ abstract contract FlywheelCore is Ownable, IFlywheelCore {
     }
 
     /// @notice accumulate rewards on a strategy for a specific user
-    function accrueUser(
-        ERC20 strategy,
-        address user,
-        uint256 index
-    ) private returns (uint256) {
+    function accrueUser(ERC20 strategy, address user, uint256 index) private returns (uint256) {
         // load indices
         uint256 supplierIndex = userIndex[strategy][user];
 

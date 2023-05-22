@@ -2,9 +2,9 @@
 // Rewards logic inspired by Tribe DAO Contracts (flywheel-v2/src/FlywheelCore.sol)
 pragma solidity ^0.8.0;
 
-import { ERC20 } from "solmate/tokens/ERC20.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
-import { IFlywheelBooster } from "../interfaces/IFlywheelBooster.sol";
+import {IFlywheelBooster} from "../interfaces/IFlywheelBooster.sol";
 
 /**
  * @title Flywheel Core Incentives Manager
@@ -72,11 +72,7 @@ interface IFlywheelCore {
      *   @return the cumulative amount of rewards accrued to the first user (including prior)
      *   @return the cumulative amount of rewards accrued to the second user (including prior)
      */
-    function accrue(
-        ERC20 strategy,
-        address user,
-        address secondUser
-    ) external returns (uint256, uint256);
+    function accrue(ERC20 strategy, address user, address secondUser) external returns (uint256, uint256);
 
     /**
      * @notice claim rewards for a given user
@@ -122,12 +118,7 @@ interface IFlywheelCore {
      *   @param rewardsDelta how many new rewards accrued to the user
      *   @param rewardsIndex the market index for rewards per token accrued
      */
-    event AccrueRewards(
-        ERC20 indexed strategy,
-        address indexed user,
-        uint256 rewardsDelta,
-        uint256 rewardsIndex
-    );
+    event AccrueRewards(ERC20 indexed strategy, address indexed user, uint256 rewardsDelta, uint256 rewardsIndex);
 
     /**
      * @notice Emitted when a user claims accrued rewards.

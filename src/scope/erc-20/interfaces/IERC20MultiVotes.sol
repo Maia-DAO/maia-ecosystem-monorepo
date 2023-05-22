@@ -3,8 +3,8 @@
 pragma solidity ^0.8.0;
 
 /**
- @title ERC20 Multi-Delegation Voting contract
- @notice an ERC20 extension that allows delegations to multiple delegatees up to a user's balance on a given block.
+ * @title ERC20 Multi-Delegation Voting contract
+ *  @notice an ERC20 extension that allows delegations to multiple delegatees up to a user's balance on a given block.
  */
 interface IERC20MultiVotes {
     /**
@@ -96,10 +96,7 @@ interface IERC20MultiVotes {
      * @param delegatee the account receiving votes from `delegator`.
      * @return the total amount of votes delegated to `delegatee` by `delegator`
      */
-    function delegatesVotesCount(address delegator, address delegatee)
-        external
-        view
-        returns (uint256);
+    function delegatesVotesCount(address delegator, address delegatee) external view returns (uint256);
 
     /**
      * @notice Get the list of delegates from `delegator`.
@@ -146,10 +143,7 @@ interface IERC20MultiVotes {
     event MaxDelegatesUpdate(uint256 oldMaxDelegates, uint256 newMaxDelegates);
 
     /// @notice emitted when updating the canContractExceedMaxDelegates flag for an account
-    event CanContractExceedMaxDelegatesUpdate(
-        address indexed account,
-        bool canContractExceedMaxDelegates
-    );
+    event CanContractExceedMaxDelegatesUpdate(address indexed account, bool canContractExceedMaxDelegates);
 
     /// @dev Emitted when a `delegator` delegates `amount` votes to `delegate`.
     event Delegation(address indexed delegator, address indexed delegate, uint256 amount);
@@ -158,19 +152,11 @@ interface IERC20MultiVotes {
     event Undelegation(address indexed delegator, address indexed delegate, uint256 amount);
 
     /// @dev Emitted when a token transfer or delegate change results in changes to an account's voting power.
-    event DelegateVotesChanged(
-        address indexed delegate,
-        uint256 previousBalance,
-        uint256 newBalance
-    );
+    event DelegateVotesChanged(address indexed delegate, uint256 previousBalance, uint256 newBalance);
 
     /// @notice An event thats emitted when an account changes its delegate
     /// @dev this is used for backward compatibility with OZ interfaces for ERC20Votes and ERC20VotesComp.
-    event DelegateChanged(
-        address indexed delegator,
-        address indexed fromDelegate,
-        address indexed toDelegate
-    );
+    event DelegateChanged(address indexed delegator, address indexed fromDelegate, address indexed toDelegate);
 
     /*///////////////////////////////////////////////////////////////
                             ERRORS
@@ -182,5 +168,6 @@ interface IERC20MultiVotes {
     /// @dev thrown when attempting to delegate more votes than an address has free, or exceeding the max delegates
     error DelegationError();
 
+    /// @dev thrown when attempting to undelegate more votes than the delegatee has unused.
     error UndelegationVoteError();
 }

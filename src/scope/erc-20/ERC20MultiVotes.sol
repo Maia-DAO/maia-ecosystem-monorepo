@@ -3,18 +3,18 @@
 
 pragma solidity ^0.8.0;
 
-import { Ownable } from "solady/auth/Ownable.sol";
-import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
-import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
+import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
+import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 
-import { ERC20 } from "solmate/tokens/ERC20.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
-import { EnumerableSet } from "@lib/EnumerableSet.sol";
+import {EnumerableSet} from "@lib/EnumerableSet.sol";
 
-import { IBaseV2Gauge } from "@gauges/interfaces/IBaseV2Gauge.sol";
+import {IBaseV2Gauge} from "@gauges/interfaces/IBaseV2Gauge.sol";
 
-import { Errors } from "./interfaces/Errors.sol";
-import { IERC20MultiVotes } from "./interfaces/IERC20MultiVotes.sol";
+import {Errors} from "./interfaces/Errors.sol";
+import {IERC20MultiVotes} from "./interfaces/IERC20MultiVotes.sol";
 
 /// @title ERC20 Multi-Delegation Voting contract
 abstract contract ERC20MultiVotes is ERC20, Ownable, IERC20MultiVotes {
@@ -29,12 +29,7 @@ abstract contract ERC20MultiVotes is ERC20, Ownable, IERC20MultiVotes {
     mapping(address => Checkpoint[]) private _checkpoints;
 
     /// @inheritdoc IERC20MultiVotes
-    function checkpoints(address account, uint32 pos)
-        public
-        view
-        virtual
-        returns (Checkpoint memory)
-    {
+    function checkpoints(address account, uint32 pos) public view virtual returns (Checkpoint memory) {
         return _checkpoints[account][pos];
     }
 
@@ -60,22 +55,13 @@ abstract contract ERC20MultiVotes is ERC20, Ownable, IERC20MultiVotes {
     }
 
     /// @inheritdoc IERC20MultiVotes
-    function getPriorVotes(address account, uint256 blockNumber)
-        public
-        view
-        virtual
-        returns (uint256)
-    {
+    function getPriorVotes(address account, uint256 blockNumber) public view virtual returns (uint256) {
         if (blockNumber >= block.number) revert BlockError();
         return _checkpointsLookup(_checkpoints[account], blockNumber);
     }
 
     /// @dev Lookup a value in a list of (sorted) checkpoints.
-    function _checkpointsLookup(Checkpoint[] storage ckpts, uint256 blockNumber)
-        private
-        view
-        returns (uint256)
-    {
+    function _checkpointsLookup(Checkpoint[] storage ckpts, uint256 blockNumber) private view returns (uint256) {
         // We run a binary search to look for the earliest checkpoint taken after `blockNumber`.
         uint256 high = ckpts.length;
         uint256 low = 0;
@@ -127,19 +113,17 @@ abstract contract ERC20MultiVotes is ERC20, Ownable, IERC20MultiVotes {
                         DELEGATION LOGIC
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice How many votes a user has delegated to a delegatee.
     mapping(address => mapping(address => uint256)) private _delegatesVotesCount;
 
+    /// @notice How many votes a user has delegated to him.
     mapping(address => uint256) public userDelegatedVotes;
 
+    /// @notice The delegatees of a user.
     mapping(address => EnumerableSet.AddressSet) private _delegates;
 
     /// @inheritdoc IERC20MultiVotes
-    function delegatesVotesCount(address delegator, address delegatee)
-        public
-        view
-        virtual
-        returns (uint256)
-    {
+    function delegatesVotesCount(address delegator, address delegatee) public view virtual returns (uint256) {
         return _delegatesVotesCount[delegator][delegatee];
     }
 
@@ -168,6 +152,12 @@ abstract contract ERC20MultiVotes is ERC20, Ownable, IERC20MultiVotes {
         _delegate(msg.sender, newDelegatee);
     }
 
+    /**
+     * @notice Delegates all votes from `delegator` to `delegatee`
+     * @dev Reverts if delegateCount > 1
+     * @param delegator The address to delegate votes from
+     * @param newDelegatee The address to delegate votes to
+     */
     function _delegate(address delegator, address newDelegatee) internal virtual {
         uint256 count = delegateCount(delegator);
 
@@ -188,21 +178,20 @@ abstract contract ERC20MultiVotes is ERC20, Ownable, IERC20MultiVotes {
         emit DelegateChanged(delegator, oldDelegatee, newDelegatee);
     }
 
-    function _incrementDelegation(
-        address delegator,
-        address delegatee,
-        uint256 amount
-    ) internal virtual {
+    /**
+     * @notice Delegates votes from `delegator` to `delegatee`
+     * @dev Reverts if delegator is not approved and exceeds maxDelegates
+     * @param delegator The address to delegate votes from
+     * @param delegatee The address to delegate votes to
+     * @param amount The amount of votes to delegate
+     */
+    function _incrementDelegation(address delegator, address delegatee, uint256 amount) internal virtual {
         // Require freeVotes exceed the delegation size
         uint256 free = freeVotes(delegator);
         if (delegatee == address(0) || free < amount || amount == 0) revert DelegationError();
 
         bool newDelegate = _delegates[delegator].add(delegatee); // idempotent add
-        if (
-            newDelegate &&
-            delegateCount(delegator) > maxDelegates &&
-            !canContractExceedMaxDelegates[delegator]
-        ) {
+        if (newDelegate && delegateCount(delegator) > maxDelegates && !canContractExceedMaxDelegates[delegator]) {
             // if is a new delegate, exceeds max and is not approved to exceed, revert
             revert DelegationError();
         }
@@ -214,11 +203,14 @@ abstract contract ERC20MultiVotes is ERC20, Ownable, IERC20MultiVotes {
         _writeCheckpoint(delegatee, _add, amount);
     }
 
-    function _undelegate(
-        address delegator,
-        address delegatee,
-        uint256 amount
-    ) internal virtual {
+    /**
+     * @notice Undelegates votes from `delegator` to `delegatee`
+     * @dev Reverts if delegatee does not have enough free votes
+     * @param delegator The address to undelegate votes from
+     * @param delegatee The address to undelegate votes to
+     * @param amount The amount of votes to undelegate
+     */
+    function _undelegate(address delegator, address delegatee, uint256 amount) internal virtual {
         /**
          * @dev delegatee needs to have sufficient free votes for delegator to undelegate.
          *         Delegatee needs to be trusted, can be either a contract or an EOA.
@@ -240,11 +232,15 @@ abstract contract ERC20MultiVotes is ERC20, Ownable, IERC20MultiVotes {
         _writeCheckpoint(delegatee, _subtract, amount);
     }
 
-    function _writeCheckpoint(
-        address delegatee,
-        function(uint256, uint256) view returns (uint256) op,
-        uint256 delta
-    ) private {
+    /**
+     * @notice Writes a checkpoint for `delegatee` with `delta` votes
+     * @param delegatee The address to write a checkpoint for
+     * @param op The operation to perform on the checkpoint
+     * @param delta The difference in votes to write
+     */
+    function _writeCheckpoint(address delegatee, function(uint256, uint256) view returns (uint256) op, uint256 delta)
+        private
+    {
         Checkpoint[] storage ckpts = _checkpoints[delegatee];
 
         uint256 pos = ckpts.length;
@@ -254,9 +250,7 @@ abstract contract ERC20MultiVotes is ERC20, Ownable, IERC20MultiVotes {
         if (pos > 0 && ckpts[pos - 1].fromBlock == block.number) {
             ckpts[pos - 1].votes = newWeight.toUint224();
         } else {
-            ckpts.push(
-                Checkpoint({ fromBlock: block.number.toUint32(), votes: newWeight.toUint224() })
-            );
+            ckpts.push(Checkpoint({fromBlock: block.number.toUint32(), votes: newWeight.toUint224()}));
         }
         emit DelegateVotesChanged(delegatee, oldWeight, newWeight);
     }
@@ -277,27 +271,46 @@ abstract contract ERC20MultiVotes is ERC20, Ownable, IERC20MultiVotes {
     /// _decrementVotesUntilFree is called as a greedy algorithm to free up votes.
     /// It may be more gas efficient to free weight before burning or transferring tokens.
 
+    /**
+     * @notice Burns `amount` of tokens from `from` address.
+     * @dev Frees votes with a greedy algorithm if needed to burn tokens
+     * @param from The address to burn tokens from.
+     * @param amount The amount of tokens to burn.
+     */
     function _burn(address from, uint256 amount) internal virtual override {
         _decrementVotesUntilFree(from, amount);
         super._burn(from, amount);
     }
 
+    /**
+     * @notice Transfers `amount` of tokens from `msg.sender` to `to` address.
+     * @dev Frees votes with a greedy algorithm if needed to burn tokens
+     * @param to the address to transfer to.
+     * @param amount the amount to transfer.
+     */
     function transfer(address to, uint256 amount) public virtual override returns (bool) {
         _decrementVotesUntilFree(msg.sender, amount);
         return super.transfer(to, amount);
     }
 
-    function transferFrom(
-        address from,
-        address to,
-        uint256 amount
-    ) public virtual override returns (bool) {
+    /**
+     * @notice Transfers `amount` of tokens from `from` address to `to` address.
+     * @dev Frees votes with a greedy algorithm if needed to burn tokens
+     * @param from the address to transfer from.
+     * @param to the address to transfer to.
+     * @param amount the amount to transfer.
+     */
+    function transferFrom(address from, address to, uint256 amount) public virtual override returns (bool) {
         _decrementVotesUntilFree(from, amount);
         return super.transferFrom(from, to, amount);
     }
 
-    /// a greedy algorithm for freeing votes before a token burn/transfer
-    /// frees up entire delegates, so likely will free more than `votes`
+    /**
+     * @notice A greedy algorithm for freeing votes before a token burn/transfer
+     * @dev Frees up entire delegates, so likely will free more than `votes`
+     * @param user The address to free votes from.
+     * @param votes The amount of votes to free.
+     */
     function _decrementVotesUntilFree(address user, uint256 votes) internal {
         uint256 userFreeVotes = freeVotes(user);
 
@@ -347,21 +360,12 @@ abstract contract ERC20MultiVotes is ERC20, Ownable, IERC20MultiVotes {
     bytes32 public constant DELEGATION_TYPEHASH =
         keccak256("Delegation(address delegatee,uint256 nonce,uint256 expiry)");
 
-    function delegateBySig(
-        address delegatee,
-        uint256 nonce,
-        uint256 expiry,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) public {
+    function delegateBySig(address delegatee, uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s) public {
         require(block.timestamp <= expiry, "ERC20MultiVotes: signature expired");
         address signer = ecrecover(
             keccak256(
                 abi.encodePacked(
-                    "\x19\x01",
-                    DOMAIN_SEPARATOR(),
-                    keccak256(abi.encode(DELEGATION_TYPEHASH, delegatee, nonce, expiry))
+                    "\x19\x01", DOMAIN_SEPARATOR(), keccak256(abi.encode(DELEGATION_TYPEHASH, delegatee, nonce, expiry))
                 )
             ),
             v,

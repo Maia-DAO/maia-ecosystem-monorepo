@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { FlywheelCore } from "@rewards/FlywheelCoreStrategy.sol";
+import {FlywheelCore} from "@rewards/FlywheelCoreStrategy.sol";
 
-import { BaseV2GaugeManager } from "../factories/BaseV2GaugeManager.sol";
+import {BaseV2GaugeManager} from "../factories/BaseV2GaugeManager.sol";
 
 /**
  * @title Bribes Factory.
@@ -30,6 +30,7 @@ interface IBribesFactory {
     /// @notice Mapping that holds the address of the bribe token of a given flywheel.
     function flywheelTokens(address) external view returns (FlywheelCore);
 
+    /// @notice The gauge manager contract.
     function gaugeManager() external view returns (BaseV2GaugeManager);
 
     /// @notice Returns all the bribes created by the factory.

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { RewardsDepot, IRewardsDepot } from "./RewardsDepot.sol";
+import {RewardsDepot, IRewardsDepot} from "./RewardsDepot.sol";
 
 /// @title Single Rewards Depot
 contract SingleRewardsDepot is RewardsDepot {

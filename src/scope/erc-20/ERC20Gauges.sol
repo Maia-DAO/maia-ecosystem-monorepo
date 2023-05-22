@@ -2,18 +2,18 @@
 // Gauge weight logic inspired by Tribe DAO Contracts (flywheel-v2/src/token/ERC20Gauges.sol)
 pragma solidity ^0.8.0;
 
-import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
+import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
 
-import { ReentrancyGuard } from "solmate/utils/ReentrancyGuard.sol";
+import {ReentrancyGuard} from "solmate/utils/ReentrancyGuard.sol";
 
-import { EnumerableSet } from "@lib/EnumerableSet.sol";
+import {EnumerableSet} from "@lib/EnumerableSet.sol";
 
-import { IBaseV2Gauge } from "@gauges/interfaces/IBaseV2Gauge.sol";
+import {IBaseV2Gauge} from "@gauges/interfaces/IBaseV2Gauge.sol";
 
-import { ERC20MultiVotes } from "./ERC20MultiVotes.sol";
+import {ERC20MultiVotes} from "./ERC20MultiVotes.sol";
 
-import { Errors } from "./interfaces/Errors.sol";
-import { IERC20Gauges } from "./interfaces/IERC20Gauges.sol";
+import {Errors} from "./interfaces/Errors.sol";
+import {IERC20Gauges} from "./interfaces/IERC20Gauges.sol";
 
 /// @title  An ERC20 with an embedded "Gauge" style vote with liquid weights
 abstract contract ERC20Gauges is ERC20MultiVotes, ReentrancyGuard, IERC20Gauges {
@@ -89,15 +89,8 @@ abstract contract ERC20Gauges is ERC20MultiVotes, ReentrancyGuard, IERC20Gauges 
         return _getStoredWeight(_getGaugeWeight[gauge], _getGaugeCycleEnd());
     }
 
-    function _getStoredWeight(Weight storage gaugeWeight, uint32 currentCycle)
-        internal
-        view
-        returns (uint112)
-    {
-        return
-            gaugeWeight.currentCycle < currentCycle
-                ? gaugeWeight.currentWeight
-                : gaugeWeight.storedWeight;
+    function _getStoredWeight(Weight storage gaugeWeight, uint32 currentCycle) internal view returns (uint112) {
+        return gaugeWeight.currentCycle < currentCycle ? gaugeWeight.currentWeight : gaugeWeight.storedWeight;
     }
 
     /// @inheritdoc IERC20Gauges
@@ -118,7 +111,7 @@ abstract contract ERC20Gauges is ERC20MultiVotes, ReentrancyGuard, IERC20Gauges 
     /// @inheritdoc IERC20Gauges
     function gauges(uint256 offset, uint256 num) external view returns (address[] memory values) {
         values = new address[](num);
-        for (uint256 i = 0; i < num; ) {
+        for (uint256 i = 0; i < num;) {
             unchecked {
                 values[i] = _gauges.at(offset + i); // will revert if out of bounds
                 i++;
@@ -157,13 +150,9 @@ abstract contract ERC20Gauges is ERC20MultiVotes, ReentrancyGuard, IERC20Gauges 
     }
 
     /// @inheritdoc IERC20Gauges
-    function userGauges(
-        address user,
-        uint256 offset,
-        uint256 num
-    ) external view returns (address[] memory values) {
+    function userGauges(address user, uint256 offset, uint256 num) external view returns (address[] memory values) {
         values = new address[](num);
-        for (uint256 i = 0; i < num; ) {
+        for (uint256 i = 0; i < num;) {
             unchecked {
                 values[i] = _userGauges[user].at(offset + i); // will revert if out of bounds
                 i++;
@@ -182,11 +171,7 @@ abstract contract ERC20Gauges is ERC20MultiVotes, ReentrancyGuard, IERC20Gauges 
     }
 
     /// @inheritdoc IERC20Gauges
-    function calculateGaugeAllocation(address gauge, uint256 quantity)
-        external
-        view
-        returns (uint256)
-    {
+    function calculateGaugeAllocation(address gauge, uint256 quantity) external view returns (uint256) {
         if (_deprecatedGauges.contains(gauge)) return 0;
         uint32 currentCycle = _getGaugeCycleEnd();
 
@@ -200,22 +185,21 @@ abstract contract ERC20Gauges is ERC20MultiVotes, ReentrancyGuard, IERC20Gauges 
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IERC20Gauges
-    function incrementGauge(address gauge, uint112 weight)
-        external
-        nonReentrant
-        returns (uint112 newUserWeight)
-    {
+    function incrementGauge(address gauge, uint112 weight) external nonReentrant returns (uint112 newUserWeight) {
         uint32 currentCycle = _getGaugeCycleEnd();
         _incrementGaugeWeight(msg.sender, gauge, weight, currentCycle);
         return _incrementUserAndGlobalWeights(msg.sender, weight, currentCycle);
     }
 
-    function _incrementGaugeWeight(
-        address user,
-        address gauge,
-        uint112 weight,
-        uint32 cycle
-    ) internal {
+    /**
+     * @notice Increment the weight of a gauge for a user
+     * @dev This function calls accrueBribes for the gauge to ensure the gauge handles the balance change.
+     * @param user the user to increment the weight of
+     * @param gauge the gauge to increment the weight of
+     * @param weight the weight to increment by
+     * @param cycle the cycle to increment the weight for
+     */
+    function _incrementGaugeWeight(address user, address gauge, uint112 weight, uint32 cycle) internal {
         if (!_gauges.contains(gauge) || _deprecatedGauges.contains(gauge)) revert InvalidGaugeError();
         unchecked {
             if (cycle - block.timestamp <= incrementFreezeWindow) revert IncrementFreezeError();
@@ -224,8 +208,9 @@ abstract contract ERC20Gauges is ERC20MultiVotes, ReentrancyGuard, IERC20Gauges 
         IBaseV2Gauge(gauge).accrueBribes(user);
 
         bool added = _userGauges[user].add(gauge); // idempotent add
-        if (added && _userGauges[user].length() > maxGauges && !canContractExceedMaxGauges[user])
+        if (added && _userGauges[user].length() > maxGauges && !canContractExceedMaxGauges[user]) {
             revert MaxGaugeError();
+        }
 
         getUserGaugeWeight[user][gauge] += weight;
 
@@ -234,11 +219,17 @@ abstract contract ERC20Gauges is ERC20MultiVotes, ReentrancyGuard, IERC20Gauges 
         emit IncrementGaugeWeight(user, gauge, weight, cycle);
     }
 
-    function _incrementUserAndGlobalWeights(
-        address user,
-        uint112 weight,
-        uint32 cycle
-    ) internal returns (uint112 newUserWeight) {
+    /**
+     * @notice Increment the weight of a gauge for a user and the total weight
+     * @param user the user to increment the weight of
+     * @param weight the weight to increment by
+     * @param cycle the cycle to increment the weight for
+     * @return newUserWeight the new user's weight
+     */
+    function _incrementUserAndGlobalWeights(address user, uint112 weight, uint32 cycle)
+        internal
+        returns (uint112 newUserWeight)
+    {
         newUserWeight = getUserWeight[user] + weight;
 
         // new user weight must be less than or equal to the total user weight
@@ -265,7 +256,7 @@ abstract contract ERC20Gauges is ERC20MultiVotes, ReentrancyGuard, IERC20Gauges 
         uint32 currentCycle = _getGaugeCycleEnd();
 
         // Update a gauge's specific state
-        for (uint256 i = 0; i < size; ) {
+        for (uint256 i = 0; i < size;) {
             address gauge = gaugeList[i];
             uint112 weight = weights[i];
             weightsSum += weight;
@@ -279,26 +270,26 @@ abstract contract ERC20Gauges is ERC20MultiVotes, ReentrancyGuard, IERC20Gauges 
     }
 
     /// @inheritdoc IERC20Gauges
-    function decrementGauge(address gauge, uint112 weight)
-        external
-        nonReentrant
-        returns (uint112 newUserWeight)
-    {
+    function decrementGauge(address gauge, uint112 weight) external nonReentrant returns (uint112 newUserWeight) {
         uint32 currentCycle = _getGaugeCycleEnd();
 
         // All operations will revert on underflow, protecting against bad inputs
         _decrementGaugeWeight(msg.sender, gauge, weight, currentCycle);
-        if (!_deprecatedGauges.contains(gauge))
+        if (!_deprecatedGauges.contains(gauge)) {
             _writeGaugeWeight(_totalWeight, _subtract112, weight, currentCycle);
+        }
         return _decrementUserWeights(msg.sender, weight);
     }
 
-    function _decrementGaugeWeight(
-        address user,
-        address gauge,
-        uint112 weight,
-        uint32 cycle
-    ) internal {
+    /**
+     * @notice Decrement the weight of a gauge for a user
+     * @dev This function calls accrueBribes for the gauge to ensure the gauge handles the balance change.
+     * @param user the user to decrement the weight of
+     * @param gauge the gauge to decrement the weight of
+     * @param weight the weight to decrement by
+     * @param cycle the cycle to decrement the weight for
+     */
+    function _decrementGaugeWeight(address user, address gauge, uint112 weight, uint32 cycle) internal {
         if (!_gauges.contains(gauge)) revert InvalidGaugeError();
 
         uint112 oldWeight = getUserGaugeWeight[user][gauge];
@@ -316,10 +307,13 @@ abstract contract ERC20Gauges is ERC20MultiVotes, ReentrancyGuard, IERC20Gauges 
         emit DecrementGaugeWeight(user, gauge, weight, cycle);
     }
 
-    function _decrementUserWeights(address user, uint112 weight)
-        internal
-        returns (uint112 newUserWeight)
-    {
+    /**
+     * @notice Decrement the weight of a gauge for a user and the total weight
+     * @param user the user to decrement the weight of
+     * @param weight the weight to decrement by
+     * @return newUserWeight the new user's weight
+     */
+    function _decrementUserWeights(address user, uint112 weight) internal returns (uint112 newUserWeight) {
         newUserWeight = getUserWeight[user] - weight;
         getUserWeight[user] = newUserWeight;
     }
@@ -341,7 +335,7 @@ abstract contract ERC20Gauges is ERC20MultiVotes, ReentrancyGuard, IERC20Gauges 
 
         // Update the gauge's specific state
         // All operations will revert on underflow, protecting against bad inputs
-        for (uint256 i = 0; i < size; ) {
+        for (uint256 i = 0; i < size;) {
             address gauge = gaugeList[i];
             uint112 weight = weights[i];
             weightsSum += weight;
@@ -358,10 +352,14 @@ abstract contract ERC20Gauges is ERC20MultiVotes, ReentrancyGuard, IERC20Gauges 
     }
 
     /**
-     @dev this function is the key to the entire contract.
-     The storage weight it operates on is either a global or gauge-specific weight.
-     The operation applied is either addition for incrementing gauges or subtraction for decrementing a gauge.
-    */
+     * @dev this function is the key to the entire contract.
+     *  The storage weight it operates on is either a global or gauge-specific weight.
+     *  The operation applied is either addition for incrementing gauges or subtraction for decrementing a gauge.
+     * @param weight the weight to apply the operation to
+     * @param op the operation to apply
+     * @param delta the amount to apply the operation by
+     * @param cycle the cycle to apply the operation for
+     */
     function _writeGaugeWeight(
         Weight storage weight,
         function(uint112, uint112) view returns (uint112) op,
@@ -401,6 +399,11 @@ abstract contract ERC20Gauges is ERC20MultiVotes, ReentrancyGuard, IERC20Gauges 
         return _addGauge(gauge);
     }
 
+    /**
+     * @notice Add a gauge to the contract
+     * @param gauge the gauge to add
+     * @return weight the previous weight of the gauge, if it was already added
+     */
     function _addGauge(address gauge) internal returns (uint112 weight) {
         bool newAdd = _gauges.add(gauge);
         bool previouslyDeprecated = _deprecatedGauges.remove(gauge);
@@ -423,6 +426,10 @@ abstract contract ERC20Gauges is ERC20MultiVotes, ReentrancyGuard, IERC20Gauges 
         _removeGauge(gauge);
     }
 
+    /**
+     * @notice Remove a gauge from the contract
+     * @param gauge the gauge to remove
+     */
     function _removeGauge(address gauge) internal {
         // add to deprecated and fail loud if not present
         if (!_deprecatedGauges.add(gauge)) revert InvalidGaugeError();
@@ -469,27 +476,46 @@ abstract contract ERC20Gauges is ERC20MultiVotes, ReentrancyGuard, IERC20Gauges 
     /// _decrementWeightUntilFree is called as a greedy algorithm to free up weight.
     /// It may be more gas efficient to free weight before burning or transferring tokens.
 
+    /**
+     * @notice Burns `amount` of tokens from `from` address.
+     * @dev Frees weights and votes with a greedy algorithm if needed to burn tokens
+     * @param from The address to burn tokens from.
+     * @param amount The amount of tokens to burn.
+     */
     function _burn(address from, uint256 amount) internal virtual override {
         _decrementWeightUntilFree(from, amount);
         super._burn(from, amount);
     }
 
+    /**
+     * @notice Transfers `amount` of tokens from `msg.sender` to `to` address.
+     * @dev Frees weights and votes with a greedy algorithm if needed to burn tokens
+     * @param to the address to transfer to.
+     * @param amount the amount to transfer.
+     */
     function transfer(address to, uint256 amount) public virtual override returns (bool) {
         _decrementWeightUntilFree(msg.sender, amount);
         return super.transfer(to, amount);
     }
 
-    function transferFrom(
-        address from,
-        address to,
-        uint256 amount
-    ) public virtual override returns (bool) {
+    /**
+     * @notice Transfers `amount` of tokens from `from` address to `to` address.
+     * @dev Frees weights and votes with a greedy algorithm if needed to burn tokens
+     * @param from the address to transfer from.
+     * @param to the address to transfer to.
+     * @param amount the amount to transfer.
+     */
+    function transferFrom(address from, address to, uint256 amount) public virtual override returns (bool) {
         _decrementWeightUntilFree(from, amount);
         return super.transferFrom(from, to, amount);
     }
 
-    /// a greedy algorithm for freeing weight before a token burn/transfer
-    /// frees up entire gauges, so likely will free more than `weight`
+    /**
+     * @notice A greedy algorithm for freeing weight before a token burn/transfer
+     * @dev Frees up entire gauges, so likely will free more than `weight`
+     * @param user the user to free weight for
+     * @param weight the weight to free
+     */
     function _decrementWeightUntilFree(address user, uint256 weight) internal nonReentrant {
         uint256 userFreeWeight = freeVotes(user) + userUnusedVotes(user);
 
@@ -507,7 +533,7 @@ abstract contract ERC20Gauges is ERC20MultiVotes, ReentrancyGuard, IERC20Gauges 
 
         // Free gauges through the entire list or until underweight
         uint256 size = gaugeList.length;
-        for (uint256 i = 0; i < size && (userFreeWeight + totalFreed) < weight; ) {
+        for (uint256 i = 0; i < size && (userFreeWeight + totalFreed) < weight;) {
             address gauge = gaugeList[i];
             uint112 userGaugeWeight = getUserGaugeWeight[user][gauge];
             if (userGaugeWeight != 0) {

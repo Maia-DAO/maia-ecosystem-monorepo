@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { Ownable } from "solady/auth/Ownable.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
 
-import { ERC20 } from "solmate/tokens/ERC20.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
-import { BaseV2Gauge } from "@gauges/BaseV2Gauge.sol";
+import {BaseV2Gauge} from "@gauges/BaseV2Gauge.sol";
 
-import { FlywheelBoosterGaugeWeight } from "@rewards/booster/FlywheelBoosterGaugeWeight.sol";
-import { FlywheelBribeRewards } from "@rewards/rewards/FlywheelBribeRewards.sol";
-import { FlywheelCore } from "@rewards/FlywheelCoreStrategy.sol";
+import {FlywheelBoosterGaugeWeight} from "@rewards/booster/FlywheelBoosterGaugeWeight.sol";
+import {FlywheelBribeRewards} from "@rewards/rewards/FlywheelBribeRewards.sol";
+import {FlywheelCore} from "@rewards/FlywheelCoreStrategy.sol";
 
-import { BaseV2GaugeFactory, BaseV2GaugeManager } from "./BaseV2GaugeManager.sol";
-import { IBribesFactory } from "../interfaces/IBribesFactory.sol";
+import {BaseV2GaugeFactory, BaseV2GaugeManager} from "./BaseV2GaugeManager.sol";
+import {IBribesFactory} from "../interfaces/IBribesFactory.sol";
 
 /// @title Bribes Factory.
 contract BribesFactory is Ownable, IBribesFactory {
@@ -93,9 +93,7 @@ contract BribesFactory is Ownable, IBribesFactory {
         bribeFlywheelIds[flywheel] = id;
         activeBribeFlywheels[flywheel] = true;
 
-        flywheel.setFlywheelRewards(
-            address(new FlywheelBribeRewards(flywheel, rewardsCycleLength))
-        );
+        flywheel.setFlywheelRewards(address(new FlywheelBribeRewards(flywheel, rewardsCycleLength)));
 
         emit BribeFlywheelCreated(bribeToken, flywheel);
     }
@@ -105,8 +103,9 @@ contract BribesFactory is Ownable, IBribesFactory {
     //////////////////////////////////////////////////////////////*/
 
     modifier onlyGaugeFactory() {
-        if (!gaugeManager.activeGaugeFactories(BaseV2GaugeFactory(msg.sender)))
+        if (!gaugeManager.activeGaugeFactories(BaseV2GaugeFactory(msg.sender))) {
             revert Unauthorized();
+        }
         _;
     }
 }

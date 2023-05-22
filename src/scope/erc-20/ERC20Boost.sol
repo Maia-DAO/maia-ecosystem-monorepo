@@ -2,19 +2,19 @@
 
 pragma solidity ^0.8.0;
 
-import { Ownable } from "solady/auth/Ownable.sol";
-import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
+import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
 
-import { ERC20 } from "solmate/tokens/ERC20.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
-import { EnumerableSet } from "@lib/EnumerableSet.sol";
+import {EnumerableSet} from "@lib/EnumerableSet.sol";
 
-import { IBaseV2Gauge } from "@gauges/interfaces/IBaseV2Gauge.sol";
+import {IBaseV2Gauge} from "@gauges/interfaces/IBaseV2Gauge.sol";
 
-import { Errors } from "./interfaces/Errors.sol";
-import { IERC20Boost } from "./interfaces/IERC20Boost.sol";
+import {Errors} from "./interfaces/Errors.sol";
+import {IERC20Boost} from "./interfaces/IERC20Boost.sol";
 
-/// @title An ERC20 with an embedded attachment mechanism to keep track of boost 
+/// @title An ERC20 with an embedded attachment mechanism to keep track of boost
 ///        allocations to gauges.
 abstract contract ERC20Boost is ERC20, Ownable, IERC20Boost {
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -49,7 +49,7 @@ abstract contract ERC20Boost is ERC20, Ownable, IERC20Boost {
     /// @inheritdoc IERC20Boost
     function gauges(uint256 offset, uint256 num) external view returns (address[] memory values) {
         values = new address[](num);
-        for (uint256 i = 0; i < num; ) {
+        for (uint256 i = 0; i < num;) {
             unchecked {
                 values[i] = _gauges.at(offset + i); // will revert if out of bounds
                 i++;
@@ -93,13 +93,9 @@ abstract contract ERC20Boost is ERC20, Ownable, IERC20Boost {
     }
 
     /// @inheritdoc IERC20Boost
-    function userGauges(
-        address user,
-        uint256 offset,
-        uint256 num
-    ) external view returns (address[] memory values) {
+    function userGauges(address user, uint256 offset, uint256 num) external view returns (address[] memory values) {
         values = new address[](num);
-        for (uint256 i = 0; i < num; ) {
+        for (uint256 i = 0; i < num;) {
             unchecked {
                 values[i] = _userGauges[user].at(offset + i); // will revert if out of bounds
                 i++;
@@ -118,8 +114,9 @@ abstract contract ERC20Boost is ERC20, Ownable, IERC20Boost {
 
     /// @inheritdoc IERC20Boost
     function attach(address user) external {
-        if (!_gauges.contains(msg.sender) || _deprecatedGauges.contains(msg.sender))
+        if (!_gauges.contains(msg.sender) || _deprecatedGauges.contains(msg.sender)) {
             revert InvalidGauge();
+        }
 
         // idempotent add
         if (!_userGauges[user].add(msg.sender)) revert GaugeAlreadyAttached();
@@ -131,10 +128,8 @@ abstract contract ERC20Boost is ERC20, Ownable, IERC20Boost {
             emit UpdateUserBoost(user, userGaugeBoost);
         }
 
-        getUserGaugeBoost[user][msg.sender] = GaugeState({
-            userGaugeBoost: userGaugeBoost,
-            totalGaugeBoost: totalSupply.toUint128()
-        });
+        getUserGaugeBoost[user][msg.sender] =
+            GaugeState({userGaugeBoost: userGaugeBoost, totalGaugeBoost: totalSupply.toUint128()});
 
         emit Attach(user, msg.sender, userGaugeBoost);
     }
@@ -158,7 +153,7 @@ abstract contract ERC20Boost is ERC20, Ownable, IERC20Boost {
         address[] memory gaugeList = _userGauges[user].values();
 
         uint256 length = gaugeList.length;
-        for (uint256 i = 0; i < length; ) {
+        for (uint256 i = 0; i < length;) {
             address gauge = gaugeList[i];
 
             if (!_deprecatedGauges.contains(gauge)) {
@@ -195,7 +190,7 @@ abstract contract ERC20Boost is ERC20, Ownable, IERC20Boost {
     function decrementGaugeAllBoost(address gauge) external {
         require(_userGauges[msg.sender].remove(gauge));
         delete getUserGaugeBoost[msg.sender][gauge];
-        
+
         emit Detach(msg.sender, gauge);
     }
 
@@ -205,15 +200,11 @@ abstract contract ERC20Boost is ERC20, Ownable, IERC20Boost {
     }
 
     /// @inheritdoc IERC20Boost
-    function decrementGaugesBoostIndexed(
-        uint256 boost,
-        uint256 offset,
-        uint256 num
-    ) public {
+    function decrementGaugesBoostIndexed(uint256 boost, uint256 offset, uint256 num) public {
         address[] memory gaugeList = _userGauges[msg.sender].values();
 
         uint256 length = gaugeList.length;
-        for (uint256 i = 0; i < num && i < length; ) {
+        for (uint256 i = 0; i < num && i < length;) {
             address gauge = gaugeList[offset + i];
 
             GaugeState storage gaugeState = getUserGaugeBoost[msg.sender][gauge];
@@ -242,7 +233,7 @@ abstract contract ERC20Boost is ERC20, Ownable, IERC20Boost {
 
         // Free gauges until through the entire list
         uint256 size = gaugeList.length;
-        for (uint256 i = 0; i < size; ) {
+        for (uint256 i = 0; i < size;) {
             address gauge = gaugeList[i];
 
             require(_userGauges[msg.sender].remove(gauge)); // Remove from set. Should never fail.
@@ -302,24 +293,39 @@ abstract contract ERC20Boost is ERC20, Ownable, IERC20Boost {
 
     /// NOTE: any "removal" of tokens from a user requires notAttached < amount.
 
+    /**
+     * @notice Burns `amount` of tokens from `from` address.
+     * @dev User must have enough free boost.
+     * @param from The address to burn tokens from.
+     * @param amount The amount of tokens to burn.
+     */
     function _burn(address from, uint256 amount) internal override notAttached(from, amount) {
         super._burn(from, amount);
     }
 
-    function transfer(address to, uint256 amount)
-        public
-        override
-        notAttached(msg.sender, amount)
-        returns (bool)
-    {
+    /**
+     * @notice Transfers `amount` of tokens from `msg.sender` to `to` address.
+     * @dev User must have enough free boost.
+     * @param to the address to transfer to.
+     * @param amount the amount to transfer.
+     */
+    function transfer(address to, uint256 amount) public override notAttached(msg.sender, amount) returns (bool) {
         return super.transfer(to, amount);
     }
 
-    function transferFrom(
-        address from,
-        address to,
-        uint256 amount
-    ) public override notAttached(from, amount) returns (bool) {
+    /**
+     * @notice Transfers `amount` of tokens from `from` address to `to` address.
+     * @dev User must have enough free boost.
+     * @param from the address to transfer from.
+     * @param to the address to transfer to.
+     * @param amount the amount to transfer.
+     */
+    function transferFrom(address from, address to, uint256 amount)
+        public
+        override
+        notAttached(from, amount)
+        returns (bool)
+    {
         return super.transferFrom(from, to, amount);
     }
 

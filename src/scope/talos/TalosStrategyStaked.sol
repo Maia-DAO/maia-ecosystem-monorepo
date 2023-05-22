@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0;
 
-import { FlywheelCoreInstant } from "@rewards/FlywheelCoreInstant.sol";
-import { MultiRewardsDepot } from "@rewards/depots/MultiRewardsDepot.sol";
-import { FlywheelInstantRewards, ERC20 } from "@rewards/rewards/FlywheelInstantRewards.sol";
+import {FlywheelCoreInstant} from "@rewards/FlywheelCoreInstant.sol";
+import {MultiRewardsDepot} from "@rewards/depots/MultiRewardsDepot.sol";
+import {FlywheelInstantRewards, ERC20} from "@rewards/rewards/FlywheelInstantRewards.sol";
 
-import { BoostAggregator } from "./boost-aggregator/BoostAggregator.sol";
-import { TalosStrategySimpleRebalance, TalosBaseStrategy } from "./strategies/TalosStrategySimpleRebalance.sol";
+import {BoostAggregator} from "./boost-aggregator/BoostAggregator.sol";
+import {TalosStrategySimpleRebalance, TalosBaseStrategy} from "./strategies/TalosStrategySimpleRebalance.sol";
 
-import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-import { INonfungiblePositionManager } from "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";
+import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import {INonfungiblePositionManager} from "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";
 
-import { ITalosOptimizer } from "./interfaces/ITalosOptimizer.sol";
-import { ITalosStrategyStaked } from "./interfaces/ITalosStrategyStaked.sol";
+import {ITalosOptimizer} from "./interfaces/ITalosOptimizer.sol";
+import {ITalosStrategyStaked} from "./interfaces/ITalosStrategyStaked.sol";
 
 library DeployStaked {
     function createTalosV3Strategy(
@@ -23,8 +23,7 @@ library DeployStaked {
         FlywheelCoreInstant flywheel,
         address owner
     ) public returns (TalosBaseStrategy) {
-        return
-            new TalosStrategyStaked(
+        return new TalosStrategyStaked(
                 pool,
                 optimizer,
                 boostAggregator,
@@ -78,9 +77,7 @@ contract TalosStrategyStaked is TalosStrategySimpleRebalance, ITalosStrategyStak
         flywheel = _flywheel;
 
         boostAggregator = _boostAggregator;
-        _boostAggregator.setOwnRewardsDepot(
-            address(FlywheelInstantRewards(_flywheel.flywheelRewards()).rewardsDepot())
-        );
+        _boostAggregator.setOwnRewardsDepot(address(FlywheelInstantRewards(_flywheel.flywheelRewards()).rewardsDepot()));
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -92,11 +89,7 @@ contract TalosStrategyStaked is TalosStrategySimpleRebalance, ITalosStrategyStak
         return super.transfer(_to, _amount);
     }
 
-    function transferFrom(
-        address _from,
-        address _to,
-        uint256 _amount
-    ) public override returns (bool) {
+    function transferFrom(address _from, address _to, uint256 _amount) public override returns (bool) {
         flywheel.accrue(ERC20(address(this)), _from, _to);
         return super.transferFrom(_from, _to, _amount);
     }

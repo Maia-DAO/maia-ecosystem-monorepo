@@ -2,16 +2,16 @@
 
 pragma solidity ^0.8.0;
 
-import { Ownable } from "solady/auth/Ownable.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
-import { ERC20 } from "solmate/tokens/ERC20.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
-import { bHermesBoost } from "./tokens/bHermesBoost.sol";
-import { bHermesGauges } from "./tokens/bHermesGauges.sol";
-import { bHermesVotes as ERC20Votes } from "./tokens/bHermesVotes.sol";
+import {bHermesBoost} from "./tokens/bHermesBoost.sol";
+import {bHermesGauges} from "./tokens/bHermesGauges.sol";
+import {bHermesVotes as ERC20Votes} from "./tokens/bHermesVotes.sol";
 
-import { IUtilityManager } from "./interfaces/IUtilityManager.sol";
+import {IUtilityManager} from "./interfaces/IUtilityManager.sol";
 
 /// @title Utility Manager Contract.
 abstract contract UtilityManager is IUtilityManager {
@@ -41,11 +41,7 @@ abstract contract UtilityManager is IUtilityManager {
      * @param _gaugeBoost The address of the bHermesBoost contract.
      * @param _governance The address of the bHermesVotes contract.
      */
-    constructor(
-        address _gaugeWeight,
-        address _gaugeBoost,
-        address _governance
-    ) {
+    constructor(address _gaugeWeight, address _gaugeBoost, address _governance) {
         gaugeWeight = bHermesGauges(_gaugeWeight);
         gaugeBoost = bHermesBoost(_gaugeBoost);
         governance = ERC20Votes(_governance);
@@ -63,11 +59,7 @@ abstract contract UtilityManager is IUtilityManager {
     }
 
     /// @inheritdoc IUtilityManager
-    function forfeitMultipleAmounts(
-        uint256 weight,
-        uint256 boost,
-        uint256 _governance
-    ) public virtual {
+    function forfeitMultipleAmounts(uint256 weight, uint256 boost, uint256 _governance) public virtual {
         forfeitWeight(weight);
         forfeitBoost(boost);
         forfeitGovernance(_governance);
@@ -108,11 +100,7 @@ abstract contract UtilityManager is IUtilityManager {
     }
 
     /// @inheritdoc IUtilityManager
-    function claimMultipleAmounts(
-        uint256 weight,
-        uint256 boost,
-        uint256 _governance
-    ) public virtual {
+    function claimMultipleAmounts(uint256 weight, uint256 boost, uint256 _governance) public virtual {
         claimWeight(weight);
         claimBoost(boost);
         claimGovernance(_governance);

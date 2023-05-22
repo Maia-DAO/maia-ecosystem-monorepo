@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0;
 
-import { Ownable } from "solady/auth/Ownable.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
-import { ERC20 } from "solmate/tokens/ERC20.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
-import { INonfungiblePositionManager } from "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";
+import {INonfungiblePositionManager} from "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";
 
-import { bHermesBoost } from "@hermes/tokens/bHermesBoost.sol";
-import { UniswapV3Staker } from "@v3-staker/UniswapV3Staker.sol";
+import {bHermesBoost} from "@hermes/tokens/bHermesBoost.sol";
+import {UniswapV3Staker} from "@v3-staker/UniswapV3Staker.sol";
 
-import { IBoostAggregator, IERC721Receiver } from "../interfaces/IBoostAggregator.sol";
+import {IBoostAggregator, IERC721Receiver} from "../interfaces/IBoostAggregator.sol";
 
 /// @notice Boost Aggregator for Uniswap V3 NFTs.
 contract BoostAggregator is Ownable, IERC721Receiver, IBoostAggregator {
@@ -59,11 +59,7 @@ contract BoostAggregator is Ownable, IERC721Receiver, IBoostAggregator {
      * @param _hermes The hermes token contract
      * @param _owner The owner of this contract
      */
-    constructor(
-        UniswapV3Staker _uniswapV3Staker,
-        ERC20 _hermes,
-        address _owner
-    ) {
+    constructor(UniswapV3Staker _uniswapV3Staker, ERC20 _hermes, address _owner) {
         _initializeOwner(_owner);
         uniswapV3Staker = _uniswapV3Staker;
         hermesGaugeBoost = uniswapV3Staker.hermesGaugeBoost();
@@ -78,22 +74,18 @@ contract BoostAggregator is Ownable, IERC721Receiver, IBoostAggregator {
     /// @inheritdoc IERC721Receiver
     /// @dev msg.sender not validated to be nonfungiblePositionManager in order to allow
     ///      whitelisted addresses to retrieve NFTs incorrectly sent to this contract
-    function onERC721Received(
-        address,
-        address from,
-        uint256 tokenId,
-        bytes calldata
-    ) external override onlyWhitelisted returns (bytes4) {
+    function onERC721Received(address, address from, uint256 tokenId, bytes calldata)
+        external
+        override
+        onlyWhitelisted
+        returns (bytes4)
+    {
         // update tokenIdRewards prior to staking
         tokenIdRewards[tokenId] = uniswapV3Staker.tokenIdRewards(tokenId);
         // map tokenId to user
         tokenIdToUser[tokenId] = from;
         // stake NFT to Uniswap V3 Staker
-        nonfungiblePositionManager.safeTransferFrom(
-            address(this),
-            address(uniswapV3Staker),
-            tokenId
-        );
+        nonfungiblePositionManager.safeTransferFrom(address(this), address(uniswapV3Staker), tokenId);
 
         return this.onERC721Received.selector;
     }
@@ -183,11 +175,7 @@ contract BoostAggregator is Ownable, IERC721Receiver, IBoostAggregator {
     }
 
     /// @inheritdoc IBoostAggregator
-    function decrementGaugesBoostIndexed(
-        uint256 boost,
-        uint256 offset,
-        uint256 num
-    ) external onlyOwner {
+    function decrementGaugesBoostIndexed(uint256 boost, uint256 offset, uint256 num) external onlyOwner {
         hermesGaugeBoost.decrementGaugesBoostIndexed(boost, offset, num);
     }
 

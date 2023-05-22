@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { FlywheelCoreInstant } from "@rewards/FlywheelCoreInstant.sol";
+import {FlywheelCoreInstant} from "@rewards/FlywheelCoreInstant.sol";
 
-import { BoostAggregator } from "../boost-aggregator/BoostAggregator.sol";
+import {BoostAggregator} from "../boost-aggregator/BoostAggregator.sol";
 
 /**
  * @title Tokenized Vault implementation for a staked Uniswap V3 Non-Fungible Positions.

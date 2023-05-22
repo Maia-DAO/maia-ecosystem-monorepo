@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { ERC20 } from "solmate/tokens/ERC20.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
-import { ERC4626PartnerManager as PartnerManager, IBaseVault } from "../tokens/ERC4626PartnerManager.sol";
+import {ERC4626PartnerManager as PartnerManager, IBaseVault} from "../tokens/ERC4626PartnerManager.sol";
 
 /**
  * @title Factory for managing PartnerManagers

@@ -2,14 +2,14 @@
 // Rewards logic inspired by Tribe DAO Contracts (flywheel-v2/src/rewards/FlywheelDynamicRewards.sol)
 pragma solidity ^0.8.0;
 
-import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
-import { ERC20 } from "solmate/tokens/ERC20.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
-import { BaseFlywheelRewards, FlywheelCore } from "../base/BaseFlywheelRewards.sol";
+import {BaseFlywheelRewards, FlywheelCore} from "../base/BaseFlywheelRewards.sol";
 
-import { IFlywheelAcummulatedRewards } from "../interfaces/IFlywheelAcummulatedRewards.sol";
+import {IFlywheelAcummulatedRewards} from "../interfaces/IFlywheelAcummulatedRewards.sol";
 
 ///  @title Flywheel Accumulated Rewards.
 abstract contract FlywheelAcummulatedRewards is BaseFlywheelRewards, IFlywheelAcummulatedRewards {
@@ -30,9 +30,7 @@ abstract contract FlywheelAcummulatedRewards is BaseFlywheelRewards, IFlywheelAc
      *  @param _flywheel flywheel core contract
      *  @param _rewardsCycleLength the length of a rewards cycle in seconds
      */
-    constructor(FlywheelCore _flywheel, uint256 _rewardsCycleLength)
-        BaseFlywheelRewards(_flywheel)
-    {
+    constructor(FlywheelCore _flywheel, uint256 _rewardsCycleLength) BaseFlywheelRewards(_flywheel) {
         rewardsCycleLength = _rewardsCycleLength;
     }
 
@@ -41,12 +39,7 @@ abstract contract FlywheelAcummulatedRewards is BaseFlywheelRewards, IFlywheelAc
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IFlywheelAcummulatedRewards
-    function getAccruedRewards(ERC20 strategy)
-        external
-        override
-        onlyFlywheel
-        returns (uint256 amount)
-    {
+    function getAccruedRewards(ERC20 strategy) external override onlyFlywheel returns (uint256 amount) {
         uint32 timestamp = block.timestamp.toUint32();
 
         // if cycle has ended, reset cycle and transfer all available
@@ -54,8 +47,7 @@ abstract contract FlywheelAcummulatedRewards is BaseFlywheelRewards, IFlywheelAc
             amount = getNextCycleRewards(strategy);
 
             // reset for next cycle
-            uint256 newEndCycle = ((timestamp + rewardsCycleLength) / rewardsCycleLength) *
-                rewardsCycleLength;
+            uint256 newEndCycle = ((timestamp + rewardsCycleLength) / rewardsCycleLength) * rewardsCycleLength;
             endCycle = newEndCycle;
 
             emit NewRewardsCycle(timestamp, newEndCycle, amount);

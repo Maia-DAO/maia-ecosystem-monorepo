@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { ERC20Votes, SafeTransferLib, UtilityManager, IUtilityManager } from "@hermes/UtilityManager.sol";
+import {ERC20Votes, SafeTransferLib, UtilityManager, IUtilityManager} from "@hermes/UtilityManager.sol";
 
-import { IBaseVault } from "./interfaces/IBaseVault.sol";
-import { IPartnerUtilityManager } from "./interfaces/IPartnerUtilityManager.sol";
+import {IBaseVault} from "./interfaces/IBaseVault.sol";
+import {IPartnerUtilityManager} from "./interfaces/IPartnerUtilityManager.sol";
 
 /// @title Partner Utility Manager Contract.
 abstract contract PartnerUtilityManager is UtilityManager, IPartnerUtilityManager {
@@ -55,12 +55,10 @@ abstract contract PartnerUtilityManager is UtilityManager, IPartnerUtilityManage
     }
 
     /// @inheritdoc IPartnerUtilityManager
-    function forfeitMultipleAmounts(
-        uint256 weight,
-        uint256 boost,
-        uint256 _governance,
-        uint256 _partnerGovernance
-    ) public virtual {
+    function forfeitMultipleAmounts(uint256 weight, uint256 boost, uint256 _governance, uint256 _partnerGovernance)
+        public
+        virtual
+    {
         forfeitWeight(weight);
         forfeitBoost(boost);
         forfeitGovernance(_governance);
@@ -113,12 +111,10 @@ abstract contract PartnerUtilityManager is UtilityManager, IPartnerUtilityManage
     }
 
     /// @inheritdoc IPartnerUtilityManager
-    function claimMultipleAmounts(
-        uint256 weight,
-        uint256 boost,
-        uint256 _governance,
-        uint256 _partnerGovernance
-    ) public virtual {
+    function claimMultipleAmounts(uint256 weight, uint256 boost, uint256 _governance, uint256 _partnerGovernance)
+        public
+        virtual
+    {
         claimWeight(weight);
         claimBoost(boost);
         claimGovernance(_governance);
@@ -129,8 +125,9 @@ abstract contract PartnerUtilityManager is UtilityManager, IPartnerUtilityManage
     function claimWeight(uint256 amount) public virtual override checkWeight(amount) {
         uint256 weightAvailable = address(gaugeWeight).balanceOf(address(this));
         /// @dev Must transfer weight amount to this manager address.
-        if (weightAvailable < amount)
+        if (weightAvailable < amount) {
             IBaseVault(partnerVault).clearWeight(amount - weightAvailable);
+        }
 
         super.claimWeight(amount);
     }
@@ -148,8 +145,9 @@ abstract contract PartnerUtilityManager is UtilityManager, IPartnerUtilityManage
     function claimGovernance(uint256 amount) public virtual override checkGovernance(amount) {
         uint256 governanceAvailable = address(governance).balanceOf(address(this));
         /// @dev Must transfer governance amount to this manager address.
-        if (governanceAvailable < amount)
+        if (governanceAvailable < amount) {
             IBaseVault(partnerVault).clearGovernance(amount - governanceAvailable);
+        }
 
         super.claimGovernance(amount);
     }
@@ -163,7 +161,7 @@ abstract contract PartnerUtilityManager is UtilityManager, IPartnerUtilityManage
     /*///////////////////////////////////////////////////////////////
                             MODIFIERS
     //////////////////////////////////////////////////////////////*/
-    
+
     /// @dev Checks available governance allows for call.
     modifier checkPartnerGovernance(uint256 amount) virtual;
 }

@@ -31,7 +31,7 @@ interface ITalosOptimizer {
 
     /**
      * @notice Sets the total max supply which can only be changed by the governance address.
-       @param _maxTotalSupply amount to set as max supply.
+     *    @param _maxTotalSupply amount to set as max supply.
      */
     function setMaxTotalSupply(uint256 _maxTotalSupply) external;
 

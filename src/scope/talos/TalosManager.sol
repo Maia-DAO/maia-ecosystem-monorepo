@@ -1,17 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { RLPEncoder } from "@rlp/RLPEncoder.sol";
-import { RLPDecoder } from "@rlp/RLPDecoder.sol";
+import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
-import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import {ITalosBaseStrategy} from "./interfaces/ITalosBaseStrategy.sol";
+import {ITalosManager} from "./interfaces/ITalosManager.sol";
+import {ITalosOptimizer} from "./interfaces/ITalosOptimizer.sol";
+import {PoolVariables} from "./libraries/PoolVariables.sol";
 
-import { ITalosBaseStrategy } from "./interfaces/ITalosBaseStrategy.sol";
-import { ITalosManager } from "./interfaces/ITalosManager.sol";
-import { ITalosOptimizer } from "./interfaces/ITalosOptimizer.sol";
-import { PoolVariables } from "./libraries/PoolVariables.sol";
-
-import { ITalosManager, AutomationCompatibleInterface } from "./interfaces/ITalosManager.sol";
+import {ITalosManager, AutomationCompatibleInterface} from "./interfaces/ITalosManager.sol";
 
 /// @title  Talos Strategy Manager.
 contract TalosManager is AutomationCompatibleInterface, ITalosManager {
@@ -68,11 +65,10 @@ contract TalosManager is AutomationCompatibleInterface, ITalosManager {
      */
     function getRebalance(ITalosBaseStrategy position) private view returns (bool) {
         //Calculate base ticks.
-        (, int24 currentTick, , , , , ) = position.pool().slot0();
+        (, int24 currentTick,,,,,) = position.pool().slot0();
 
-        return
-            currentTick - position.tickLower() >= ticksFromLowerRebalance ||
-            position.tickUpper() - currentTick >= ticksFromUpperRebalance;
+        return currentTick - position.tickLower() >= ticksFromLowerRebalance
+            || position.tickUpper() - currentTick >= ticksFromUpperRebalance;
     }
 
     /**
@@ -81,11 +77,10 @@ contract TalosManager is AutomationCompatibleInterface, ITalosManager {
      */
     function getRerange(ITalosBaseStrategy position) private view returns (bool) {
         //Calculate base ticks.
-        (, int24 currentTick, , , , , ) = position.pool().slot0();
+        (, int24 currentTick,,,,,) = position.pool().slot0();
 
-        return
-            currentTick - position.tickLower() >= ticksFromLowerRerange ||
-            position.tickUpper() - currentTick >= ticksFromUpperRerange;
+        return currentTick - position.tickLower() >= ticksFromLowerRerange
+            || position.tickUpper() - currentTick >= ticksFromUpperRerange;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -93,19 +88,13 @@ contract TalosManager is AutomationCompatibleInterface, ITalosManager {
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc AutomationCompatibleInterface
-    function checkUpkeep(bytes calldata)
-        external
-        view
-        override
-        returns (bool upkeepNeeded, bytes memory performData)
-    {
+    function checkUpkeep(bytes calldata) external view override returns (bool upkeepNeeded, bytes memory performData) {
         ITalosOptimizer optimizer = strategy.optimizer();
 
         // checks if price has not moved a lot recently.
         // This mitigates price manipulation during rebalance and also prevents placing orders when it's too volatile.
-        try
-            strategy.pool().checkDeviation(optimizer.maxTwapDeviation(), optimizer.twapDuration())
-        {} catch {
+        try strategy.pool().checkDeviation(optimizer.maxTwapDeviation(), optimizer.twapDuration()) {}
+        catch {
             return (false, "");
         }
 

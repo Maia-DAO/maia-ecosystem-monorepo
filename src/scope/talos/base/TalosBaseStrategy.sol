@@ -2,21 +2,21 @@
 // Logic inspired by Popsicle Finance Contracts (PopsicleV3Optimizer/contracts/popsicle-v3-optimizer/PopsicleV3Optimizer.sol)
 pragma solidity >=0.8.0;
 
-import { Ownable } from "solady/auth/Ownable.sol";
-import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
-import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
+import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 
-import { ReentrancyGuard } from "solmate/utils/ReentrancyGuard.sol";
-import { ERC20 } from "solmate/tokens/ERC20.sol";
+import {ReentrancyGuard} from "solmate/utils/ReentrancyGuard.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
-import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-import { INonfungiblePositionManager } from "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";
+import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import {INonfungiblePositionManager} from "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";
 
-import { PoolVariables } from "../libraries/PoolVariables.sol";
+import {PoolVariables} from "../libraries/PoolVariables.sol";
 
-import { ITalosBaseStrategy, IERC721Receiver } from "../interfaces/ITalosBaseStrategy.sol";
-import { ITalosOptimizer } from "../interfaces/ITalosOptimizer.sol";
+import {ITalosBaseStrategy, IERC721Receiver} from "../interfaces/ITalosBaseStrategy.sol";
+import {ITalosOptimizer} from "../interfaces/ITalosOptimizer.sol";
 
 /// @title Tokenized Vault implementation for Uniswap V3 Non Fungible Positions.
 abstract contract TalosBaseStrategy is Ownable, ERC20, ReentrancyGuard, ITalosBaseStrategy {
@@ -97,19 +97,11 @@ abstract contract TalosBaseStrategy is Ownable, ERC20, ReentrancyGuard, ITalosBa
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc ITalosBaseStrategy
-    function init(
-        uint256 amount0Desired,
-        uint256 amount1Desired,
-        address receiver
-    )
+    function init(uint256 amount0Desired, uint256 amount1Desired, address receiver)
         external
         virtual
         nonReentrant
-        returns (
-            uint256 shares,
-            uint256 amount0,
-            uint256 amount1
-        )
+        returns (uint256 shares, uint256 amount0, uint256 amount1)
     {
         if (initialized) revert AlreadyInitialized();
 
@@ -117,7 +109,7 @@ abstract contract TalosBaseStrategy is Ownable, ERC20, ReentrancyGuard, ITalosBa
             // Own Scope to avoid stack to deep
             int24 _tickSpacing = tickSpacing; // Saves an extra SLOAD
             int24 baseThreshold = _tickSpacing * optimizer.tickRangeMultiplier();
-            (, int24 currentTick, , , , , ) = pool.slot0();
+            (, int24 currentTick,,,,,) = pool.slot0();
             int24 tickFloor = PoolVariables.floor(currentTick, _tickSpacing);
 
             int24 _tickLower = tickFloor - baseThreshold; // Saves an extra SLOAD
@@ -185,21 +177,13 @@ abstract contract TalosBaseStrategy is Ownable, ERC20, ReentrancyGuard, ITalosBa
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc ITalosBaseStrategy
-    function deposit(
-        uint256 amount0Desired,
-        uint256 amount1Desired,
-        address receiver
-    )
+    function deposit(uint256 amount0Desired, uint256 amount1Desired, address receiver)
         public
         virtual
         override
         nonReentrant
         checkDeviation
-        returns (
-            uint256 shares,
-            uint256 amount0,
-            uint256 amount1
-        )
+        returns (uint256 shares, uint256 amount0, uint256 amount1)
     {
         uint256 _tokenId = tokenId;
 
@@ -226,9 +210,7 @@ abstract contract TalosBaseStrategy is Ownable, ERC20, ReentrancyGuard, ITalosBa
         if (amount0 == 0 && amount1 == 0) revert AmountsAreZero();
 
         uint256 supply = totalSupply; // Saves an extra SLOAD if totalSupply is non-zero.
-        shares = supply == 0
-            ? liquidityDifference * MULTIPLIER
-            : (liquidityDifference * supply) / liquidity;
+        shares = supply == 0 ? liquidityDifference * MULTIPLIER : (liquidityDifference * supply) / liquidity;
         liquidity += liquidityDifference;
 
         _mint(receiver, shares);
@@ -251,13 +233,7 @@ abstract contract TalosBaseStrategy is Ownable, ERC20, ReentrancyGuard, ITalosBa
     }
 
     /// @inheritdoc ITalosBaseStrategy
-    function redeem(
-        uint256 shares,
-        uint256 amount0Min,
-        uint256 amount1Min,
-        address receiver,
-        address _owner
-    )
+    function redeem(uint256 shares, uint256 amount0Min, uint256 amount1Min, address receiver, address _owner)
         public
         virtual
         override
@@ -347,21 +323,12 @@ abstract contract TalosBaseStrategy is Ownable, ERC20, ReentrancyGuard, ITalosBa
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IERC721Receiver
-    function onERC721Received(
-        address,
-        address,
-        uint256,
-        bytes calldata
-    ) external pure override returns (bytes4) {
+    function onERC721Received(address, address, uint256, bytes calldata) external pure override returns (bytes4) {
         return this.onERC721Received.selector;
     }
 
     /// @inheritdoc ITalosBaseStrategy
-    function uniswapV3SwapCallback(
-        int256 amount0,
-        int256 amount1,
-        bytes calldata _data
-    ) external {
+    function uniswapV3SwapCallback(int256 amount0, int256 amount1, bytes calldata _data) external {
         if (msg.sender != address(pool)) revert CallerIsNotPool();
         if (amount0 == 0 && amount1 == 0) revert AmountsAreZero();
         SwapCallbackData memory data = abi.decode(_data, (SwapCallbackData));

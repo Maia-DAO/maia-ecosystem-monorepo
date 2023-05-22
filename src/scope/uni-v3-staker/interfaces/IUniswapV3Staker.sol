@@ -2,21 +2,21 @@
 // Rewards logic inspired by Uniswap V3 Contracts (Uniswap/v3-staker/contracts/UniswapV3Staker.sol)
 pragma solidity ^0.8.0;
 
-import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
-import { IUniswapV3Factory } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
-import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-import { INonfungiblePositionManager } from "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";
+import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
+import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import {INonfungiblePositionManager} from "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";
 
-import { UniswapV3Gauge } from "@gauges/UniswapV3Gauge.sol";
+import {UniswapV3Gauge} from "@gauges/UniswapV3Gauge.sol";
 
-import { bHermesBoost } from "@hermes/tokens/bHermesBoost.sol";
+import {bHermesBoost} from "@hermes/tokens/bHermesBoost.sol";
 
 /**
  * @title Uniswap V3 Staker Interface with bHermes Boost.
  *  @author Maia DAO (https://github.com/Maia-DAO)
  *  @notice Allows staking non-fungible liquidity tokens in exchange for reward tokens.
- *          
+ *
  *
  * ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣀⣤⣤⣤⣄⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
  * ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣶⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣶⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
@@ -121,11 +121,7 @@ interface IUniswapV3Staker is IERC721Receiver {
     function incentives(bytes32 incentiveId)
         external
         view
-        returns (
-            uint256 totalRewardUnclaimed,
-            uint160 totalSecondsClaimedX128,
-            uint96 numberOfStakes
-        );
+        returns (uint256 totalRewardUnclaimed, uint160 totalSecondsClaimedX128, uint96 numberOfStakes);
 
     /// @notice Returns information about a deposited NFT
     /// @return owner The owner of the deposited NFT
@@ -135,12 +131,7 @@ interface IUniswapV3Staker is IERC721Receiver {
     function deposits(uint256 tokenId)
         external
         view
-        returns (
-            address owner,
-            int24 tickLower,
-            int24 tickUpper,
-            uint40 stakedTimestamp
-        );
+        returns (address owner, int24 tickLower, int24 tickUpper, uint40 stakedTimestamp);
 
     /// @notice Returns tokenId of the attached position of user per pool
     /// @dev Returns 0 if no position is attached
@@ -201,11 +192,7 @@ interface IUniswapV3Staker is IERC721Receiver {
     /// @param tokenId The unique identifier of an Uniswap V3 LP token
     /// @param to The address where the LP token will be sent
     /// @param data An optional data array that will be passed along to the `to` address via the NFT safeTransferFrom
-    function withdrawToken(
-        uint256 tokenId,
-        address to,
-        bytes memory data
-    ) external;
+    function withdrawToken(uint256 tokenId, address to, bytes memory data) external;
 
     /*//////////////////////////////////////////////////////////////
                             REWARD LOGIC
@@ -274,11 +261,7 @@ interface IUniswapV3Staker is IERC721Receiver {
     /// @param pool The Uniswap V3 pool
     /// @param startTime The time when the incentive program begins
     /// @param reward The amount of reward tokens to be distributed
-    event IncentiveCreated(
-        IUniswapV3Pool indexed pool,
-        uint256 startTime,
-        uint256 reward
-    );
+    event IncentiveCreated(IUniswapV3Pool indexed pool, uint256 startTime, uint256 reward);
 
     /// @notice Event that can be emitted when a liquidity mining incentive has ended
     /// @param incentiveId The incentive which is ending
@@ -289,11 +272,7 @@ interface IUniswapV3Staker is IERC721Receiver {
     /// @param tokenId The ID of the deposit (and token) that is being transferred
     /// @param oldOwner The owner before the deposit was transferred
     /// @param newOwner The owner after the deposit was transferred
-    event DepositTransferred(
-        uint256 indexed tokenId,
-        address indexed oldOwner,
-        address indexed newOwner
-    );
+    event DepositTransferred(uint256 indexed tokenId, address indexed oldOwner, address indexed newOwner);
 
     /// @notice Event emitted when a Uniswap V3 LP token has been staked
     /// @param tokenId The unique identifier of an Uniswap V3 LP token
@@ -320,7 +299,6 @@ interface IUniswapV3Staker is IERC721Receiver {
     /// @param uniswapV3Pool The Uniswap V3 pool
     /// @param poolMinimumWidth The poolMinimumWidth for the pool
     event PoolMinimumWidthUpdated(IUniswapV3Pool indexed uniswapV3Pool, uint24 indexed poolMinimumWidth);
-
 
     /// @notice Event emitted when updating the gauge address for a pool
     event GaugeUpdated(IUniswapV3Pool indexed uniswapV3Pool, address indexed uniswapV3Gauge);

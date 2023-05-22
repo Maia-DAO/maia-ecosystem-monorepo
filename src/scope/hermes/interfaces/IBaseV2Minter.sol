@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import { ERC4626 } from "@ERC4626/ERC4626.sol";
+import {ERC4626} from "@ERC4626/ERC4626.sol";
 
-import { HERMES } from "@hermes/tokens/HERMES.sol";
+import {HERMES} from "@hermes/tokens/HERMES.sol";
 
-import { IRewardsStream } from "@rewards/interfaces/IFlywheelGaugeRewards.sol";
-import { FlywheelGaugeRewards } from "@rewards/rewards/FlywheelGaugeRewards.sol";
+import {IRewardsStream} from "@rewards/interfaces/IFlywheelGaugeRewards.sol";
+import {FlywheelGaugeRewards} from "@rewards/rewards/FlywheelGaugeRewards.sol";
 
 /**
  * @title Base V2 Minter
@@ -106,13 +106,7 @@ interface IBaseV2Minter is IRewardsStream {
                                 EVENTS
     //////////////////////////////////////////////////////////////*/
 
-    event Mint(
-        address indexed sender,
-        uint256 weekly,
-        uint256 circulatingSupply,
-        uint256 growth,
-        uint256 dao_share
-    );
+    event Mint(address indexed sender, uint256 weekly, uint256 circulatingSupply, uint256 growth, uint256 dao_share);
 
     /*///////////////////////////////////////////////////////////////
                                 ERRORS

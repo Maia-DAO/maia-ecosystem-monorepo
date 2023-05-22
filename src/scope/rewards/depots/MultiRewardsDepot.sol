@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { Ownable } from "solady/auth/Ownable.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
 
-import { RewardsDepot } from "./RewardsDepot.sol";
+import {RewardsDepot} from "./RewardsDepot.sol";
 
-import { IMultiRewardsDepot } from "../interfaces/IMultiRewardsDepot.sol";
+import {IMultiRewardsDepot} from "../interfaces/IMultiRewardsDepot.sol";
 
 /// @title Multiple Rewards Depot
 contract MultiRewardsDepot is Ownable, RewardsDepot, IMultiRewardsDepot {
@@ -35,12 +35,7 @@ contract MultiRewardsDepot is Ownable, RewardsDepot, IMultiRewardsDepot {
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc IMultiRewardsDepot
-    function getRewards()
-        external
-        override(RewardsDepot, IMultiRewardsDepot)
-        onlyFlywheelRewards
-        returns (uint256)
-    {
+    function getRewards() external override(RewardsDepot, IMultiRewardsDepot) onlyFlywheelRewards returns (uint256) {
         return transferRewards(_assets[msg.sender], msg.sender);
     }
 

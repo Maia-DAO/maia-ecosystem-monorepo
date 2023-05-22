@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { INonfungiblePositionManager } from "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";
-import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import {INonfungiblePositionManager} from "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";
+import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
-import { TalosBaseStrategy } from "../base/TalosBaseStrategy.sol";
-import { OptimizerFactory, TalosOptimizer } from "../factories/OptimizerFactory.sol";
+import {TalosBaseStrategy} from "../base/TalosBaseStrategy.sol";
+import {OptimizerFactory, TalosOptimizer} from "../factories/OptimizerFactory.sol";
 
-import { ITalosOptimizer } from "../interfaces/ITalosOptimizer.sol";
+import {ITalosOptimizer} from "../interfaces/ITalosOptimizer.sol";
 
 /**
  * @title Talos Base Strategy Factory

@@ -2,13 +2,13 @@
 // Rewards logic inspired by Tribe DAO Contracts (flywheel-v2/src/rewards/FlywheelDynamicRewards.sol)
 pragma solidity ^0.8.0;
 
-import { ERC20 } from "solmate/tokens/ERC20.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
-import { FlywheelCore } from "../base/FlywheelCore.sol";
-import { RewardsDepot } from "../depots/RewardsDepot.sol";
-import { FlywheelAcummulatedRewards } from "../rewards/FlywheelAcummulatedRewards.sol";
+import {FlywheelCore} from "../base/FlywheelCore.sol";
+import {RewardsDepot} from "../depots/RewardsDepot.sol";
+import {FlywheelAcummulatedRewards} from "../rewards/FlywheelAcummulatedRewards.sol";
 
-import { IFlywheelBribeRewards } from "../interfaces/IFlywheelBribeRewards.sol";
+import {IFlywheelBribeRewards} from "../interfaces/IFlywheelBribeRewards.sol";
 
 /// @title Flywheel Accumulated Bribes Reward Stream
 contract FlywheelBribeRewards is FlywheelAcummulatedRewards, IFlywheelBribeRewards {

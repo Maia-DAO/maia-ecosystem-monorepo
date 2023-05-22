@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { bHermesBoost } from "../tokens/bHermesBoost.sol";
-import { bHermesGauges } from "../tokens/bHermesGauges.sol";
-import { bHermesVotes as ERC20Votes } from "../tokens/bHermesVotes.sol";
+import {bHermesBoost} from "../tokens/bHermesBoost.sol";
+import {bHermesGauges} from "../tokens/bHermesGauges.sol";
+import {bHermesVotes as ERC20Votes} from "../tokens/bHermesVotes.sol";
 
 /**
  * @title Utility Manager Contract.
@@ -42,11 +42,7 @@ interface IUtilityManager {
     function forfeitMultiple(uint256 amount) external;
 
     /// @notice Forfeits multiple amounts of multiple utility tokens.
-    function forfeitMultipleAmounts(
-        uint256 weight,
-        uint256 boost,
-        uint256 _governance
-    ) external;
+    function forfeitMultipleAmounts(uint256 weight, uint256 boost, uint256 _governance) external;
 
     /// @notice Forfeits amounts of weight utility token.
     /// @param amount The amount to send to partner manager
@@ -64,11 +60,7 @@ interface IUtilityManager {
     function claimMultiple(uint256 amount) external;
 
     /// @notice Claims multiple amounts of multiple utility tokens.
-    function claimMultipleAmounts(
-        uint256 weight,
-        uint256 boost,
-        uint256 _governance
-    ) external;
+    function claimMultipleAmounts(uint256 weight, uint256 boost, uint256 _governance) external;
 
     /// @notice Claims amounts of weight utility token.
     /// @param amount The amount to send to partner manager
@@ -85,16 +77,22 @@ interface IUtilityManager {
     /*///////////////////////////////////////////////////////////////
                                 EVENTS
     //////////////////////////////////////////////////////////////*/
+
     /// @notice Emitted when a user forfeits weight.
     event ForfeitWeight(address indexed user, uint256 amount);
+
     /// @notice Emitted when a user forfeits boost.
     event ForfeitBoost(address indexed user, uint256 amount);
+
     /// @notice Emitted when a user forfeits governance.
     event ForfeitGovernance(address indexed user, uint256 amount);
+
     /// @notice Emitted when a user claims weight.
     event ClaimWeight(address indexed user, uint256 amount);
+
     /// @notice Emitted when a user claims boost.
     event ClaimBoost(address indexed user, uint256 amount);
+
     /// @notice Emitted when a user claims governance.
     event ClaimGovernance(address indexed user, uint256 amount);
 

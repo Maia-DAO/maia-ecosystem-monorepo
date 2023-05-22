@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
-import { ERC20 } from "solmate/tokens/ERC20.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
-import { ERC4626DepositOnly } from "@ERC4626/ERC4626DepositOnly.sol";
+import {ERC4626DepositOnly} from "@ERC4626/ERC4626DepositOnly.sol";
 
-import { bHermesBoost } from "./tokens/bHermesBoost.sol";
-import { bHermesGauges } from "./tokens/bHermesGauges.sol";
-import { bHermesVotes } from "./tokens/bHermesVotes.sol";
-import { UtilityManager } from "./UtilityManager.sol";
+import {bHermesBoost} from "./tokens/bHermesBoost.sol";
+import {bHermesGauges} from "./tokens/bHermesGauges.sol";
+import {bHermesVotes} from "./tokens/bHermesVotes.sol";
+import {UtilityManager} from "./UtilityManager.sol";
 
 /**
  * @title bHermes: Yield bearing, boosting, voting, and gauge enabled Hermes
@@ -52,12 +52,7 @@ import { UtilityManager } from "./UtilityManager.sol";
 contract bHermes is UtilityManager, ERC4626DepositOnly {
     using SafeTransferLib for address;
 
-    constructor(
-        ERC20 _hermes,
-        address _owner,
-        uint32 _gaugeCycleLength,
-        uint32 _incrementFreezeWindow
-    )
+    constructor(ERC20 _hermes, address _owner, uint32 _gaugeCycleLength, uint32 _incrementFreezeWindow)
         UtilityManager(
             address(new bHermesGauges(_owner, _gaugeCycleLength, _incrementFreezeWindow)),
             address(new bHermesBoost(_owner)),
@@ -72,22 +67,25 @@ contract bHermes is UtilityManager, ERC4626DepositOnly {
 
     /// @dev Checks available weight allows for the call.
     modifier checkWeight(uint256 amount) override {
-        if (balanceOf[msg.sender] < amount + userClaimedWeight[msg.sender])
+        if (balanceOf[msg.sender] < amount + userClaimedWeight[msg.sender]) {
             revert InsufficientShares();
+        }
         _;
     }
 
     /// @dev Checks available boost allows for the call.
     modifier checkBoost(uint256 amount) override {
-        if (balanceOf[msg.sender] < amount + userClaimedBoost[msg.sender])
+        if (balanceOf[msg.sender] < amount + userClaimedBoost[msg.sender]) {
             revert InsufficientShares();
+        }
         _;
     }
 
     /// @dev Checks available governance allows for the call.
     modifier checkGovernance(uint256 amount) override {
-        if (balanceOf[msg.sender] < amount + userClaimedGovernance[msg.sender])
+        if (balanceOf[msg.sender] < amount + userClaimedGovernance[msg.sender]) {
             revert InsufficientShares();
+        }
         _;
     }
 
@@ -143,9 +141,8 @@ contract bHermes is UtilityManager, ERC4626DepositOnly {
         uint256 userBalance = balanceOf[msg.sender];
 
         if (
-            userBalance - userClaimedWeight[msg.sender] < amount ||
-            userBalance - userClaimedBoost[msg.sender] < amount ||
-            userBalance - userClaimedGovernance[msg.sender] < amount
+            userBalance - userClaimedWeight[msg.sender] < amount || userBalance - userClaimedBoost[msg.sender] < amount
+                || userBalance - userClaimedGovernance[msg.sender] < amount
         ) revert InsufficientUnderlying();
 
         return super.transfer(to, amount);
@@ -158,17 +155,12 @@ contract bHermes is UtilityManager, ERC4626DepositOnly {
      * @param amount amounts of tokens to transfer
      */
 
-    function transferFrom(
-        address from,
-        address to,
-        uint256 amount
-    ) public virtual override returns (bool) {
+    function transferFrom(address from, address to, uint256 amount) public virtual override returns (bool) {
         uint256 userBalance = balanceOf[from];
 
         if (
-            userBalance - userClaimedWeight[from] < amount ||
-            userBalance - userClaimedBoost[from] < amount ||
-            userBalance - userClaimedGovernance[from] < amount
+            userBalance - userClaimedWeight[from] < amount || userBalance - userClaimedBoost[from] < amount
+                || userBalance - userClaimedGovernance[from] < amount
         ) revert InsufficientUnderlying();
 
         return super.transferFrom(from, to, amount);

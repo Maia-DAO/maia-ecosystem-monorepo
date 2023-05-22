@@ -2,15 +2,15 @@
 // Logic inspired by Popsicle Finance Contracts (PopsicleV3Optimizer/contracts/popsicle-v3-optimizer/PopsicleV3Optimizer.sol)
 pragma solidity ^0.8.0;
 
-import { ERC20 } from "solmate/tokens/ERC20.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
-import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
-import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-import { INonfungiblePositionManager } from "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";
+import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import {INonfungiblePositionManager} from "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";
 
-import { IUniswapV3Staker } from "@v3-staker/interfaces/IUniswapV3Staker.sol";
-import { ITalosOptimizer } from "./ITalosOptimizer.sol";
+import {IUniswapV3Staker} from "@v3-staker/interfaces/IUniswapV3Staker.sol";
+import {ITalosOptimizer} from "./ITalosOptimizer.sol";
 
 /**
  * @title Tokenized Vault implementation for Uniswap V3 Non Fungible Positions.
@@ -103,17 +103,9 @@ interface ITalosBaseStrategy is IERC721Receiver {
 
     /// @notice Initializes the Optimizer with the given parameters.
     /// @dev Makes first deposit and mints tokenId.
-    function init(
-        uint256 amount0Desired,
-        uint256 amount1Desired,
-        address receiver
-    )
+    function init(uint256 amount0Desired, uint256 amount1Desired, address receiver)
         external
-        returns (
-            uint256 shares,
-            uint256 amount0,
-            uint256 amount1
-        );
+        returns (uint256 shares, uint256 amount0, uint256 amount1);
 
     /*//////////////////////////////////////////////////////////////
                         DEPOSIT/WITHDRAWAL LOGIC
@@ -128,17 +120,9 @@ interface ITalosBaseStrategy is IERC721Receiver {
      * @return amount0 Amount of token0 deposited
      * @return amount1 Amount of token1 deposited
      */
-    function deposit(
-        uint256 amount0Desired,
-        uint256 amount1Desired,
-        address receiver
-    )
+    function deposit(uint256 amount0Desired, uint256 amount1Desired, address receiver)
         external
-        returns (
-            uint256 shares,
-            uint256 amount0,
-            uint256 amount1
-        );
+        returns (uint256 shares, uint256 amount0, uint256 amount1);
 
     /**
      * @notice Withdraws tokens in proportion to the Optimizer's holdings.
@@ -151,30 +135,26 @@ interface ITalosBaseStrategy is IERC721Receiver {
      * @return amount0 Amount of token0 sent to recipient
      * @return amount1 Amount of token1 sent to recipient
      */
-    function redeem(
-        uint256 shares,
-        uint256 amount0Min,
-        uint256 amount1Min,
-        address receiver,
-        address owner
-    ) external returns (uint256 amount0, uint256 amount1);
+    function redeem(uint256 shares, uint256 amount0Min, uint256 amount1Min, address receiver, address owner)
+        external
+        returns (uint256 amount0, uint256 amount1);
 
     /*//////////////////////////////////////////////////////////////
                         RERANGE/REBALANCE LOGIC
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Updates Optimizer's positions.
+     * @notice Updates Optimizer's positions. Can only be called by the strategy manager.
      * @dev Finds base position and limit position for imbalanced token
-     * mints all amounts to this position(including earned fees)
+     * mints all amounts to this position (including earned fees)
      */
     function rerange() external;
 
     /**
-     * @notice Updates Optimizer's positions. Can only be called by the governance.
+     * @notice Updates Optimizer's positions. Can only be called by the strategy manager.
      * @dev Swaps imbalanced token. Finds base position and limit position for imbalanced token if
      * we don't have balance during swap because of price impact.
-     * mints all amounts to this position(including earned fees)
+     * mints all amounts to this position (including earned fees)
      */
     function rebalance() external;
 
@@ -187,11 +167,7 @@ interface ITalosBaseStrategy is IERC721Receiver {
     /// @param amount0 The amount of token0 due to the pool for the swap
     /// @param amount1 The amount of token1 due to the pool for the swap
     /// @param _data Any data passed through by the caller via the IUniswapV3PoolActions#swap call
-    function uniswapV3SwapCallback(
-        int256 amount0,
-        int256 amount1,
-        bytes calldata _data
-    ) external;
+    function uniswapV3SwapCallback(int256 amount0, int256 amount1, bytes calldata _data) external;
 
     /*//////////////////////////////////////////////////////////////
                             ADMIN FUNCTIONS
@@ -210,7 +186,6 @@ interface ITalosBaseStrategy is IERC721Receiver {
     /// @param fees1 Exact amount of fees claimed by the users in terms of token 1
     event RewardPaid(address indexed sender, uint256 fees0, uint256 fees1);
 
-
     /// @notice Emitted when TalosV3 Optimizer is initialized
     /// @param tokenId Token Id of the position
     /// @param caller Address of the caller
@@ -219,7 +194,7 @@ interface ITalosBaseStrategy is IERC721Receiver {
     /// @param amount1 Amount of token 1 deposited to the position
     /// @param shares Amount of shares minted
     event Initialize(
-        uint256 indexed tokenId, 
+        uint256 indexed tokenId,
         address indexed caller,
         address indexed owner,
         uint256 amount0,
@@ -233,13 +208,7 @@ interface ITalosBaseStrategy is IERC721Receiver {
     /// @param amount0 Amount of token 0 deposited to the position
     /// @param amount1 Amount of token 1 deposited to the position
     /// @param shares Amount of shares minted
-    event Deposit(
-        address indexed caller,
-        address indexed owner,
-        uint256 amount0,
-        uint256 amount1,
-        uint256 shares
-    );
+    event Deposit(address indexed caller, address indexed owner, uint256 amount0, uint256 amount1, uint256 shares);
 
     /// @notice Emitted when TalosV3 Optimizer is redeemed
     /// @param caller Address of the caller
@@ -274,18 +243,30 @@ interface ITalosBaseStrategy is IERC721Receiver {
                                 ERRORS
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Error emitted when caller is not the strategy manager
     error NotStrategyManager();
+
+    /// @notice Error emitted when trying to initialize an already initialized pool
     error AlreadyInitialized();
+
+    /// @notice Error emitted when trying to add more liquidity than maxTotalSupply
     error ExceedingMaxTotalSupply();
+
+    /// @notice Error emitted when caller is not the Uniswap V3 Pool
     error CallerIsNotPool();
+
+    /// @notice Error emitted when both amounts are zero
     error AmountsAreZero();
 
-    // Must widthdraw more than zero shares
+    /// @notice Error emitted when widthdrawing zero shares
     error RedeemingZeroShares();
+
+    /// @notice Error emitted when receiver is zero address
     error ReceiverIsZeroAddress();
 
     // Token 0 amount is bigger than accrued protocol fees
     error Token0AmountIsBiggerThanProtocolFees();
+
     // Token 1 amount is bigger than accrued protocol fees
     error Token1AmountIsBiggerThanProtocolFees();
 }

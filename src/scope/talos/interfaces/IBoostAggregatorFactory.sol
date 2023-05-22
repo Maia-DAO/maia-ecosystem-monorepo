@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { ERC20 } from "solmate/tokens/ERC20.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
-import { UniswapV3Staker } from "@v3-staker/UniswapV3Staker.sol";
+import {UniswapV3Staker} from "@v3-staker/UniswapV3Staker.sol";
 
-import { BoostAggregator } from "../boost-aggregator/BoostAggregator.sol";
+import {BoostAggregator} from "../boost-aggregator/BoostAggregator.sol";
 
 /**
  * @title Boost Aggregator Factory

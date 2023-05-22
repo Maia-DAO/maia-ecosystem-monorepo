@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0;
 
-import { ERC20 } from "solmate/tokens/ERC20.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
-import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
-import { INonfungiblePositionManager } from "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";
+import {INonfungiblePositionManager} from "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";
 
-import { bHermesBoost } from "@hermes/tokens/bHermesBoost.sol";
-import { UniswapV3Staker } from "@v3-staker/UniswapV3Staker.sol";
+import {bHermesBoost} from "@hermes/tokens/bHermesBoost.sol";
+import {UniswapV3Staker} from "@v3-staker/UniswapV3Staker.sol";
 
 /**
  * @title Boost Aggregator for Uniswap V3 NFTs
@@ -120,11 +120,7 @@ interface IBoostAggregator is IERC721Receiver {
      * @param offset offset of boost to withdraw
      * @param num number of boost to withdraw
      */
-    function decrementGaugesBoostIndexed(
-        uint256 boost,
-        uint256 offset,
-        uint256 num
-    ) external;
+    function decrementGaugesBoostIndexed(uint256 boost, uint256 offset, uint256 num) external;
 
     /*//////////////////////////////////////////////////////////////
                                 ERRORS
@@ -132,6 +128,7 @@ interface IBoostAggregator is IERC721Receiver {
 
     /// @dev throws when trying to set fees larger than 100%
     error FeeTooHigh();
+
     /// @dev throws when msg.sender is not the tokenId owner
     error NotTokenIdOwner();
 }

@@ -64,6 +64,7 @@ interface IUniswapV3Gauge {
                             EVENTS
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Emitted when the minimum width is updated
     event NewMinimumWidth(uint24 minimumWidth);
 
     /*//////////////////////////////////////////////////////////////

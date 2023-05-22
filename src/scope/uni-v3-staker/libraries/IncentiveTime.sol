@@ -17,34 +17,26 @@ library IncentiveTime {
     function computeStart(uint256 timestamp) internal pure returns (uint96 start) {
         /// @dev The start of the incentive is the start of the week (Thursday 12:00:00 UTC) that the timestamp falls in
         /// Remove Offset, rounds down to nearest week, adds offset back
-        return
-            uint96(
-                ((timestamp - INCENTIVES_OFFSET) / INCENTIVES_DURATION) *
-                    INCENTIVES_DURATION +
-                    INCENTIVES_OFFSET
-            );
+        return uint96(((timestamp - INCENTIVES_OFFSET) / INCENTIVES_DURATION) * INCENTIVES_DURATION + INCENTIVES_OFFSET);
     }
 
     function computeEnd(uint256 timestamp) internal pure returns (uint96 end) {
         /// @dev The end of the incentive is the end of the week (Thursday 12:00:00 UTC) that the timestamp falls in
         /// Remove Offset, rounds up to nearest week, adds offset back
-        return
-            uint96(
-                (((timestamp - INCENTIVES_OFFSET) / INCENTIVES_DURATION) + 1) *
-                    INCENTIVES_DURATION +
-                    INCENTIVES_OFFSET
-            );
+        return uint96(
+            (((timestamp - INCENTIVES_OFFSET) / INCENTIVES_DURATION) + 1) * INCENTIVES_DURATION + INCENTIVES_OFFSET
+        );
     }
 
     function getEnd(uint96 start) internal pure returns (uint96 end) {
         end = start + uint96(INCENTIVES_DURATION);
     }
 
-    function getEndAndDuration(
-        uint96 start,
-        uint40 stakedTimestamp,
-        uint256 timestamp
-    ) internal pure returns (uint96 end, uint256 stakedDuration) {
+    function getEndAndDuration(uint96 start, uint40 stakedTimestamp, uint256 timestamp)
+        internal
+        pure
+        returns (uint96 end, uint256 stakedDuration)
+    {
         if (stakedTimestamp < start) revert InvalidStartTime();
         end = start + uint96(INCENTIVES_DURATION);
 

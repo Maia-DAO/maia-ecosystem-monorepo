@@ -2,16 +2,16 @@
 
 pragma solidity ^0.8.0;
 
-import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
-import { Ownable } from "solady/auth/Ownable.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
-import { ERC20 } from "solmate/tokens/ERC20.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
-import { bHermesVotes as vMaiaVotes } from "@hermes/tokens/bHermesVotes.sol";
+import {bHermesVotes as vMaiaVotes} from "@hermes/tokens/bHermesVotes.sol";
 
-import { DateTimeLib } from "./libraries/DateTimeLib.sol";
-import { ERC4626PartnerManager, PartnerManagerFactory } from "./tokens/ERC4626PartnerManager.sol";
+import {DateTimeLib} from "./libraries/DateTimeLib.sol";
+import {ERC4626PartnerManager, PartnerManagerFactory} from "./tokens/ERC4626PartnerManager.sol";
 
 /**
  * @title vMaia: Yield bearing, boosting, voting, and gauge enabled MAIA
@@ -20,8 +20,8 @@ import { ERC4626PartnerManager, PartnerManagerFactory } from "./tokens/ERC4626Pa
  *         distributes bHermes utility tokens (Weight, Boost, Governance)
  *         in exchange for staking MAIA.
  *
- *         NOTE: Withdraw is only allowed once per month, 
-                 during the 1st Tuesday (UTC+0) of the month.
+ *         NOTE: Withdraw is only allowed once per month,
+ *                  during the 1st Tuesday (UTC+0) of the month.
  */
 contract vMaia is ERC4626PartnerManager {
     using SafeTransferLib for address;
@@ -54,18 +54,7 @@ contract vMaia is ERC4626PartnerManager {
         address _bhermes,
         address _partnerVault,
         address _owner
-    )
-        ERC4626PartnerManager(
-            _factory,
-            _bHermesRate,
-            _partnerAsset,
-            _name,
-            _symbol,
-            _bhermes,
-            _partnerVault,
-            _owner
-        )
-    {
+    ) ERC4626PartnerManager(_factory, _bHermesRate, _partnerAsset, _name, _symbol, _bhermes, _partnerVault, _owner) {
         // Set the current month to the current month.
         currentMonth = DateTimeLib.getMonth(block.timestamp);
     }
@@ -76,22 +65,25 @@ contract vMaia is ERC4626PartnerManager {
 
     /// @dev Checks available weight allows for the call.
     modifier checkWeight(uint256 amount) virtual override {
-        if (balanceOf[msg.sender] < amount + userClaimedWeight[msg.sender])
+        if (balanceOf[msg.sender] < amount + userClaimedWeight[msg.sender]) {
             revert InsufficientShares();
+        }
         _;
     }
 
     /// @dev Checks available governance allows for the call.
     modifier checkGovernance(uint256 amount) virtual override {
-        if (balanceOf[msg.sender] < amount + userClaimedGovernance[msg.sender])
+        if (balanceOf[msg.sender] < amount + userClaimedGovernance[msg.sender]) {
             revert InsufficientShares();
+        }
         _;
     }
 
     /// @dev Checks available partner governance allows for the call.
     modifier checkPartnerGovernance(uint256 amount) virtual override {
-        if (balanceOf[msg.sender] < amount + userClaimedPartnerGovernance[msg.sender])
+        if (balanceOf[msg.sender] < amount + userClaimedPartnerGovernance[msg.sender]) {
             revert InsufficientShares();
+        }
         _;
     }
 

@@ -116,11 +116,7 @@ interface IERC20Boost {
      *  @param offset the index of the first gauge element to read.
      *  @param num the number of gauges to return.
      */
-    function userGauges(
-        address user,
-        uint256 offset,
-        uint256 num
-    ) external view returns (address[] memory values);
+    function userGauges(address user, uint256 offset, uint256 num) external view returns (address[] memory values);
 
     /**
      * @notice returns the number of user gauges
@@ -178,11 +174,7 @@ interface IERC20Boost {
      * @param offset the index of the first gauge element to read.
      * @param num the number of gauges to return.
      */
-    function decrementGaugesBoostIndexed(
-        uint256 boost,
-        uint256 offset,
-        uint256 num
-    ) external;
+    function decrementGaugesBoostIndexed(uint256 boost, uint256 offset, uint256 num) external;
 
     /**
      * @notice Remove all the boost from all user gauges

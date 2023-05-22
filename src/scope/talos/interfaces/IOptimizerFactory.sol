@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { TalosOptimizer } from "../TalosOptimizer.sol";
+import {TalosOptimizer} from "../TalosOptimizer.sol";
 
 /**
  * @title Talos Optimizer Factory
@@ -26,8 +26,15 @@ interface IOptimizerFactory {
                             CREATE LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Creates a new optimizer
-    /// @param owner The owner of the optimizer
+    /**
+     * @notice Creates a new optimizer
+     * @param _twapDuration The duration of the TWAP
+     * @param _maxTwapDeviation The maximum deviation of the TWAP
+     * @param _tickRangeMultiplier The tick range multiplier
+     * @param _priceImpactPercentage The price impact percentage
+     * @param _maxTotalSupply The maximum total supply for Talos LPs
+     * @param owner The owner of the optimizer
+     */
     function createTalosOptimizer(
         uint32 _twapDuration,
         int24 _maxTwapDeviation,

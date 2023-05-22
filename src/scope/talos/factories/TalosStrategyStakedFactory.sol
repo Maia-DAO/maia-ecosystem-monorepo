@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-import { INonfungiblePositionManager } from "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";
+import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import {INonfungiblePositionManager} from "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";
 
-import { FlywheelCoreInstant, IFlywheelBooster, IFlywheelRewards } from "@rewards/FlywheelCoreInstant.sol";
-import { FlywheelInstantRewards } from "@rewards/rewards/FlywheelInstantRewards.sol";
+import {FlywheelCoreInstant, IFlywheelBooster, IFlywheelRewards} from "@rewards/FlywheelCoreInstant.sol";
+import {FlywheelInstantRewards} from "@rewards/rewards/FlywheelInstantRewards.sol";
 
-import { TalosBaseStrategy } from "../base/TalosBaseStrategy.sol";
-import { BoostAggregator, BoostAggregatorFactory } from "./BoostAggregatorFactory.sol";
-import { OptimizerFactory } from "./OptimizerFactory.sol";
-import { TalosBaseStrategyFactory } from "./TalosBaseStrategyFactory.sol";
-import { DeployStaked, TalosStrategyStaked } from "../TalosStrategyStaked.sol";
+import {TalosBaseStrategy} from "../base/TalosBaseStrategy.sol";
+import {BoostAggregator, BoostAggregatorFactory} from "./BoostAggregatorFactory.sol";
+import {OptimizerFactory} from "./OptimizerFactory.sol";
+import {TalosBaseStrategyFactory} from "./TalosBaseStrategyFactory.sol";
+import {DeployStaked, TalosStrategyStaked} from "../TalosStrategyStaked.sol";
 
-import { ITalosOptimizer } from "../interfaces/ITalosOptimizer.sol";
-import { ITalosStrategyStakedFactory } from "../interfaces/ITalosStrategyStakedFactory.sol";
+import {ITalosOptimizer} from "../interfaces/ITalosOptimizer.sol";
+import {ITalosStrategyStakedFactory} from "../interfaces/ITalosStrategyStakedFactory.sol";
 
 /// @title Talos Strategy Staked Factory
 contract TalosStrategyStakedFactory is TalosBaseStrategyFactory, ITalosStrategyStakedFactory {
@@ -58,6 +58,7 @@ contract TalosStrategyStakedFactory is TalosBaseStrategyFactory, ITalosStrategyS
                             CREATE LOGIC
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Internal function responsible for creating a new Talos Strategy
     function createTalosV3Strategy(
         IUniswapV3Pool pool,
         ITalosOptimizer optimizer,
@@ -65,17 +66,12 @@ contract TalosStrategyStakedFactory is TalosBaseStrategyFactory, ITalosStrategyS
         bytes memory data
     ) internal override returns (TalosBaseStrategy strategy) {
         BoostAggregator boostAggregator = abi.decode(data, (BoostAggregator));
-        if (boostAggregator.nonfungiblePositionManager() != nonfungiblePositionManager)
+        if (boostAggregator.nonfungiblePositionManager() != nonfungiblePositionManager) {
             revert InvalidNFTManager();
+        }
 
-        strategy = DeployStaked.createTalosV3Strategy(
-            pool,
-            optimizer,
-            boostAggregator,
-            strategyManager,
-            flywheel,
-            owner()
-        );
+        strategy =
+            DeployStaked.createTalosV3Strategy(pool, optimizer, boostAggregator, strategyManager, flywheel, owner());
 
         flywheel.addStrategyForRewards(strategy);
     }
