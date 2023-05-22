@@ -10,21 +10,27 @@ import {ERC20hTokenBranch as ERC20hToken} from "./token/ERC20hTokenBranch.sol";
 import {IERC20hTokenBranchFactory as IFactory} from "./interfaces/IERC20hTokenBranchFactory.sol";
 
 /**
- * @title Core Branch Router implementation for Arbitrum deployment.
- * @notice This contract is responsible for routing cross-chain messages to the Arbitrum Core Branch Router.
+ * @title `ArbitrumCoreBranchRouter`
  * @author MaiaDAO
- * @dev
+ * @notice Core Branch Router implementation for Arbitrum deployment.
+ *         This contract is responsible for permissionlessly adding new
+ *         tokens or Bridge Agents to the system as well as key governance
+ *         enabled system functions (i.e. `addBridgeAgentFactory`).
+ * @dev    The function `addGlobalToken` is used to add a global token to a
+ *         given Branch Chain is not available since the Arbitrum Branch is
+ *         in the same network as the Root Environment.
+ *         Func IDs for calling these functions through messaging layer:
  *
- *   CROSS-CHAIN MESSAGING FUNCIDs
- *   -----------------------------
- *   FUNC ID      | FUNC NAME
- *   -------------+---------------
- *   1            | clearDeposit
- *   2            | finalizeDeposit
- *   3            | finalizeWithdraw
- *   4            | clearToken
- *   5            | clearTokens
- *   6            | addGlobalToken
+ *         CROSS-CHAIN MESSAGING FUNCIDs
+ *         -----------------------------
+ *         FUNC ID      | FUNC NAME
+ *         -------------+---------------
+ *         0x01         | clearDeposit
+ *         0x02         | finalizeDeposit
+ *         0x03         | finalizeWithdraw
+ *         0x04         | clearToken
+ *         0x05         | clearTokens
+ *         0x06         | addGlobalToken
  *
  */
 contract ArbitrumCoreBranchRouter is CoreBranchRouter {

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import {UlyssesFactory} from "../factories/UlyssesFactory.sol";
 
 /**
  * @title Ulysses Router
@@ -61,6 +62,12 @@ interface IUlyssesRouter {
     //////////////////////////////////////////////////////////////*/
 
     /**
+     * @notice Returns the Ulysses Factory address
+     * @return ulyssesFactory The Ulysses Factory address
+     */
+    function ulyssesFactory() external view returns (UlyssesFactory);
+
+    /**
      * @notice Adds liquidity to a pool
      * @param amount The amount of tokens to add
      * @param minOutput The minimum amount of LP tokens to receive
@@ -83,6 +90,7 @@ interface IUlyssesRouter {
      * @param amount The amount of tokens to swap
      * @param minOutput The minimum amount of tokens to receive
      * @param routes The routes to take for the swap to occur
+     * @return tokensReceived amount of tokens received
      */
     function swap(uint256 amount, uint256 minOutput, Route[] calldata routes) external returns (uint256);
 

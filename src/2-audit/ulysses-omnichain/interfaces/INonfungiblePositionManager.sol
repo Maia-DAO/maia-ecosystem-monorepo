@@ -101,12 +101,7 @@ interface INonfungiblePositionManager is
     function mint(MintParams calldata params)
         external
         payable
-        returns (
-            uint256 tokenId,
-            uint128 liquidity,
-            uint256 amount0,
-            uint256 amount1
-        );
+        returns (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1);
 
     struct IncreaseLiquidityParams {
         uint256 tokenId;
@@ -130,11 +125,7 @@ interface INonfungiblePositionManager is
     function increaseLiquidity(IncreaseLiquidityParams calldata params)
         external
         payable
-        returns (
-            uint128 liquidity,
-            uint256 amount0,
-            uint256 amount1
-        );
+        returns (uint128 liquidity, uint256 amount0, uint256 amount1);
 
     struct DecreaseLiquidityParams {
         uint256 tokenId;

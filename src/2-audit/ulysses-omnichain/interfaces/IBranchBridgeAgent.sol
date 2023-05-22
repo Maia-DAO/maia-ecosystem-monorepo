@@ -1,23 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {Ownable} from "solady/auth/Ownable.sol";
-import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
-import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
-
-import {ERC20} from "solmate/tokens/ERC20.sol";
-import {WETH9} from "../interfaces/IWETH9.sol";
-
-import {ERC20hTokenBranch as ERC20hToken} from "../token/ERC20hTokenBranch.sol";
-import {IBranchRouter as IRouter} from "../interfaces/IBranchRouter.sol";
-import {IBranchPort as IPort} from "../interfaces/IBranchPort.sol";
-
 import {IApp} from "./IApp.sol";
-import {AnycallFlags} from "../lib/AnycallFlags.sol";
-import {IAnycallProxy} from "./IAnycallProxy.sol";
-import {IAnycallConfig} from "./IAnycallConfig.sol";
-import {IAnycallExecutor} from "./IAnycallExecutor.sol";
-import {INonfungiblePositionManager} from "../interfaces/INonfungiblePositionManager.sol";
 
 struct UserFeeInfo {
     uint256 depositedGas;
@@ -100,16 +84,20 @@ struct SettlementMultipleParams {
 }
 
 /**
- * @title IBranchBridgeAgent
+ * @title `BranchBridgeAgent`
  * @author MaiaDAO
- * @dev Base Branch Bridge Agent Interface for Native Asset Bridgeing + Anycall cross-chain messaging.
+ * @notice Contract for deployment in Branch Chains of Omnichain System, responible for
+ *         interfacing with Users/Routers acting as a middleman to access Anycall cross-chain
+ *         messaging and Port communication for asset management.
+ * @dev    Func IDs for calling these functions through messaging layer:
  *
- *   -----------------------------
- *   ACTION FLAG  | ACTION NAME
- *   -------------+---------------
- *   0x00         | execute message w/o asset settlement
- *   0x01         | execute message w/ single asset settlement
- *   0x02         | execute message w/ multiple asset settlement
+ *         BRANCH BRIDGE AGENT SETTLEMENT FLAGS
+ *         --------------------------------------
+ *         ID           | DESCRIPTION
+ *         -------------+------------------------
+ *         0x00         | Call to Branch without Settlement.
+ *         0x01         | Call to Branch with Settlement.
+ *         0x02         | Call to Branch with Settlement of Multiple Tokens.
  *
  */
 interface IBranchBridgeAgent is IApp {
@@ -131,7 +119,7 @@ interface IBranchBridgeAgent is IApp {
 
     /**
      * @notice Function to perform a call to the Root Omnichain Router without token deposit.
-     *   @param params RLP enconded parameters to execute on the root chain.
+     *   @param params enconded parameters to execute on the root chain router.
      *   @param remoteExecutionGas gas allocated for remote branch execution.
      *   @dev DEPOSIT ID: 1 (Call without deposit)
      *
@@ -140,7 +128,7 @@ interface IBranchBridgeAgent is IApp {
 
     /**
      * @notice Function to perform a call to the Root Omnichain Router while depositing a single asset.
-     *   @param params RLP enconded parameters to execute on the root chain.
+     *   @param params enconded parameters to execute on the root chain router.
      *   @param dParams additional token deposit parameters.
      *   @param remoteExecutionGas gas allocated for remote branch execution.
      *   @dev DEPOSIT ID: 2 (Call with single deposit)
@@ -152,7 +140,7 @@ interface IBranchBridgeAgent is IApp {
 
     /**
      * @notice Function to perform a call to the Root Omnichain Router while depositing two or more assets.
-     *   @param params RLP enconded parameters to execute on the root chain.
+     *   @param params enconded parameters to execute on the root chain router.
      *   @param dParams additional token deposit parameters.
      *   @param remoteExecutionGas gas allocated for remote branch execution.
      *   @dev DEPOSIT ID: 3 (Call with multiple deposit)
@@ -166,7 +154,7 @@ interface IBranchBridgeAgent is IApp {
 
     /**
      * @notice Function to perform a call to the Root Omnichain Router without token deposit with msg.sender information.
-     *   @param params RLP enconded parameters to execute on the root chain.
+     *   @param params enconded parameters to execute on the root chain router.
      *   @param remoteExecutionGas gas allocated for remote branch execution.
      *   @dev DEPOSIT ID: 4 (Call without deposit and verified sender)
      *
@@ -175,7 +163,7 @@ interface IBranchBridgeAgent is IApp {
 
     /**
      * @notice Function to perform a call to the Root Omnichain Router while depositing a single asset msg.sender.
-     *   @param params RLP enconded parameters to execute on the root chain.
+     *   @param params enconded parameters to execute on the root chain router.
      *   @param dParams additional token deposit parameters.
      *   @param remoteExecutionGas gas allocated for remote branch execution.
      *   @dev DEPOSIT ID: 5 (Call with single deposit and verified sender)
@@ -187,7 +175,7 @@ interface IBranchBridgeAgent is IApp {
 
     /**
      * @notice Function to perform a call to the Root Omnichain Router while depositing two or more assets with msg.sender.
-     *   @param params RLP enconded parameters to execute on the root chain.
+     *   @param params enconded parameters to execute on the root chain router.
      *   @param dParams additional token deposit parameters.
      *   @param remoteExecutionGas gas allocated for remote branch execution.
      *   @dev DEPOSIT ID: 6 (Call with multiple deposit and verified sender)
@@ -203,7 +191,7 @@ interface IBranchBridgeAgent is IApp {
      * @notice Function to perform a call to the Root Omnichain Environment retrying a failed deposit that hasn't been executed yet.
      *     @param _isSigned Flag to indicate if the deposit was signed.
      *     @param _depositNonce Identifier for user deposit.
-     *     @param _params parameters to execute on the root chain.
+     *     @param _params parameters to execute on the root chain router.
      *     @param _remoteExecutionGas gas allocated for remote branch execution.
      *     @param _toChain Destination chain for interaction.
      */
@@ -298,7 +286,7 @@ interface IBranchBridgeAgent is IApp {
     /**
      * @notice Function to perform a call to the Root Omnichain Router while depositing a single asset.
      *   @param depositor address of user depositing assets.
-     *   @param params RLP enconded parameters to execute on the root chain.
+     *   @param params enconded parameters to execute on the root chain router.
      *   @param dParams additional token deposit parameters.
      *   @param gasToBridgeOut gas allocated for the cross-chain call.
      *   @param remoteExecutionGas gas allocated for omnichain execution.
@@ -316,7 +304,7 @@ interface IBranchBridgeAgent is IApp {
     /**
      * @notice Function to perform a call to the Root Omnichain Router while depositing two or more assets.
      *   @param depositor address of user depositing assets.
-     *   @param params RLP enconded parameters to execute on the root chain.
+     *   @param params enconded parameters to execute on the root chain router.
      *   @param dParams additional token deposit parameters.
      *   @param gasToBridgeOut gas allocated for the cross-chain call.
      *   @param remoteExecutionGas gas allocated for omnichain execution.

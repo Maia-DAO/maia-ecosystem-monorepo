@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-
 /**
  * @title Ulysses Token
  *  @author Maia DAO (https://github.com/Maia-DAO)
@@ -38,7 +37,7 @@ pragma solidity ^0.8.0;
  * ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⣷⣦⣀⠀⠀⠀⠀⢸⠃⠀⠁⠐⠂⠀⠀⠁⢉⠿⣿⣦⡀⠀⠀⠀⠀⢠⡿⣏⢲⣸⢬⣊⢾⡱⢽⠰
  * ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣰⣿⣿⣿⢻⣷⣦⣀⠀⣸⠀⠀⠀⠀⠀⠀⠀⣴⢿⠀⠘⣿⣿⣦⠀⠀⠀⡘⡷⡊⠱⣘⠶⢉⢎⠱⠄⠁
  */
- interface IUlyssesToken {
+interface IUlyssesToken {
     /*//////////////////////////////////////////////////////////////
                             EXTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -66,8 +65,12 @@ pragma solidity ^0.8.0;
                                 ERRORS
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Error emitted when trying to add an asset that is already part of the Ulysses token.
     error AssetAlreadyAdded();
 
+    /// @notice Error emitted when trying to remove the last asset of the Ulysses token.
     error CannotRemoveLastAsset();
+
+    /// @notice Error emitted when trying to set weights with an invalid length.
     error InvalidWeightsLength();
 }

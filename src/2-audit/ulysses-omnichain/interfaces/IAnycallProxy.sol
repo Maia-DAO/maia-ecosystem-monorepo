@@ -8,13 +8,9 @@ interface IAnycallProxy {
 
     function config() external view returns (address);
 
-    function anyCall(
-        address _to,
-        bytes calldata _data,
-        uint256 _toChainID,
-        uint256 _flags,
-        bytes calldata _extdata
-    ) external payable;
+    function anyCall(address _to, bytes calldata _data, uint256 _toChainID, uint256 _flags, bytes calldata _extdata)
+        external
+        payable;
 
     function anyCall(
         string calldata _to,

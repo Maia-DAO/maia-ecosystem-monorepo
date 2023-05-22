@@ -6,14 +6,14 @@ import {Ownable} from "solady/auth/Ownable.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {WETH9} from "../interfaces/IWETH9.sol";
 
-import {RLPDecoder} from "@rlp/RLPDecoder.sol";
 import {IRootPort as IPort} from "../interfaces/IRootPort.sol";
 import {DepositParams, DepositMultipleParams} from "../interfaces/IRootBridgeAgent.sol";
 
 /**
- * @title ERC20 hToken Contract for deployment in Branch Chains of Hermes Omnichain Incentives System
+ * @title `RootRouter`
  * @author MaiaDAO
- * @dev
+ * @notice Contract Interface for Root Router contracts in charge of interacting with Root Bridge Agents.
+ *         This contract for deployment in Branch Chains of the Ulysses Omnichain System.
  */
 interface IRootRouter {
     /*///////////////////////////////////////////////////////////////

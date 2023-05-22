@@ -10,18 +10,22 @@ import {IERC20hTokenRootFactory as IFactory} from "./interfaces/IERC20hTokenRoot
 import {ERC20hTokenRoot} from "./token/ERC20hTokenRoot.sol";
 
 /**
- * @title ERC20 hToken Contract for deployment in Branch Chains of Hermes Omnichain Incentives System
+ * @title `CoreRootRouter`
  * @author MaiaDAO
- * @dev Func IDs for calling these functions through messaging layer.
+ * @notice Core Branch Router implementation for Root Environment deployment.
+ *         This contract is responsible for permissionlessly adding new
+ *         tokens or Bridge Agents to the system as well as key governance
+ *         enabled system functions (i.e. `addNewChain`).
+ * @dev    Func IDs for calling these functions through messaging layer:
  *
- *   CROSS-CHAIN MESSAGING FUNCIDs
- *   -----------------------------
- *   FUNC ID      | FUNC NAME
- *   -------------+---------------
- *   0x01         | addGlobalToken
- *   0x02         | addLocalToken
- *   0x03         | setLocalToken
- *   0x04         | syncBranchBridgeAgent
+ *         CROSS-CHAIN MESSAGING FUNCIDs
+ *         -----------------------------
+ *         FUNC ID      | FUNC NAME
+ *         -------------+---------------
+ *         0x01         | addGlobalToken
+ *         0x02         | addLocalToken
+ *         0x03         | setLocalToken
+ *         0x04         | syncBranchBridgeAgent
  *
  */
 contract CoreRootRouter is IRootRouter, Ownable {

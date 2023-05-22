@@ -2,22 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-import {Ownable} from "solady/auth/Ownable.sol";
-import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
-
-import {ERC20} from "solmate/tokens/ERC20.sol";
-
-import {ERC20hTokenRoot} from "../token/ERC20hTokenRoot.sol";
-
 import {VirtualAccount} from "../VirtualAccount.sol";
-
-import {IRootBridgeAgent as IBridgeAgent} from "./IRootBridgeAgent.sol";
-
-import {IRootBridgeAgentFactory} from "./IRootBridgeAgentFactory.sol";
-
-import {IERC20hTokenRootFactory} from "../interfaces/IERC20hTokenRootFactory.sol";
-
-import {INonfungiblePositionManager} from "../interfaces/INonfungiblePositionManager.sol";
 
 interface ICoreRootRouter {
     function bridgeAgentAddress() external view returns (address);
@@ -33,9 +18,11 @@ struct GasPoolInfo {
 }
 
 /**
- * @title IRootPort Interface.
- * @ author MaiaDAO.
- * @notice This interface is used to interact with the Root Port Contract of the Hermes Omnichain Incentives System.
+ * @title `RootPort`
+ * @author MaiaDAO
+ * @notice Ulyses `RootPort` implementation for Root Omnichain Environment deployment.
+ *         This contract is used to manage the deposit and withdrawal of assets
+ *         between the Root Omnichain Environment an every Branch Chain.
  */
 interface IRootPort {
     /*///////////////////////////////////////////////////////////////

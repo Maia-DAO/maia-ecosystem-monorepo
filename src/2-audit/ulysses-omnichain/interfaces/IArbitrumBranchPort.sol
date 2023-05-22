@@ -2,24 +2,16 @@
 
 pragma solidity ^0.8.0;
 
-import {Ownable} from "solady/auth/Ownable.sol";
-import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
-
 import {IBranchPort} from "./IBranchPort.sol";
-import {IRootPort} from "./IRootPort.sol";
 
-import {BranchPort} from "../BranchPort.sol";
-
-import {ArbitrumBranchBridgeAgent} from "../ArbitrumBranchBridgeAgent.sol";
-
-import {ERC20, ERC20hTokenBranch} from "../token/ERC20hTokenBranch.sol";
 /**
- * @title IArbBranchPort.
- * @author MaiaDAO.
- * @notice This contract is used to interact with the Branch Port which is in charge of managing the deposit and withdrawal of assets between the branch chains and the omnichain environment.
+ * @title `ArbitrumBranchPort`
+ * @author MaiaDAO
+ * @notice Ulyses `Port` implementation for Arbitrum Branch Chain deployment.
+ *         This contract is used to manage the deposit and withdrawal of assets
+ *         between Arbitrum Chain Branch contracts and the root omnichain environment.
  */
-
-interface IArbBranchPort is IBranchPort {
+interface IArbitrumBranchPort is IBranchPort {
     /*///////////////////////////////////////////////////////////////
                         EXTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/

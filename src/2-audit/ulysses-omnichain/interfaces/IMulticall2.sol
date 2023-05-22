@@ -11,12 +11,11 @@ interface IMulticall2 {
         address target;
         bytes callData;
     }
+
     struct Result {
         bool success;
         bytes returnData;
     }
 
-    function aggregate(Call[] memory calls)
-        external
-        returns (uint256 blockNumber, bytes[] memory returnData);
+    function aggregate(Call[] memory calls) external returns (uint256 blockNumber, bytes[] memory returnData);
 }

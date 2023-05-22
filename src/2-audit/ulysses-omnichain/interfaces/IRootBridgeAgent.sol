@@ -1,52 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {Ownable} from "solady/auth/Ownable.sol";
-
-import {IRootPort as IPort} from "../interfaces/IRootPort.sol";
-import {IRootRouter as IRouter} from "../interfaces/IRootRouter.sol";
-import {IBranchBridgeAgent} from "../interfaces/IBranchBridgeAgent.sol";
-import {IERC20hTokenRoot} from "../interfaces/IERC20hTokenRoot.sol";
-import {VirtualAccount} from "../VirtualAccount.sol";
-
 import {IApp} from "./IApp.sol";
-import {IAnycallProxy} from "./IAnycallProxy.sol";
-import {IAnycallConfig} from "./IAnycallConfig.sol";
-import {IAnycallExecutor} from "./IAnycallExecutor.sol";
-import {AnycallFlags} from "../lib/AnycallFlags.sol";
 
-import {WETH9} from "../interfaces/IWETH9.sol";
-import {RLPDecoder} from "@rlp/RLPDecoder.sol";
-import {ERC20} from "solmate/tokens/ERC20.sol";
-import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
-import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
-import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+/*///////////////////////////////////////////////////////////////
+                            STRUCTS
+//////////////////////////////////////////////////////////////*/
 
-/**
- * Glossary:
- *  - ht = hToken
- *  - t = Token
- *  - A = Amount
- *  - D = Destination
- *  - C = ChainId
- *  - b = bytes
- *  - n = number of assets
- *  ___________________________________________________________________________________________________________________________
- * |            Flag               |        Deposit Info        |             Token Info             |   DATA    |  Gas Info   |
- * |           1 byte              |         4-25 bytes         |     3 + (105 or 128) * n bytes     |   ---	 |  32 bytes   |
- * |                               |                            |          hT - t - A - D - C        |           |             |
- * |_______________________________|____________________________|____________________________________|___________|_____________|
- * | callOutSystem = 0x0   	       |                 4b(nonce)  |            -------------           |   ---	 |  dep + bOut |
- * | callOut = 0x1                 |                 4b(nonce)  |            -------------           |   ---	 |  dep + bOut |
- * | callOutSingle = 0x2           |                 4b(nonce)  |      20b + 20b + 32b + 32b + 3b    |   ---	 |  16b + 16b  |
- * | callOutMulti = 0x3            |         1b(n) + 4b(nonce)  |   	32b + 32b + 32b + 32b + 3b   |   ---	 |  16b + 16b  |
- * | callOutSigned = 0x4           |    20b(recip) + 4b(nonce)  |   	      -------------          |   ---     |  16b + 16b  |
- * | callOutSignedSingle = 0x5     |           20b + 4b(nonce)  |      20b + 20b + 32b + 32b + 3b 	 |   ---	 |  16b + 16b  |
- * | callOutSignedMultiple = 0x6   |   20b + 1b(n) + 4b(nonce)  |      32b + 32b + 32b + 32b + 3b 	 |   ---	 |  16b + 16b  |
- * |_______________________________|____________________________|____________________________________|___________|_____________|
- */
-
-//Any data passed through by the caller via the IUniswapV3PoolActions#swap call
 struct SwapCallbackData {
     address tokenIn; //Token being sold
 }
@@ -122,20 +82,65 @@ struct DepositMultipleParams {
 }
 
 /**
- * @title ERC20 hToken Contract for deployment in Branch Chains of Hermes Omnichain Incentives System
+ * @title  BranchBridgeAgent contract for deployment in the Root Chain Omnichain Environment.
  * @author MaiaDAO
- * @dev Base Root Router for Anycall cross-chain messaging.
+ * @notice Contract responsible for interfacing with Users/Routers acting as a middleman to
+ *         access Anycall cross-chain messaging and Port communication for asset management.
+ * @dev    Bridge Agents allow for the encapsulation of business logic as well as the standardize
+ *         cross-chain communication, allowing for the creation of custom Routers to perform
+ *         actions as a response to remote user requests.
+ *         Remote execution is "sandboxed" in two different nestings:
+ *         - 1: Anycall Messaging Layer will revert execution if by the end of the call the
+ *              balance in the executionBudget AnycallConfig contract for the Root Bridge Agent
+ *              being called is inferior to the  executionGasSpent, throwing the error `no enough budget`.
+ *         - 2: The `RootBridgeAgent` will trigger a revert all state changes if by the end of the remote initiated call
+ *              Router interaction the userDepositedGas < executionGasSpent. This is done by calling the `_forceRevert()`
+ *              internal function clearing all executionBudget from the AnycallConfig contract forcing the error `no enough budget`.
+ *         - 3: The `RootBridgeAgentExecutor` is in charge of requesting token deposits for each remote interaction as well
+ *              as performing the Router calls, if any of the calls initiated by the Router lead to an invlaid state change
+ *              both the token deposit clearances as well as the external interactions will be reverted. Yet executionGas
+ *              will still be credited by the `RootBridgeAgent`.
  *
- *   CROSS-CHAIN MESSAGING FUNCIDs
- *   -----------------------------
- *   FUNC ID      | FUNC NAME
- *   -------------|---------------
- *   0            | No Deposit
- *   1            | With Deposit
- *   2            | With Deposit of Multiple Tokens
- *   3            | withdrawFromPort
- *   4            | bridgeTo
- *   5            | clearSettlement
+ *          Func IDs for calling these  functions through messaging layer:
+ *
+ *          ROOT BRIDGE AGENT DEPOSIT FLAGS
+ *          --------------------------------------
+ *          ID           | DESCRIPTION
+ *          -------------+------------------------
+ *          0x00         | Branch Router Response.
+ *          0x01         | Call to Root Router without Deposit.
+ *          0x02         | Call to Root Router with Deposit.
+ *          0x03         | Call to Root Router with Deposit of Multiple Tokens.
+ *          0x04         | Call to Root Router without Deposit + singned message.
+ *          0x05         | Call to Root Router with Deposit + singned message.
+ *          0x06         | Call to Root Router with Deposit of Multiple Tokens + singned message.
+ *          0x07         | Call to `retrySettlement()´.
+ *          0x08         | Call to `clearDeposit()´.
+ *
+ *
+ *          Encoding Scheme for different Root Bridge Agent Deposit Flags:
+ *
+ *           - ht = hToken
+ *           - t = Token
+ *           - A = Amount
+ *           - D = Destination
+ *           - C = ChainId
+ *           - b = bytes
+ *           - n = number of assets
+ *           ___________________________________________________________________________________________________________________________
+ *          |            Flag               |        Deposit Info        |             Token Info             |   DATA   |  Gas Info   |
+ *          |           1 byte              |         4-25 bytes         |     3 + (105 or 128) * n bytes     |   ---	 |  32 bytes   |
+ *          |                               |                            |          hT - t - A - D - C        |          |             |
+ *          |_______________________________|____________________________|____________________________________|__________|_____________|
+ *          | callOutSystem = 0x0   	    |                 4b(nonce)  |            -------------           |   ---	 |  dep + bOut |
+ *          | callOut = 0x1                 |                 4b(nonce)  |            -------------           |   ---	 |  dep + bOut |
+ *          | callOutSingle = 0x2           |                 4b(nonce)  |      20b + 20b + 32b + 32b + 3b    |   ---	 |  16b + 16b  |
+ *          | callOutMulti = 0x3            |         1b(n) + 4b(nonce)  |   	32b + 32b + 32b + 32b + 3b    |   ---	 |  16b + 16b  |
+ *          | callOutSigned = 0x4           |    20b(recip) + 4b(nonce)  |   	      -------------           |   ---    |  16b + 16b  |
+ *          | callOutSignedSingle = 0x5     |           20b + 4b(nonce)  |      20b + 20b + 32b + 32b + 3b 	  |   ---	 |  16b + 16b  |
+ *          | callOutSignedMultiple = 0x6   |   20b + 1b(n) + 4b(nonce)  |      32b + 32b + 32b + 32b + 3b 	  |   ---	 |  16b + 16b  |
+ *          |_______________________________|____________________________|____________________________________|__________|_____________|
+ *
  *
  */
 interface IRootBridgeAgent is IApp {

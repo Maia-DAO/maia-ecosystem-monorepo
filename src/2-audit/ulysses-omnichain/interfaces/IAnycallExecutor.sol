@@ -4,14 +4,7 @@ pragma solidity ^0.8.10;
 
 /// IAnycallExecutor interface of the anycall executor
 interface IAnycallExecutor {
-    function context()
-        external
-        view
-        returns (
-            address from,
-            uint256 fromChainID,
-            uint256 nonce
-        );
+    function context() external view returns (address from, uint256 fromChainID, uint256 nonce);
 
     function execute(
         address _to,

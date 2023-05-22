@@ -1,25 +1,39 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import {Ownable} from "solady/auth/Ownable.sol";
+
 import "./interfaces/IBranchRouter.sol";
 import {IBranchBridgeAgent as IBridgeAgent} from "./interfaces/IBranchBridgeAgent.sol";
-/**
- * @title BaseBranchRouter contract for deployment in Branch Chains of Omnichain System.
- * @author MaiaDAO
- * @dev Base Branch Interface for Anycall cross-chain messaging.
- */
 
+import {
+    Deposit,
+    DepositStatus,
+    DepositInput,
+    DepositParams,
+    DepositMultipleInput,
+    DepositMultipleParams,
+    SettlementParams,
+    SettlementMultipleParams
+} from "./interfaces/IBranchBridgeAgent.sol";
+
+/// @title `BaseBranchRouter`
 contract BaseBranchRouter is IBranchRouter, Ownable {
-    /// @notice Address for local Branch Bridge Agent who processes requests and ineracts with local port.
+    /// @inheritdoc IBranchRouter
     address public localBridgeAgentAddress;
 
-    /// @notice Local Bridge Agent Executor Address.
+    /// @inheritdoc IBranchRouter
     address public bridgeAgentExecutorAddress;
 
     constructor() {
         _initializeOwner(msg.sender);
     }
 
+    /*///////////////////////////////////////////////////////////////
+                        OWNER FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Contract state initialization function.
     function initialize(address _localBridgeAgentAddress) external onlyOwner {
         require(_localBridgeAgentAddress != address(0), "Bridge Agent address cannot be 0");
         localBridgeAgentAddress = _localBridgeAgentAddress;

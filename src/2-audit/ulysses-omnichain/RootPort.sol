@@ -2,12 +2,24 @@
 
 pragma solidity ^0.8.0;
 
-import "./interfaces/IRootPort.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
-/**
- * @title Root Port contract
- * @notice This contract is in the root chain of the OmniBridge system and it's used to manage cross chain balances.
- */
+import {ERC20} from "solmate/tokens/ERC20.sol";
+
+import {INonfungiblePositionManager} from "./interfaces/INonfungiblePositionManager.sol";
+
+import {IRootBridgeAgent as IBridgeAgent} from "./interfaces/IRootBridgeAgent.sol";
+
+import {IRootBridgeAgentFactory} from "./interfaces/IRootBridgeAgentFactory.sol";
+
+import {IERC20hTokenRootFactory} from "./interfaces/IERC20hTokenRootFactory.sol";
+
+import {IRootPort, VirtualAccount, GasPoolInfo, ICoreRootRouter} from "./interfaces/IRootPort.sol";
+
+import {ERC20hTokenRoot} from "./token/ERC20hTokenRoot.sol";
+
+/// @title `RootPort`
 contract RootPort is Ownable, IRootPort {
     using SafeTransferLib for address;
 

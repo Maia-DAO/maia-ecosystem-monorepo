@@ -9,17 +9,17 @@ import {ERC4626, ERC20} from "solmate/mixins/ERC4626.sol";
 
 import {UlyssesPool} from "./UlyssesPool.sol";
 
-import {UlyssesFactory} from "./factories/UlyssesFactory.sol";
-
-import {IUlyssesRouter} from "./interfaces/IUlyssesRouter.sol";
+import {IUlyssesRouter, UlyssesFactory} from "./interfaces/IUlyssesRouter.sol";
 
 /// @title Ulysses Router
 contract UlyssesRouter is IUlyssesRouter {
     using SafeTransferLib for address;
     using FixedPointMathLib for uint256;
 
-    mapping(uint256 => UlyssesPool) public pools;
+    /// @notice Mapping from pool id to Ulysses pool.
+    mapping(uint256 => UlyssesPool) private pools;
 
+    /// @inheritdoc IUlyssesRouter
     UlyssesFactory public ulyssesFactory;
 
     constructor(UlyssesFactory _ulyssesFactory) {
@@ -41,6 +41,8 @@ contract UlyssesRouter is IUlyssesRouter {
             if (address(ulysses) == address(0)) revert UnrecognizedUlyssesLP();
 
             pools[id] = ulysses;
+
+            address(ulysses.asset()).safeApprove(address(ulysses), type(uint256).max);
         }
     }
 
@@ -72,13 +74,14 @@ contract UlyssesRouter is IUlyssesRouter {
                             SWAP LOGIC
     //////////////////////////////////////////////////////////////*/
 
+    /// @inheritdoc IUlyssesRouter
     function swap(uint256 amount, uint256 minOutput, Route[] calldata routes) external returns (uint256) {
         address(getUlyssesLP(routes[0].from).asset()).safeTransferFrom(msg.sender, address(this), amount);
 
         uint256 length = routes.length;
 
         for (uint256 i = 0; i < length;) {
-            amount = _swap(amount, routes[i].from, routes[i].to);
+            amount = getUlyssesLP(routes[i].from).swapIn(amount, routes[i].to);
 
             unchecked {
                 ++i;
@@ -94,12 +97,5 @@ contract UlyssesRouter is IUlyssesRouter {
         address(getUlyssesLP(routes[length].to).asset()).safeTransfer(msg.sender, amount);
 
         return amount;
-    }
-
-    function _swap(uint256 amount, uint256 from, uint256 to) private returns (uint256) {
-        UlyssesPool ulyssesFrom = getUlyssesLP(from);
-
-        address(ulyssesFrom.asset()).safeApprove(address(ulyssesFrom), amount);
-        return ulyssesFrom.swapIn(amount, to);
     }
 }

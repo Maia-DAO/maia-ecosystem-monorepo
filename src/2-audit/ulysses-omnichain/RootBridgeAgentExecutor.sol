@@ -1,8 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import {Ownable} from "solady/auth/Ownable.sol";
+
 import {RootBridgeAgent} from "./RootBridgeAgent.sol";
-import "./interfaces/IRootBridgeAgent.sol";
+import {IRootBridgeAgent, DepositParams, DepositMultipleParams} from "./interfaces/IRootBridgeAgent.sol";
+
+import {IRootRouter as IRouter} from "./interfaces/IRootRouter.sol";
 
 library DeployRootBridgeAgentExecutor {
     function deploy(address _owner) external returns (address) {
@@ -10,6 +14,13 @@ library DeployRootBridgeAgentExecutor {
     }
 }
 
+/**
+ * @title `RootBridgeAgentExecutor`
+ * @notice This contract is used for requesting token settlement clearance and
+ *         executing transaction requests from the branch chains.
+ * @dev    Execution is "sandboxed" meaning upon tx failure both token settlements
+ *         and interactions with external contracts should be reverted and caught.
+ */
 contract RootBridgeAgentExecutor is Ownable {
     /*///////////////////////////////////////////////////////////////
                             ENCODING CONSTS
@@ -45,7 +56,7 @@ contract RootBridgeAgentExecutor is Ownable {
 
     uint8 internal constant PARAMS_DEPOSIT_OFFSET = 96;
 
-    constructor(address owner) Ownable() {
+    constructor(address owner) {
         _initializeOwner(owner);
     }
 

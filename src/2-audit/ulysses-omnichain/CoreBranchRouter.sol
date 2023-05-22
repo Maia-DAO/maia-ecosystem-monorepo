@@ -10,24 +10,7 @@ import {IBranchBridgeAgentFactory as IBridgeAgentFactory} from "./interfaces/IBr
 import {ERC20hTokenBranch as ERC20hToken} from "./token/ERC20hTokenBranch.sol";
 import {ICoreBranchRouter} from "./interfaces/ICoreBranchRouter.sol";
 
-/**
- * @title ERC20 hToken Contract for deployment in Branch Chains of Hermes Omnichain Incentives System
- * @author MaiaDAO
- * @dev
- *
- *   CROSS-CHAIN MESSAGING FUNCIDs
- *   -----------------------------
- *   FUNC ID      | FUNC NAME
- *   -------------+---------------
- *   0x01            | clearDeposit
- *   0x02            | finalizeDeposit
- *   0x03            | finalizeWithdraw
- *   0x04            | clearToken
- *   0x05            | clearTokens
- *   0x06            | addGlobalToken
- *
- */
-
+/// @title `CoreBranchRouter`
 contract CoreBranchRouter is BaseBranchRouter {
     /// @notice hToken Factory Address.
     address public hTokenFactoryAddress;

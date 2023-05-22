@@ -12,9 +12,12 @@ import {IAnycallProxy} from "./IAnycallProxy.sol";
 import {IRootBridgeAgent} from "../interfaces/IRootBridgeAgent.sol";
 
 /**
- * @title IRootBridgeAgentFactory Contract.
- * @author MaiaDAO.
- * @notice This contract is used to deploy new Root Bridge Agents Factory responsible for deploying new Bridge Agents which are in charge of managing the deposit and withdrawal of assets between the branch chains and the omnichain environment.
+ * @title  `RootBridgeAgentFactory`
+ * @author MaiaDAO
+ * @notice This contract is used to deploy new Root Bridge Agents responsible
+ *         for deploying new Bridge Agents which are in charge of managing the
+ *         deposit and withdrawal of assets between the branch chains and the
+ *         omnichain environment.
  */
 interface IRootBridgeAgentFactory {
     /*///////////////////////////////////////////////////////////////

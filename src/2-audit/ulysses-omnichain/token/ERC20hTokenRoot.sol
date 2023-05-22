@@ -1,30 +1,30 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "../interfaces/IERC20hTokenRoot.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
-/**
- * @title ERC20 hToken Contract for deployment in Root Chain of Hermes Omnichain Incentives System
- * @author MaiaDAO
- * @dev
- */
+import {IERC20hTokenRoot} from "../interfaces/IERC20hTokenRoot.sol";
+
+/// @title ERC20 hToken Contract for deployment in Root Chain of Hermes Omnichain Incentives System
 contract ERC20hTokenRoot is ERC20, IERC20hTokenRoot {
     using SafeTransferLib for address;
 
-    /// @notice Local Network Identifier.
+    /// @inheritdoc IERC20hTokenRoot
     uint256 public localChainId;
 
-    /// @notice Root Port Address.
+    /// @inheritdoc IERC20hTokenRoot
     address public rootPortAddress;
 
-    /// @notice Root Port Address.
+    /// @inheritdoc IERC20hTokenRoot
     address public localBranchPortAddress;
 
-    /// @notice Factory Address.
+    /// @inheritdoc IERC20hTokenRoot
     address public factoryAddress;
 
-    /// @notice a mapping from a chain's id and the number of tokens.
-    mapping(uint256 => uint256) public underlyingPerChain;
+    /// @inheritdoc IERC20hTokenRoot
+    mapping(uint256 => uint256) public getTokenBalance;
 
     /**
      * @notice Constructor for the ERC20hTokenRoot Contract.
@@ -59,15 +59,6 @@ contract ERC20hTokenRoot is ERC20, IERC20hTokenRoot {
     }
 
     /*///////////////////////////////////////////////////////////////
-                        VIEW FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @dev View Function returns Token's Local Address.
-    function getTokenBalance(uint256 chainId) public view returns (uint256) {
-        return underlyingPerChain[chainId];
-    }
-
-    /*///////////////////////////////////////////////////////////////
                         ERC20 LOGIC
     //////////////////////////////////////////////////////////////*/
 
@@ -78,7 +69,7 @@ contract ERC20hTokenRoot is ERC20, IERC20hTokenRoot {
      * @param chainId Chain Id of the chain to mint tokens to.
      */
     function mint(address to, uint256 amount, uint256 chainId) external requiresPort returns (bool) {
-        underlyingPerChain[chainId] += amount;
+        getTokenBalance[chainId] += amount;
         _mint(to, amount);
         return true;
     }
@@ -90,7 +81,7 @@ contract ERC20hTokenRoot is ERC20, IERC20hTokenRoot {
      * @param chainId Chain Id of the chain to burn tokens to.
      */
     function burn(address from, uint256 value, uint256 chainId) external requiresPort {
-        underlyingPerChain[chainId] -= value;
+        getTokenBalance[chainId] -= value;
         _burn(from, value);
     }
 }

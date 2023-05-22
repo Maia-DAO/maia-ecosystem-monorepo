@@ -7,9 +7,8 @@ import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
 /**
  * @title IPortStrategy Interface.
- *   @author MaiaDAO.
- *   @notice Interface for Port Strategy contracts.
- *
+ * @author MaiaDAO.
+ * @notice Interface for Brach Port Strategy contracts.
  */
 interface IPortStrategy {
     /*///////////////////////////////////////////////////////////////

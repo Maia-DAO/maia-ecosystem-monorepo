@@ -2,13 +2,18 @@
 
 pragma solidity ^0.8.0;
 
-import "./interfaces/IArbBranchPort.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
-/**
- * @title Base Port implementation for the Arbitrum deployment.
- *   @author MaiaDAO
- */
-contract ArbitrumBranchPort is BranchPort, IArbBranchPort {
+import {IArbitrumBranchPort, IBranchPort} from "./interfaces/IArbitrumBranchPort.sol";
+import {IRootPort} from "./interfaces/IRootPort.sol";
+
+import {ArbitrumBranchBridgeAgent} from "./ArbitrumBranchBridgeAgent.sol";
+import {BranchPort} from "./BranchPort.sol";
+import {ERC20, ERC20hTokenBranch} from "./token/ERC20hTokenBranch.sol";
+
+/// @title `ArbitrumBranchPort`
+contract ArbitrumBranchPort is BranchPort, IArbitrumBranchPort {
     using SafeTransferLib for address;
 
     /// @notice Local Network Identifier.
@@ -34,7 +39,7 @@ contract ArbitrumBranchPort is BranchPort, IArbBranchPort {
                         EXTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    ///@inheritdoc IArbBranchPort
+    ///@inheritdoc IArbitrumBranchPort
     function depositToPort(address _depositor, address _recipient, address _underlyingAddress, uint256 _deposit)
         external
         requiresBridgeAgent
@@ -47,7 +52,7 @@ contract ArbitrumBranchPort is BranchPort, IArbBranchPort {
         IRootPort(rootPortAddress).mintToLocalBranch(_recipient, globalToken, _deposit);
     }
 
-    ///@inheritdoc IArbBranchPort
+    ///@inheritdoc IArbitrumBranchPort
     function withdrawFromPort(address _depositor, address _recipient, address _globalAddress, uint256 _deposit)
         external
         requiresBridgeAgent

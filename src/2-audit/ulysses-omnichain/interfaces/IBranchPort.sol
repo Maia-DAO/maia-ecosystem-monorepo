@@ -2,15 +2,12 @@
 
 pragma solidity ^0.8.0;
 
-import {ERC20hTokenBranch} from "../token/ERC20hTokenBranch.sol";
-import {ERC20} from "solmate/tokens/ERC20.sol";
-import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
-import {IPortStrategy} from "./IPortStrategy.sol";
-
 /**
- * @title IBranchPort.
- * @author MaiaDAO.
- * @dev This contract is used to interact with the Branch Port which is in charge of managing the deposit and withdrawal of assets between the a branch chain and the omnichain environment.
+ * @title `BranchPort`
+ * @author MaiaDAO
+ * @notice Ulyses `Port` implementation for Branch Chain deployment.
+ *         This contract is used to manage the deposit and withdrawal of assets
+ *         between Branch Chain contracts and the root omnichain environment.
  */
 interface IBranchPort {
     /*///////////////////////////////////////////////////////////////
@@ -210,7 +207,6 @@ interface IBranchPort {
     event BridgeAgentFactoryToggled(address indexed _bridgeAgentFactory);
 
     event BridgeAgentToggled(address indexed _bridgeAgent);
-
 
     /*///////////////////////////////////////////////////////////////
                             ERRORS

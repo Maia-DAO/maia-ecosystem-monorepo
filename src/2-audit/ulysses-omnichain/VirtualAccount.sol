@@ -2,21 +2,21 @@
 
 pragma solidity ^0.8.0;
 
-import "./interfaces/IVirtualAccount.sol";
-
+import {ERC721} from "solmate/tokens/ERC721.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
-/**
- * @title VirtualAccount
- * @dev VirtualAccount is a contract that allows hApps to keep encapsulated user balance for accounting purposes.
- */
+import {IVirtualAccount, Call} from "./interfaces/IVirtualAccount.sol";
+
+import {IRootPort} from "./interfaces/IRootPort.sol";
+
+/// @title `VirtualAccount`
 contract VirtualAccount is IVirtualAccount {
     using SafeTransferLib for address;
 
-    /// @notice The address of the user who owns this account.
+    /// @inheritdoc IVirtualAccount
     address public immutable userAddress;
 
-    /// @notice Address for Local Port Address where funds deposited from this chain are stored.
+    /// @inheritdoc IVirtualAccount
     address public localPortAddress;
 
     constructor(address _userAddress, address _localPortAddress) {
@@ -35,13 +35,18 @@ contract VirtualAccount is IVirtualAccount {
     }
 
     /// @inheritdoc IVirtualAccount
-    function call(Call[] calldata calls) external requiresApprovedCaller returns (uint256, bytes[] memory data) {
+    function call(Call[] calldata calls)
+        external
+        requiresApprovedCaller
+        returns (uint256 blockNumber, bytes[] memory returnData)
+    {
+        blockNumber = block.number;
+        returnData = new bytes[](calls.length);
         for (uint256 i = 0; i < calls.length; i++) {
-            (bool success, bytes memory returnData) = calls[i].target.call(calls[i].callData);
+            (bool success, bytes memory data) = calls[i].target.call(calls[i].callData);
             if (!success) revert CallFailed();
-            data[i] = returnData;
+            returnData[i] = data;
         }
-        return (block.number, data);
     }
 
     /*///////////////////////////////////////////////////////////////

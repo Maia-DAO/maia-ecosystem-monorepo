@@ -2,24 +2,16 @@
 
 pragma solidity ^0.8.0;
 
-import {ERC721} from "solmate/tokens/ERC721.sol";
-
-import {IRootPort} from "./IRootPort.sol";
-
+/// @notice Interface for the `Multicall2` contract.
 struct Call {
     address target;
     bytes callData;
 }
 
-struct Result {
-    bool success;
-    bytes returnData;
-}
-
 /**
- * @title VirtualAccount Contract.
- * @author MaiaDAO.
- * @dev This contract that allows users to manage assets and perform interactions remotely. Provides hApps with encapsulated user balance for accounting purposes.
+ * @title `VirtualAccount`
+ * @notice A VirtualAccount allows users to manage assets and perform interactions remotely. That allows hApps to keep encapsulated user balance for accounting purposes.
+ * @dev    This contract is based off Maker's `Multicall2` contract, performs a set of `Call` objects if any of the perfomed call is invalid the whole batch should revert.
  */
 interface IVirtualAccount {
     /**
@@ -27,6 +19,12 @@ interface IVirtualAccount {
      * @return The address of the user that owns the VirtualAccount.
      */
     function userAddress() external view returns (address);
+
+    /**
+     * @notice Returns the address of the local port.
+     * @return The address of the local port.
+     */
+    function localPortAddress() external view returns (address);
 
     /**
      * @notice Withdraws ERC20 tokens from the VirtualAccount.
@@ -53,5 +51,6 @@ interface IVirtualAccount {
     //////////////////////////////////////////////////////////////*/
 
     error CallFailed();
+
     error UnauthorizedCaller();
 }

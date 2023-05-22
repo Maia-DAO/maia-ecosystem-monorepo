@@ -2,9 +2,25 @@
 pragma solidity ^0.8.0;
 
 /**
- * @title ICoreBranchRouter.
- * @author MaiaDAO.
- * @dev This contract is used to interact with the Core Branch Router which is in charge of managing the permissionless addition of new tokens and Bridge Agents to chains and governace gated actions such as updating Branch Port parameters.
+ * @title `CoreBranchRouter`
+ * @author MaiaDAO
+ * @notice Core Branch Router implementation for Arbitrum deployment.
+ *         This contract is responsible for permissionlessly adding new
+ *         tokens or Bridge Agents to the system as well as key governance
+ *         enabled system functions (i.e. `addBridgeAgentFactory`).
+ * @dev    Func IDs for calling these functions through messaging layer:
+ *
+ *         CROSS-CHAIN MESSAGING FUNCIDs
+ *         -----------------------------
+ *         FUNC ID      | FUNC NAME
+ *         -------------+---------------
+ *         0x01         | clearDeposit
+ *         0x02         | finalizeDeposit
+ *         0x03         | finalizeWithdraw
+ *         0x04         | clearToken
+ *         0x05         | clearTokens
+ *         0x06         | addGlobalToken
+ *
  */
 interface ICoreBranchRouter {
     /*///////////////////////////////////////////////////////////////

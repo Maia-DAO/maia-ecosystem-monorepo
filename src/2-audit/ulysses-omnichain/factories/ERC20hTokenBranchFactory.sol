@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "../interfaces/IERC20hTokenBranchFactory.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
+
+import {ERC20} from "../token/ERC20hTokenBranch.sol";
+
+import {IERC20hTokenBranchFactory, ERC20hTokenBranch} from "../interfaces/IERC20hTokenBranchFactory.sol";
 
 /**
  * @title ERC20hTokenBranch Factory Contract

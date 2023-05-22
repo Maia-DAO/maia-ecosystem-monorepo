@@ -58,11 +58,11 @@ contract UlyssesToken is ERC4626MultiToken, Ownable, IUlyssesToken {
     function removeAsset(address asset) external nonReentrant onlyOwner {
         // No need to check if index is 0, it will underflow and revert if it is 0
         uint256 assetIndex = assetId[asset] - 1;
-        
+
         uint256 newAssetsLength = assets.length - 1;
 
         if (newAssetsLength == 0) revert CannotRemoveLastAsset();
-     
+
         totalWeights -= weights[assetIndex];
 
         address lastAsset = assets[newAssetsLength];

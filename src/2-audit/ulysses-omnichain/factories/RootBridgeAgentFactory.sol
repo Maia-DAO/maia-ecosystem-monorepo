@@ -7,11 +7,7 @@ import {DeployRootBridgeAgent, RootBridgeAgent} from "../RootBridgeAgent.sol";
 
 import {IRootPort} from "../interfaces/IRootPort.sol";
 
-/**
- * @title RootBridgeAgent Factory Contract.
- * @author MaiaDAO.
- * @notice This contract is used to deploy new Root Bridge Agents which are in charge of managing the deposit and withdrawal of assets between the branch chains and the omnichain environment.
- */
+/// @title `RootBridgeAgentFactory`
 contract RootBridgeAgentFactory is IRootBridgeAgentFactory {
     /// @notice Root Chain Id
     uint24 public immutable rootChainId;

@@ -26,20 +26,21 @@ struct OutputMultipleParams {
 }
 
 /**
- * @title ERC20 hToken Contract for deployment in Branch Chains of Hermes Omnichain Incentives System
+ * @title `MulticallRootRouter`
  * @author MaiaDAO
- * @dev Func IDs for calling these  functions through messaging layer.
+ * @notice Root Router implementation for interfacing with third party dApps present in the Root Omnichain Environment.
+ * @dev    Func IDs for calling these  functions through messaging layer:
  *
- *   CROSS-CHAIN MESSAGING FUNCIDs
- *   -----------------------------
- *   FUNC ID      | FUNC NAME
- *   -------------+---------------
- *   0x01         | multicallNoOutput
- *   0x02         | multicallSingleOutput
- *   0x03         | multicallMultipleOutput
- *   0x04         | multicallSignedNoOutput
- *   0x05         | multicallSignedSingleOutput
- *   0x06         | multicallSignedMultipleOutput
+ *         CROSS-CHAIN MESSAGING FUNCIDs
+ *         -----------------------------
+ *         FUNC ID      | FUNC NAME
+ *         -------------+---------------
+ *         0x01         | multicallNoOutput
+ *         0x02         | multicallSingleOutput
+ *         0x03         | multicallMultipleOutput
+ *         0x04         | multicallSignedNoOutput
+ *         0x05         | multicallSignedSingleOutput
+ *         0x06         | multicallSignedMultipleOutput
  *
  */
 contract MulticallRootRouter is IRootRouter, Ownable {
@@ -184,7 +185,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
      *  0x03         |  multicallMultipleOutput
      *
      */
-    function anyExecute(bytes1 funcId, bytes calldata rlpEncodedData, uint24)
+    function anyExecute(bytes1 funcId, bytes calldata encodedData, uint24)
         external
         payable
         override
@@ -194,16 +195,14 @@ contract MulticallRootRouter is IRootRouter, Ownable {
     {
         /// FUNC ID: 1 (multicallNoOutput)
         if (funcId == 0x01) {
-            IMulticall.Call[] memory callData =
-                abi.decode(RLPDecoder.decodeCallData(rlpEncodedData, MAX_LENGTH), (IMulticall.Call[]));
+            IMulticall.Call[] memory callData = abi.decode(encodedData, (IMulticall.Call[]));
 
             _multicall(callData);
 
             /// FUNC ID: 2 (multicallSingleOutput)
         } else if (funcId == 0x02) {
-            (IMulticall.Call[] memory callData, OutputParams memory outputParams, uint24 toChain) = abi.decode(
-                RLPDecoder.decodeCallData(rlpEncodedData, MAX_LENGTH), (IMulticall.Call[], OutputParams, uint24)
-            );
+            (IMulticall.Call[] memory callData, OutputParams memory outputParams, uint24 toChain) =
+                abi.decode(encodedData, (IMulticall.Call[], OutputParams, uint24));
 
             _multicall(callData);
 
@@ -218,9 +217,8 @@ contract MulticallRootRouter is IRootRouter, Ownable {
 
             /// FUNC ID: 3 (multicallMultipleOutput)
         } else if (funcId == 0x03) {
-            (IMulticall.Call[] memory callData, OutputMultipleParams memory outputParams, uint24 toChain) = abi.decode(
-                RLPDecoder.decodeCallData(rlpEncodedData, MAX_LENGTH), (IMulticall.Call[], OutputMultipleParams, uint24)
-            );
+            (IMulticall.Call[] memory callData, OutputMultipleParams memory outputParams, uint24 toChain) =
+                abi.decode(encodedData, (IMulticall.Call[], OutputMultipleParams, uint24));
 
             _multicall(callData);
 
@@ -245,7 +243,6 @@ contract MulticallRootRouter is IRootRouter, Ownable {
         external
         payable
         override
-        requiresExecutor
         returns (bool, bytes memory)
     {
         revert();
@@ -256,7 +253,6 @@ contract MulticallRootRouter is IRootRouter, Ownable {
     function anyExecuteDepositMultiple(bytes1, bytes calldata, DepositMultipleParams calldata, uint24)
         external
         payable
-        requiresExecutor
         returns (bool, bytes memory)
     {
         revert();
@@ -272,7 +268,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
      *  0x03         |  multicallMultipleOutput
      *
      */
-    function anyExecuteSigned(bytes1 funcId, bytes calldata rlpEncodedData, address userAccount, uint24)
+    function anyExecuteSigned(bytes1 funcId, bytes calldata encodedData, address userAccount, uint24)
         external
         payable
         override
@@ -282,7 +278,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
     {
         /// FUNC ID: 1 (multicallNoOutput)
         if (funcId == 0x01) {
-            Call[] memory calls = abi.decode(RLPDecoder.decodeCallData(rlpEncodedData, MAX_LENGTH), (Call[]));
+            Call[] memory calls = abi.decode(encodedData, (Call[]));
 
             //Call desired functions
             IVirtualAccount(userAccount).call(calls);
@@ -290,7 +286,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
             /// FUNC ID: 2 (multicallSingleOutput)
         } else if (funcId == 0x02) {
             (Call[] memory calls, OutputParams memory outputParams, uint24 toChain) =
-                abi.decode(RLPDecoder.decodeCallData(rlpEncodedData, MAX_LENGTH), (Call[], OutputParams, uint24));
+                abi.decode(encodedData, (Call[], OutputParams, uint24));
 
             //Call desired functions
             IVirtualAccount(userAccount).call(calls);
@@ -309,9 +305,8 @@ contract MulticallRootRouter is IRootRouter, Ownable {
 
             /// FUNC ID: 3 (multicallMultipleOutput)
         } else if (funcId == 0x03) {
-            (Call[] memory calls, OutputMultipleParams memory outputParams, uint24 toChain) = abi.decode(
-                RLPDecoder.decodeCallData(rlpEncodedData, MAX_LENGTH), (Call[], OutputMultipleParams, uint24)
-            );
+            (Call[] memory calls, OutputMultipleParams memory outputParams, uint24 toChain) =
+                abi.decode(encodedData, (Call[], OutputMultipleParams, uint24));
 
             //Call desired functions
             IVirtualAccount(userAccount).call(calls);
@@ -352,14 +347,14 @@ contract MulticallRootRouter is IRootRouter, Ownable {
      */
     function anyExecuteSignedDepositSingle(
         bytes1 funcId,
-        bytes calldata rlpEncodedData,
+        bytes calldata encodedData,
         DepositParams calldata,
         address userAccount,
         uint24
     ) external payable override requiresExecutor lock returns (bool success, bytes memory result) {
         /// FUNC ID: 1 (multicallNoOutput)
         if (funcId == 0x01) {
-            Call[] memory calls = abi.decode(RLPDecoder.decodeCallData(rlpEncodedData, MAX_LENGTH), (Call[]));
+            Call[] memory calls = abi.decode(encodedData, (Call[]));
 
             //Call desired functions
             IVirtualAccount(userAccount).call(calls);
@@ -367,7 +362,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
             /// FUNC ID: 2 (multicallSingleOutput)
         } else if (funcId == 0x02) {
             (Call[] memory calls, OutputParams memory outputParams, uint24 toChain) =
-                abi.decode(RLPDecoder.decodeCallData(rlpEncodedData, MAX_LENGTH), (Call[], OutputParams, uint24));
+                abi.decode(encodedData, (Call[], OutputParams, uint24));
 
             //Call desired functions
             IVirtualAccount(userAccount).call(calls);
@@ -386,9 +381,8 @@ contract MulticallRootRouter is IRootRouter, Ownable {
 
             /// FUNC ID: 3 (multicallMultipleOutput)
         } else if (funcId == 0x03) {
-            (Call[] memory calls, OutputMultipleParams memory outputParams, uint24 toChain) = abi.decode(
-                RLPDecoder.decodeCallData(rlpEncodedData, MAX_LENGTH), (Call[], OutputMultipleParams, uint24)
-            );
+            (Call[] memory calls, OutputMultipleParams memory outputParams, uint24 toChain) =
+                abi.decode(encodedData, (Call[], OutputMultipleParams, uint24));
 
             //Call desired functions
             IVirtualAccount(userAccount).call(calls);
@@ -417,7 +411,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
         return (true, "");
     }
 
-     /**
+    /**
      *  @inheritdoc IRootRouter
      *  @dev FuncIDs
      *
@@ -429,14 +423,14 @@ contract MulticallRootRouter is IRootRouter, Ownable {
      */
     function anyExecuteSignedDepositMultiple(
         bytes1 funcId,
-        bytes memory rlpEncodedData,
+        bytes memory encodedData,
         DepositMultipleParams calldata,
         address userAccount,
         uint24
     ) external payable requiresExecutor lock returns (bool success, bytes memory result) {
         /// FUNC ID: 1 (multicallNoOutput)
         if (funcId == 0x01) {
-            Call[] memory calls = abi.decode(RLPDecoder.decodeCallData(rlpEncodedData, MAX_LENGTH), (Call[]));
+            Call[] memory calls = abi.decode(encodedData, (Call[]));
 
             //Call desired functions
             IVirtualAccount(userAccount).call(calls);
@@ -444,7 +438,7 @@ contract MulticallRootRouter is IRootRouter, Ownable {
             /// FUNC ID: 2 (multicallSingleOutput)
         } else if (funcId == 0x02) {
             (Call[] memory calls, OutputParams memory outputParams, uint24 toChain) =
-                abi.decode(RLPDecoder.decodeCallData(rlpEncodedData, MAX_LENGTH), (Call[], OutputParams, uint24));
+                abi.decode(encodedData, (Call[], OutputParams, uint24));
 
             //Call desired functions
             IVirtualAccount(userAccount).call(calls);
@@ -463,9 +457,8 @@ contract MulticallRootRouter is IRootRouter, Ownable {
 
             /// FUNC ID: 3 (multicallMultipleOutput)
         } else if (funcId == 0x03) {
-            (Call[] memory calls, OutputMultipleParams memory outputParams, uint24 toChain) = abi.decode(
-                RLPDecoder.decodeCallData(rlpEncodedData, MAX_LENGTH), (Call[], OutputMultipleParams, uint24)
-            );
+            (Call[] memory calls, OutputMultipleParams memory outputParams, uint24 toChain) =
+                abi.decode(encodedData, (Call[], OutputMultipleParams, uint24));
 
             //Call desired functions
             IVirtualAccount(userAccount).call(calls);

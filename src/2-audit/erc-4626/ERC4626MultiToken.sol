@@ -19,15 +19,19 @@ abstract contract ERC4626MultiToken is ERC20, ReentrancyGuard, IERC4626MultiToke
                                IMMUTABLES
     //////////////////////////////////////////////////////////////*/
 
+    /// @inheritdoc IERC4626MultiToken
     address[] public assets;
 
+    /// @inheritdoc IERC4626MultiToken
     uint256[] public weights;
 
-    // assetId[asset] = index + 1
+    /// @inheritdoc IERC4626MultiToken
     mapping(address => uint256) public assetId;
 
+    /// @inheritdoc IERC4626MultiToken
     uint256 public totalWeights;
 
+    /// @inheritdoc IERC4626MultiToken
     function getAssets() external view returns (address[] memory) {
         return assets;
     }
@@ -286,24 +290,4 @@ abstract contract ERC4626MultiToken is ERC20, ReentrancyGuard, IERC4626MultiToke
     function beforeWithdraw(uint256[] memory assetsAmounts, uint256 shares) internal virtual {}
 
     function afterDeposit(uint256[] memory assetsAmounts, uint256 shares) internal virtual {}
-
-    /*//////////////////////////////////////////////////////////////
-                            ERRORS
-    //////////////////////////////////////////////////////////////*/
-    error ZeroAssets();
-
-    error InvalidLength();
-    /*//////////////////////////////////////////////////////////////
-                                 EVENTS
-    //////////////////////////////////////////////////////////////*/
-
-    event Deposit(address indexed caller, address indexed owner, uint256[] assets, uint256 shares);
-
-    event Withdraw(
-        address indexed caller, address indexed receiver, address indexed owner, uint256[] assets, uint256 shares
-    );
-
-    event AssetAdded(address asset, uint256 weight);
-
-    event AssetRemoved(address asset);
 }

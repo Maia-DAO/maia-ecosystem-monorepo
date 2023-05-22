@@ -1,7 +1,39 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./interfaces/IRootBridgeAgent.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
+
+import {IRootPort as IPort} from "./interfaces/IRootPort.sol";
+import {IRootRouter as IRouter} from "./interfaces/IRootRouter.sol";
+import {IBranchBridgeAgent} from "./interfaces/IBranchBridgeAgent.sol";
+import {IERC20hTokenRoot} from "./interfaces/IERC20hTokenRoot.sol";
+import {VirtualAccount} from "./VirtualAccount.sol";
+
+import {IAnycallProxy} from "./interfaces/IAnycallProxy.sol";
+import {IAnycallConfig} from "./interfaces/IAnycallConfig.sol";
+import {IAnycallExecutor} from "./interfaces/IAnycallExecutor.sol";
+import {AnycallFlags} from "./lib/AnycallFlags.sol";
+
+import {WETH9} from "./interfaces/IWETH9.sol";
+
+import {ERC20} from "solmate/tokens/ERC20.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
+import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+
+import {
+    IApp,
+    IRootBridgeAgent,
+    DepositParams,
+    DepositMultipleParams,
+    Settlement,
+    SettlementStatus,
+    SettlementParams,
+    SettlementMultipleParams,
+    UserFeeInfo,
+    SwapCallbackData
+} from "./interfaces/IRootBridgeAgent.sol";
+
 import {DeployRootBridgeAgentExecutor, RootBridgeAgentExecutor} from "./RootBridgeAgentExecutor.sol";
 
 library CheckParamsLib {
@@ -52,24 +84,40 @@ library DeployRootBridgeAgent {
 }
 
 /**
- * /**
- * @title BranchBridgeAgent contract for deployment in Branch Chains of Omnichain System.
+ * @title  BranchBridgeAgent contract for deployment in the Root Chain Omnichain Environment.
  * @author MaiaDAO
- * @dev Contract responible for interfacing with Users/Routers acting as a middleman to access Anycall cross-chain messaging and Port communication for asset management.
+ * @notice Contract responsible for interfacing with Users/Routers acting as a middleman to
+ *         access Anycall cross-chain messaging and Port communication for asset management.
+ * @dev    Bridge Agents allow for the encapsulation of business logic as well as the standardize
+ *         cross-chain communication, allowing for the creation of custom Routers to perform
+ *         actions as a response to remote user requests.
+ *         Remote execution is "sandboxed" in two different nestings:
+ *         - 1: Anycall Messaging Layer will revert execution if by the end of the call the
+ *              balance in the executionBudget AnycallConfig contract for the Root Bridge Agent
+ *              being called is inferior to the  executionGasSpent, throwing the error `no enough budget`.
+ *         - 2: The `RootBridgeAgent` will trigger a revert all state changes if by the end of the remote initiated call
+ *              Router interaction the userDepositedGas < executionGasSpent. This is done by calling the `_forceRevert()`
+ *              internal function clearing all executionBudget from the AnycallConfig contract forcing the error `no enough budget`.
+ *         - 3: The `RootBridgeAgentExecutor` is in charge of requesting token deposits for each remote interaction as well
+ *              as performing the Router calls, if any of the calls initiated by the Router lead to an invlaid state change
+ *              both the token deposit clearances as well as the external interactions will be reverted. Yet executionGas
+ *              will still be credited by the `RootBridgeAgent`.
  *
- *   ROOT BRIDGE AGENT DEPOSIT FLAGS
- *   --------------------------------------
- *   ID           | DESCRIPTION
- *   -------------+------------------------
- *   0x00         | Branch Router Response.
- *   0x01         | Call to Root Router without Deposit.
- *   0x02         | Call to Root Router with Deposit.
- *   0x03         | Call to Root Router with Deposit of Multiple Tokens.
- *   0x04         | Call to Root Router without Deposit + singned message.
- *   0x05         | Call to Root Router with Deposit + singned message.
- *   0x06         | Call to Root Router with Deposit of Multiple Tokens + singned message.
- *   0x07         | Call to `retrySettlement()´.
- *   0x08         | Call to `clearDeposit()´.
+ *          Func IDs for calling these  functions through messaging layer:
+ *
+ *          ROOT BRIDGE AGENT DEPOSIT FLAGS
+ *          --------------------------------------
+ *          ID           | DESCRIPTION
+ *          -------------+------------------------
+ *          0x00         | Branch Router Response.
+ *          0x01         | Call to Root Router without Deposit.
+ *          0x02         | Call to Root Router with Deposit.
+ *          0x03         | Call to Root Router with Deposit of Multiple Tokens.
+ *          0x04         | Call to Root Router without Deposit + singned message.
+ *          0x05         | Call to Root Router with Deposit + singned message.
+ *          0x06         | Call to Root Router with Deposit of Multiple Tokens + singned message.
+ *          0x07         | Call to `retrySettlement()´.
+ *          0x08         | Call to `clearDeposit()´.
  *
  */
 contract RootBridgeAgent is IRootBridgeAgent {

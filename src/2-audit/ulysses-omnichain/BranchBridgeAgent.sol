@@ -1,7 +1,32 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./interfaces/IBranchBridgeAgent.sol";
+import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
+import {WETH9} from "./interfaces/IWETH9.sol";
+
+import {AnycallFlags} from "./lib/AnycallFlags.sol";
+import {IAnycallProxy} from "./interfaces/IAnycallProxy.sol";
+import {IAnycallConfig} from "./interfaces/IAnycallConfig.sol";
+import {IAnycallExecutor} from "./interfaces/IAnycallExecutor.sol";
+
+import {ERC20hTokenBranch as ERC20hToken} from "./token/ERC20hTokenBranch.sol";
+import {IBranchRouter as IRouter} from "./interfaces/IBranchRouter.sol";
+import {IBranchPort as IPort} from "./interfaces/IBranchPort.sol";
+
+import {
+    IBranchBridgeAgent,
+    IApp,
+    Deposit,
+    DepositStatus,
+    DepositInput,
+    DepositMultipleInput,
+    DepositParams,
+    DepositMultipleParams,
+    SettlementParams,
+    SettlementMultipleParams
+} from "./interfaces/IBranchBridgeAgent.sol";
 import {BranchBridgeAgentExecutor, DeployBranchBridgeAgentExecutor} from "./BranchBridgeAgentExecutor.sol";
 
 library DeployBranchBridgeAgent {
@@ -28,20 +53,7 @@ library DeployBranchBridgeAgent {
     }
 }
 
-/**
- * @title BranchBridgeAgent contract for deployment in Branch Chains of Omnichain System.
- * @author MaiaDAO
- * @dev Contract responible for interfacing with Users/Routers acting as a middleman to access Anycall cross-chain messaging and Port communication for asset management.
- *
- *   BRANCH BRIDGE AGENT DEPOSIT FLAGS
- *   --------------------------------------
- *   ID           | DESCRIPTION
- *   -------------+------------------------
- *   0x00         | Call to Branch without Deposit.
- *   0x01         | Call to Branch with Deposit.
- *   0x02         | Call to Branch with Deposit of Multiple Tokens.
- *
- */
+/// @title `BranchBridgeAgent`
 contract BranchBridgeAgent is IBranchBridgeAgent {
     using SafeTransferLib for address;
     using SafeCastLib for uint256;
@@ -1222,7 +1234,7 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
 
         //Save Flag
         bytes1 flag = data[0];
-        
+
         //Save memory for Deposit Nonce
         uint32 _depositNonce;
 
@@ -1314,7 +1326,6 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
         // Withdraw all execution gas budget from anycall for tx to revert with "no enough budget"
         if (executionBudget > 0) try anycallConfig.withdraw(executionBudget) {} catch {}
     }
-
 
     /*///////////////////////////////////////////////////////////////
                             HELPERS

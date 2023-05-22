@@ -1,25 +1,31 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {Ownable} from "solady/auth/Ownable.sol";
-
 import {
     Deposit,
-    DepositStatus,
     DepositInput,
-    DepositParams,
     DepositMultipleInput,
-    DepositMultipleParams,
     SettlementParams,
     SettlementMultipleParams
 } from "./IBranchBridgeAgent.sol";
 
 /**
- * @title BaseBranchRouter Contract.
+ * @title `BaseBranchRouter`
  * @author MaiaDAO
- * @dev Base Contract for the development of middleware to interact with Branch Bridge Agents. Contract for deployment in Branch Chains of Omnichain System.
+ * @notice Base Branch Contract for interfacing with Branch Bridge Agents.
+ *         This contract for deployment in Branch Chains of the Ulysses Omnichain System.
  */
 interface IBranchRouter {
+    /*///////////////////////////////////////////////////////////////
+                            VIEW / STATE
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Address for local Branch Bridge Agent who processes requests and ineracts with local port.
+    function localBridgeAgentAddress() external view returns (address);
+
+    /// @notice Local Bridge Agent Executor Address.
+    function bridgeAgentExecutorAddress() external view returns (address);
+
     /*///////////////////////////////////////////////////////////////
                         EXTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/

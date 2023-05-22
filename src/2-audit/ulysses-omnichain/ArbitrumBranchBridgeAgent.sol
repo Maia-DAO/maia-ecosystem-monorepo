@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "./BranchBridgeAgent.sol";
-import {IArbBranchPort as IArbPort} from "./interfaces/IArbBranchPort.sol";
+import {IArbitrumBranchPort as IArbPort} from "./interfaces/IArbitrumBranchPort.sol";
 import {IRootBridgeAgent} from "./interfaces/IRootBridgeAgent.sol";
 
 library DeployArbitrumBranchBridgeAgent {
@@ -28,9 +28,12 @@ library DeployArbitrumBranchBridgeAgent {
 }
 
 /**
- * @title `ArbitrumBranchBridgeAgent` a Branch Bridge Agent implementation for Arbitrum Chain Branch deployment.
+ * @title `ArbitrumBranchBridgeAgent`
  * @author MaiaDAO
- * @notice This contract is used to manage the deposit and withdrawal of assets between arbitrum branch contracts and the root omnichain environment. Execution gas from remote interactions si managed by `RootBridgeAgent` contract.
+ * @notice This contract is used for interfacing with Users/Routers acting as a middleman
+ *         to access Anycall cross-chain messaging and Port communication for asset management
+ *         connecting Arbitrum Branch Chain contracts and the root omnichain environment.
+ * @dev    Execution gas from remote interactions is managed by `RootBridgeAgent` contract.
  */
 contract ArbitrumBranchBridgeAgent is BranchBridgeAgent {
     using SafeTransferLib for address;

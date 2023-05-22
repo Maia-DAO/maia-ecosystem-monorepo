@@ -1,8 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import {Ownable} from "solady/auth/Ownable.sol";
+
 import {BranchBridgeAgent} from "./BranchBridgeAgent.sol";
-import "./interfaces/IBranchBridgeAgent.sol";
+import {
+    IApp,
+    DepositParams,
+    DepositMultipleParams,
+    SettlementParams,
+    SettlementMultipleParams
+} from "./interfaces/IBranchBridgeAgent.sol";
+
+import {IBranchRouter as IRouter} from "./interfaces/IBranchRouter.sol";
 
 library DeployBranchBridgeAgentExecutor {
     function deploy() external returns (address) {
@@ -10,6 +20,13 @@ library DeployBranchBridgeAgentExecutor {
     }
 }
 
+/**
+ * @title `BranchBridgeAgentExecutor`
+ * @notice This contract is used for requesting token deposit clearance and
+ *         executing transaction requests from the root environment.
+ * @dev    Execution is "sandboxed" meaning upon tx failure both token deposits
+ *         and interactions with external contracts should be reverted and caught.
+ */
 contract BranchBridgeAgentExecutor is Ownable {
     /*///////////////////////////////////////////////////////////////
                             ENCODING CONSTS
@@ -39,18 +56,20 @@ contract BranchBridgeAgentExecutor is Ownable {
 
     uint8 internal constant PARAMS_DEPOSIT_OFFSET = 96;
 
-    constructor() Ownable() {
+    constructor() {
         _initializeOwner(msg.sender);
     }
 
     /*///////////////////////////////////////////////////////////////
                         EXECUTOR EXTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
+
     /**
-     * @notice Execute a transaction from root chain.
-     * @param _router address of the router to execute the calldata.
-     * @param _data encoded transaction data.
-     * @return success boolean and result bytes.
+     * @notice Function to execute a crosschain request without any settlement.
+     * @param _router Address of the router contract to execute the request.
+     * @param _data Data received from messaging layer.
+     * @return success Boolean indicating if the operation was successful.
+     * @return result Result of the execution.
      * @dev SETTLEMENT FLAG: 0 (No settlement)
      */
     function executeNoSettlement(address _router, bytes calldata _data)
@@ -63,12 +82,13 @@ contract BranchBridgeAgentExecutor is Ownable {
     }
 
     /**
-     * @notice Execute a transaction from root chain and settle a single asset.
-     * @param _recipient address of the recipient.
-     * @param _router address of the router to execute the calldata.
-     * @param _data encoded transaction data.
-     * @return success boolean and result bytes.
-     * @dev SETTLEMENT FLAG: 1 (Single Asset Settlement)
+     * @notice Function to execute a crosschain request with a single settlement.
+     * @param _recipient Address of the recipient of the settlement.
+     * @param _router Address of the router contract to execute the request.
+     * @param _data Data received from messaging layer.
+     * @return success Boolean indicating if the operation was successful.
+     * @return result Result of the execution.
+     * @dev SETTLEMENT FLAG: 1 (Single Settlement)
      */
     function executeWithSettlement(address _recipient, address _router, bytes calldata _data)
         external
@@ -93,16 +113,19 @@ contract BranchBridgeAgentExecutor is Ownable {
         if (_data.length - PARAMS_GAS_OUT > 129) {
             //Execute remote request
             (success, result) = IRouter(_router).anyExecuteSettlement(_data[129:_data.length - PARAMS_GAS_OUT], sParams);
+        } else {
+            success = true;
         }
     }
 
     /**
-     * @notice Execute a transaction from root chain and settle multiple assets.
-     * @param _recipient address of the recipient.
-     * @param _router address of the router to execute the calldata.
-     * @param _data encoded transaction data.
-     * @return success boolean and result bytes.
-     * @dev SETTLEMENT FLAG: 2 (Multiple Asset Settlement)
+     * @notice Function to execute a crosschain request with multiple settlements.
+     * @param _recipient Address of the recipient of the settlement.
+     * @param _router Address of the router contract to execute the request.
+     * @param _data Data received from messaging layer.
+     * @return success Boolean indicating if the operation was successful.
+     * @return result Result of the execution.
+     * @dev SETTLEMENT FLAG: 2 (Multiple Settlements)
      */
     function executeWithSettlementMultiple(address _recipient, address _router, bytes calldata _data)
         external
@@ -133,6 +156,8 @@ contract BranchBridgeAgentExecutor is Ownable {
                 ],
                 sParams
             );
+        } else {
+            success = true;
         }
     }
 }
