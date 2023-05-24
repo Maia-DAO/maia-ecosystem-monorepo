@@ -3,21 +3,22 @@ pragma solidity ^0.8.0;
 
 import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+
 import {ERC20} from "solmate/tokens/ERC20.sol";
+
 import {WETH9} from "./interfaces/IWETH9.sol";
 
 import {AnycallFlags} from "./lib/AnycallFlags.sol";
 import {IAnycallProxy} from "./interfaces/IAnycallProxy.sol";
 import {IAnycallConfig} from "./interfaces/IAnycallConfig.sol";
 import {IAnycallExecutor} from "./interfaces/IAnycallExecutor.sol";
-
-import {ERC20hTokenBranch as ERC20hToken} from "./token/ERC20hTokenBranch.sol";
+import {IApp, IBranchBridgeAgent} from "./interfaces/IBranchBridgeAgent.sol";
 import {IBranchRouter as IRouter} from "./interfaces/IBranchRouter.sol";
 import {IBranchPort as IPort} from "./interfaces/IBranchPort.sol";
 
+import {ERC20hTokenBranch as ERC20hToken} from "./token/ERC20hTokenBranch.sol";
+import {BranchBridgeAgentExecutor, DeployBranchBridgeAgentExecutor} from "./BranchBridgeAgentExecutor.sol";
 import {
-    IBranchBridgeAgent,
-    IApp,
     Deposit,
     DepositStatus,
     DepositInput,
@@ -27,8 +28,8 @@ import {
     SettlementParams,
     SettlementMultipleParams
 } from "./interfaces/IBranchBridgeAgent.sol";
-import {BranchBridgeAgentExecutor, DeployBranchBridgeAgentExecutor} from "./BranchBridgeAgentExecutor.sol";
 
+/// @title Library for Branch Bridge Agent Deployment
 library DeployBranchBridgeAgent {
     function deploy(
         WETH9 _wrappedNativeToken,
@@ -53,7 +54,7 @@ library DeployBranchBridgeAgent {
     }
 }
 
-/// @title `BranchBridgeAgent`
+/// @title Branch Bridge Agent Contract
 contract BranchBridgeAgent is IBranchBridgeAgent {
     using SafeTransferLib for address;
     using SafeCastLib for uint256;
@@ -133,8 +134,8 @@ contract BranchBridgeAgent is IBranchBridgeAgent {
 
     uint256 public remoteCallDepositedGas;
 
-    uint256 internal constant MIN_FALLBACK_RESERVE = 185_000; // 100_000 for anycall + 85_000 for fallback
-    uint256 internal constant MIN_EXECUTION_OVERHEAD = 260_000; // 2 * 100_000 for anycall + 30_000 Pre 1st Gas Checkpoint Execution + 25_000 Post last Gas Checkpoint Executions
+    uint256 internal constant MIN_FALLBACK_RESERVE = 185_000; // 100_000 for anycall + 85_000 fallback execution overhead
+    uint256 internal constant MIN_EXECUTION_OVERHEAD = 160_000; // 100_000 for anycall + 35_000 Pre 1st Gas Checkpoint Execution + 25_000 Post last Gas Checkpoint Executions
     uint256 internal constant TRANSFER_OVERHEAD = 24_000;
 
     constructor(
