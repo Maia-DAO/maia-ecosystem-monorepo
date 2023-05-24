@@ -1,47 +1,17 @@
-# <h1 align="center"> Hardhat x Foundry Template </h1>
+# Maia Ecosystem Monorepo
 
-This is the Maian Ecosystem Monorepo, none of this code is final and shouldn't be treated as such. The objective of this repo to help display the general scope of our V2 Ecosystem platforms.
+This is the Maian Ecosystem Monorepo, at this moment in time, none of this code is final and shouldn't be treated as such. The objective of this repo to keep track and show the results of each of our audits.
 
-## solidity-rlp-encode
-`RLPEncode` is an [RLP encoding](https://github.com/ethereum/wiki/wiki/RLP) library written in Solidity. The original author of this library is [Bakaoh](https://github.com/bakaoh). This repository cleans up the original code and adds tests for the standard RLP encoding test cases.
+Changes have been made to the contracts since these audits that are not reflected in this repositories. Final code is available in the [Code4rena Contest](https://github.com/code-423n4/2023-05-maia).
 
-**Template repository for getting started quickly with Hardhat and Foundry in one project**
+If you are reading this, the contest is still LIVE go over to https://discord.gg/code4rena and try to earn your share of $300k UDSC, the second largest reward pool to date!
 
-![Github Actions](https://github.com/devanonon/hardhat-foundry-template/workflows/test/badge.svg)
+## Audits
 
-### Getting Started
+- [Zellic - Reward System Audit](https://github.com/Maia-DAO/maia-ecosystem-monorepo/tree/1-audit)
+- [Zellic - Ulysses Omnichain Audit](https://github.com/Maia-DAO/maia-ecosystem-monorepo/tree/2-audit)
 
- * Use Foundry: 
-```bash
-forge install
-forge test
-```
+## Post-Audit Changes
 
- * Use Hardhat:
-```bash
-npm install
-npx hardhat test
-```
-
-### Features
-
- * Write / run tests with either Hardhat or Foundry:
-```bash
-forge test
-# or
-npx hardhat test
-```
-
- * Use Hardhat's task framework
-```bash
-npx hardhat example
-```
-
- * Install libraries with Foundry which work with Hardhat.
-```bash
-forge install rari-capital/solmate # Already in this repo, just an example
-```
-
-### Notes
-
-Whenever you install new libraries using Foundry, make sure to update your `remappings.txt` file by running `forge remappings > remappings.txt`. This is required because we use `hardhat-preprocessor` and the `remappings.txt` file to allow Hardhat to resolve libraries you install with Foundry.
+- [Reward System](https://github.com/Maia-DAO/maia-ecosystem-monorepo/tree/1-audit-post-revision-updates)
+- [Ulysses Omnichain](https://github.com/Maia-DAO/maia-ecosystem-monorepo/tree/2-audit-post-revision-updates)
