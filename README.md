@@ -1,9 +1,7 @@
 # <h1 align="center"> Hardhat x Foundry Template </h1>
 
 This is the Maian Ecosystem Monorepo. This branch includes the following components to be audited:
- - [Ulysses Omnichain Token Management and Cross Chain Communication](./src/2-audit/ulysses-omnichain/)
- - [Ulysses Stableswap AMM](./src/2-audit/ulysses-amm/)
- - [ERC4626 Library](./src/2-audit/erc-4626/)
+ - [Ulysses Omnichain Token Management and Cross Chain Communication](./src/ulysses-omnichain/)
 
 ## Ulysses
 To learn more about Ulysses, please visit the [Ulysses Documentation](https://v2-docs.maiadao.io/protocols/Ulysses/introduction).
